@@ -1,0 +1,72 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Settings — WanderLust{% endblock %}
+
+{% block content %}
+
+<div class="settings-layout">
+
+    <!-- Sidebar -->
+    <div class="settings-sidebar">
+        <a href="#" class="settings-nav-item active">👤 Profile</a>
+        <a href="#" class="settings-nav-item">🔒 Password & Security</a>
+        <a href="#" class="settings-nav-item">🔔 Notifications</a>
+        <a href="#" class="settings-nav-item">💳 Payment Methods</a>
+        <a href="#" class="settings-nav-item">🌍 Language & Region</a>
+        <a href="#" class="settings-nav-item">🎨 Preferences</a>
+        <a href="#" class="settings-nav-item" style="color:#EF4444; margin-top:24px;">🚪 Logout</a>
+    </div>
+
+    <!-- Panel -->
+    <div class="settings-panel">
+        <div class="settings-panel-title">👤 Profile Settings</div>
+
+        <!-- Avatar area -->
+        <div style="display:flex; align-items:center; gap:20px; margin-bottom:32px; padding-bottom:24px; border-bottom:1px solid var(--gray-100);">
+            <div style="width:72px; height:72px; border-radius:50%; background:linear-gradient(135deg,var(--blue-primary),var(--blue-light)); display:flex; align-items:center; justify-content:center; font-size:28px; color:white; font-weight:700;">G</div>
+            <div>
+                <div style="font-weight:600; color:var(--gray-900); margin-bottom:4px;">Guest User</div>
+                <div style="font-size:13px; color:var(--gray-400); margin-bottom:10px;">guest@wanderlust.tn</div>
+                <button class="btn btn-outline" style="padding:7px 16px; font-size:12px;">Change Photo</button>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
+            <div class="form-group">
+                <label class="form-label">First Name</label>
+                <input type="text" class="form-input" placeholder="Your first name" value="Guest">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Last Name</label>
+                <input type="text" class="form-input" placeholder="Your last name" value="User">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Email Address</label>
+            <input type="email" class="form-input" placeholder="your@email.com" value="guest@wanderlust.tn">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <input type="tel" class="form-input" placeholder="(+216) XX XXX XXX">
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Bio</label>
+            <textarea class="form-input" rows="3" placeholder="Tell us about yourself and your travel style..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Location</label>
+            <input type="text" class="form-input" placeholder="Your city" value="Tunis, Tunisia">
+        </div>
+
+        <div style="margin-top:8px;">
+            <button class="btn btn-primary" style="padding:12px 32px;">💾 Save Changes</button>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

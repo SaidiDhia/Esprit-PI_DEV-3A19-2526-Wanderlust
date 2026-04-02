@@ -1,0 +1,112 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Messaging — WanderLust{% endblock %}
+
+{% block content %}
+
+<div class="messaging-layout">
+
+    <!-- Contacts List -->
+    <div class="chat-list">
+        <div class="chat-list-header">💬 Messages</div>
+
+        <a href="#" class="chat-item active">
+            <div class="chat-avatar">AH</div>
+            <div class="chat-info">
+                <div class="chat-name">Ahmed Hassan</div>
+                <div class="chat-preview">Your booking is confirmed for Apr 20...</div>
+            </div>
+        </a>
+
+        <a href="#" class="chat-item">
+            <div class="chat-avatar" style="background: linear-gradient(135deg,#059669,#10B981);">LM</div>
+            <div class="chat-info">
+                <div class="chat-name">Leila Mansour</div>
+                <div class="chat-preview">What time shall we meet at the ruins?</div>
+            </div>
+        </a>
+
+        <a href="#" class="chat-item">
+            <div class="chat-avatar" style="background: linear-gradient(135deg,#F59E0B,#EF4444);">KA</div>
+            <div class="chat-info">
+                <div class="chat-name">Karim Aziz</div>
+                <div class="chat-preview">The cooking class was amazing! Thank you</div>
+            </div>
+        </a>
+
+        <a href="#" class="chat-item">
+            <div class="chat-avatar" style="background: linear-gradient(135deg,#8B5CF6,#EC4899);">SB</div>
+            <div class="chat-info">
+                <div class="chat-name">Sara Ben Ali</div>
+                <div class="chat-preview">Is camel trekking suitable for kids?</div>
+            </div>
+        </a>
+
+        <a href="#" class="chat-item">
+            <div class="chat-avatar" style="background: linear-gradient(135deg,#10B981,#3B82F6);">MB</div>
+            <div class="chat-info">
+                <div class="chat-name">Mohamed Boughrara</div>
+                <div class="chat-preview">I have a question about the package...</div>
+            </div>
+        </a>
+
+        <a href="#" class="chat-item">
+            <div class="chat-avatar" style="background: linear-gradient(135deg,#6366F1,#0EA5E9);">FT</div>
+            <div class="chat-info">
+                <div class="chat-name">Fatma Toumi</div>
+                <div class="chat-preview">Can we get an early check-in?</div>
+            </div>
+        </a>
+    </div>
+
+    <!-- Chat Main -->
+    <div class="chat-main">
+        <div class="chat-main-header">
+            <div class="chat-avatar">AH</div>
+            <div>
+                <div style="font-weight:700; font-size:15px; color:var(--gray-900);">Ahmed Hassan</div>
+                <div style="font-size:12px; color:#10B981;">● Online</div>
+            </div>
+        </div>
+
+        <div class="chat-messages">
+
+            <div class="msg msg-received">
+                Bonjour! I'm your guide for the Carthage tour. Are you still joining us on April 18th? 🏛️
+            </div>
+
+            <div class="msg msg-sent">
+                Yes, absolutely! I'm really looking forward to it. What time do we start?
+            </div>
+
+            <div class="msg msg-received">
+                We meet at 9:00 AM at the main entrance of the Carthage site. I'll be wearing a blue WanderLust vest 😊
+            </div>
+
+            <div class="msg msg-sent">
+                Perfect! Should I bring anything specific?
+            </div>
+
+            <div class="msg msg-received">
+                Comfortable walking shoes, sunscreen, and a hat. I'd also recommend bringing some water. The tour lasts about 3 hours and museum entry is included in your booking.
+            </div>
+
+            <div class="msg msg-sent">
+                Thank you so much! Can't wait. See you on the 18th 🎉
+            </div>
+
+            <div class="msg msg-received">
+                Your booking is confirmed for Apr 20. Looking forward to meeting you! If you have any more questions, don't hesitate to message me anytime.
+            </div>
+
+        </div>
+
+        <div class="chat-input-bar">
+            <input type="text" class="chat-input" placeholder="Type a message...">
+            <button class="btn btn-primary" style="border-radius:50px; padding:10px 22px;">Send ➤</button>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

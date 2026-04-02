@@ -1,0 +1,122 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}WanderLust — Explore the World{% endblock %}
+
+{% block content %}
+
+<!-- HERO -->
+<section class="hero-section">
+    <div class="hero-bg-shapes">
+        <div class="hero-shape hero-shape-1"></div>
+        <div class="hero-shape hero-shape-2"></div>
+        <div class="hero-shape hero-shape-3"></div>
+    </div>
+    <div class="hero-content">
+        <div class="hero-tag">✈️ Your Travel Companion</div>
+        <h1 class="hero-title">
+            Discover the World's<br>
+            <em>Hidden Wonders</em>
+        </h1>
+        <p class="hero-subtitle">Plan, book, and experience unforgettable adventures with WanderLust — all your travel needs in one place.</p>
+        <div class="hero-cta-group">
+            <a href="{{ path('app_activities') }}" class="btn-hero-primary">🗺️ Explore Activities</a>
+            <a href="{{ path('app_booking') }}" class="btn-hero-outline">🏨 Book Now</a>
+        </div>
+    </div>
+</section>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+    <div class="stats-bar-inner">
+        <div class="stat-item">
+            <div class="stat-number">12K+</div>
+            <div class="stat-label">Happy Travelers</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">480+</div>
+            <div class="stat-label">Destinations</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">98%</div>
+            <div class="stat-label">Satisfaction Rate</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-number">24/7</div>
+            <div class="stat-label">Customer Support</div>
+        </div>
+    </div>
+</div>
+
+<!-- MODULES GRID -->
+<section class="modules-section">
+    <div class="section-header">
+        <div class="section-label">Everything You Need</div>
+        <h2 class="section-title">Your Complete Travel Platform</h2>
+    </div>
+
+    <div class="modules-grid">
+
+        <!-- Activities -->
+        <a href="{{ path('app_activities') }}" class="module-card card-activities">
+            <div class="module-card-visual">
+                <span class="card-emoji">📅</span>
+            </div>
+            <div class="module-card-body">
+                <div class="module-card-title">Activités & Events</div>
+                <p class="module-card-desc">Browse hundreds of curated activities, tours, and local experiences. Filter by date, location, and interest.</p>
+                <span class="module-card-arrow">Explore activities →</span>
+            </div>
+        </a>
+
+        <!-- Booking -->
+        <a href="{{ path('app_booking') }}" class="module-card card-booking">
+            <div class="module-card-visual">
+                <span class="card-emoji">🏨</span>
+            </div>
+            <div class="module-card-body">
+                <div class="module-card-title">Hotel Booking</div>
+                <p class="module-card-desc">Find and book hotels, resorts, and unique stays at the best prices. Compare reviews and amenities instantly.</p>
+                <span class="module-card-arrow">Book your stay →</span>
+            </div>
+        </a>
+
+        <!-- Messaging -->
+        <a href="{{ path('app_messaging') }}" class="module-card card-messaging">
+            <div class="module-card-visual">
+                <span class="card-emoji">💬</span>
+            </div>
+            <div class="module-card-body">
+                <div class="module-card-title">Messaging</div>
+                <p class="module-card-desc">Chat directly with guides, hosts, and fellow travelers. Get real-time answers and personalized recommendations.</p>
+                <span class="module-card-arrow">Open messages →</span>
+            </div>
+        </a>
+
+        <!-- Blog -->
+        <a href="{{ path('app_blog') }}" class="module-card card-blog">
+            <div class="module-card-visual">
+                <span class="card-emoji">📝</span>
+            </div>
+            <div class="module-card-body">
+                <div class="module-card-title">Travel Blog</div>
+                <p class="module-card-desc">Read inspiring travel stories, destination guides, and expert tips from seasoned explorers around the globe.</p>
+                <span class="module-card-arrow">Read stories →</span>
+            </div>
+        </a>
+
+        <!-- Marketplace -->
+        <a href="{{ path('app_marketplace') }}" class="module-card card-marketplace">
+            <div class="module-card-visual">
+                <span class="card-emoji">🛒</span>
+            </div>
+            <div class="module-card-body">
+                <div class="module-card-title">Marketplace</div>
+                <p class="module-card-desc">Shop travel gear, souvenirs, and local crafts. Support local artisans and equip yourself for any adventure.</p>
+                <span class="module-card-arrow">Shop now →</span>
+            </div>
+        </a>
+
+    </div>
+</section>
+
+{% endblock %}

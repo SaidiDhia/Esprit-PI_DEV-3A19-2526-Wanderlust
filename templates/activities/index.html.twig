@@ -1,0 +1,127 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Activités — WanderLust{% endblock %}
+
+{% block content %}
+
+<div class="page-hero">
+    <div class="page-hero-content">
+        <span class="page-hero-icon">📅</span>
+        <h1 class="page-hero-title">Activités & Events</h1>
+        <p class="page-hero-subtitle">Discover unforgettable experiences, tours, and events tailored for every type of traveler.</p>
+    </div>
+</div>
+
+<div class="page-content">
+
+    <!-- Filters -->
+    <div class="search-filters-bar">
+        <div class="filter-group">
+            <span class="filter-label">Destination</span>
+            <input type="text" class="filter-input" placeholder="Where? (e.g. Tunis, Paris...)">
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Category</span>
+            <select class="filter-input">
+                <option>All Categories</option>
+                <option>Adventure</option>
+                <option>Cultural</option>
+                <option>Gastronomy</option>
+                <option>Nature</option>
+                <option>Sports</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Date</span>
+            <input type="date" class="filter-input">
+        </div>
+        <div class="filter-group" style="flex:0 0 auto;">
+            <button class="btn btn-primary" style="width:100%; justify-content:center;">🔍 Search</button>
+        </div>
+    </div>
+
+    <!-- Cards Grid -->
+    <div class="content-grid">
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#1D4ED8,#7C3AED);">🧗</div>
+            <div class="card-body">
+                <div class="card-meta">📍 Cap Bon, Tunisia &nbsp;·&nbsp; 🗓️ Apr 15</div>
+                <div class="card-title">Rock Climbing Adventure</div>
+                <p class="card-text">Guided half-day rock climbing session with certified instructors. All equipment provided. Suitable for beginners.</p>
+            </div>
+            <div class="card-footer">
+                <span class="price">79 TND</span>
+                <a href="#" class="btn btn-primary">Book Now</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#059669,#0EA5E9);">🏛️</div>
+            <div class="card-body">
+                <div class="card-meta">📍 Carthage, Tunisia &nbsp;·&nbsp; 🗓️ Apr 18</div>
+                <div class="card-title">Ancient Ruins Tour</div>
+                <p class="card-text">Walk through 3,000 years of history with an expert archaeologist guide. Includes museum entry.</p>
+            </div>
+            <div class="card-footer">
+                <span class="price">45 TND</span>
+                <a href="#" class="btn btn-primary">Book Now</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#F59E0B,#EF4444);">🍽️</div>
+            <div class="card-body">
+                <div class="card-meta">📍 Tunis Medina &nbsp;·&nbsp; 🗓️ Apr 20</div>
+                <div class="card-title">Tunisian Cooking Class</div>
+                <p class="card-text">Learn to prepare traditional Tunisian dishes with a local chef in the heart of the Medina. Lunch included.</p>
+            </div>
+            <div class="card-footer">
+                <span class="price">120 TND</span>
+                <a href="#" class="btn btn-primary">Book Now</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#8B5CF6,#EC4899);">🐪</div>
+            <div class="card-body">
+                <div class="card-meta">📍 Douz, Tunisia &nbsp;·&nbsp; 🗓️ Apr 25</div>
+                <div class="card-title">Sahara Desert Camel Trek</div>
+                <p class="card-text">Spend a magical sunset on camelback in the Sahara dunes. Overnight camping option available.</p>
+            </div>
+            <div class="card-footer">
+                <span class="price">200 TND</span>
+                <a href="#" class="btn btn-primary">Book Now</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#10B981,#3B82F6);">🏄</div>
+            <div class="card-body">
+                <div class="card-meta">📍 Hammamet &nbsp;·&nbsp; 🗓️ May 2</div>
+                <div class="card-title">Surfing Lessons</div>
+                <p class="card-text">2-hour beginner surfing course on the Mediterranean coast. Board rental and wetsuit included.</p>
+            </div>
+            <div class="card-footer">
+                <span class="price">95 TND</span>
+                <a href="#" class="btn btn-primary">Book Now</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#6366F1,#0EA5E9);">🎨</div>
+            <div class="card-body">
+                <div class="card-meta">📍 Sidi Bou Said &nbsp;·&nbsp; 🗓️ May 5</div>
+                <div class="card-title">Art & Ceramics Workshop</div>
+                <p class="card-text">Create your own traditional Tunisian ceramic art piece guided by local artisans. Take your work home.</p>
+            </div>
+            <div class="card-footer">
+                <span class="price">65 TND</span>
+                <a href="#" class="btn btn-primary">Book Now</a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}

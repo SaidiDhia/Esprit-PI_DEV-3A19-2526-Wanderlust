@@ -1,0 +1,153 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Booking — WanderLust{% endblock %}
+
+{% block content %}
+
+<div class="page-hero">
+    <div class="page-hero-content">
+        <span class="page-hero-icon">🏨</span>
+        <h1 class="page-hero-title">Hotel Booking</h1>
+        <p class="page-hero-subtitle">Find and reserve the perfect stay — from cozy guesthouses to luxury resorts.</p>
+    </div>
+</div>
+
+<div class="page-content">
+
+    <!-- Search Filters -->
+    <div class="search-filters-bar">
+        <div class="filter-group">
+            <span class="filter-label">Destination</span>
+            <input type="text" class="filter-input" placeholder="City or Hotel name...">
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Check-in</span>
+            <input type="date" class="filter-input">
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Check-out</span>
+            <input type="date" class="filter-input">
+        </div>
+        <div class="filter-group">
+            <span class="filter-label">Guests</span>
+            <select class="filter-input">
+                <option>1 Guest</option>
+                <option>2 Guests</option>
+                <option>3 Guests</option>
+                <option>4+ Guests</option>
+            </select>
+        </div>
+        <div class="filter-group" style="flex:0 0 auto;">
+            <button class="btn btn-primary" style="width:100%; justify-content:center;">🔍 Search</button>
+        </div>
+    </div>
+
+    <!-- Hotel Cards -->
+    <div class="content-grid">
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#1D4ED8,#0EA5E9); font-size:56px;">🏝️</div>
+            <div class="card-body">
+                <div class="card-meta">
+                    <span class="stars">★★★★★</span>
+                    <span>5.0 · 234 reviews</span>
+                </div>
+                <div class="card-title">Hammamet Beach Resort</div>
+                <p class="card-text">Stunning beachfront resort with private beach, infinity pool, and world-class spa. All-inclusive options available.</p>
+                <div style="font-size:13px; color:var(--gray-500);">📍 Hammamet, Tunisia &nbsp;·&nbsp; 🛏 Superior Room</div>
+            </div>
+            <div class="card-footer">
+                <span class="price">320 TND<span style="font-size:13px; font-weight:400; color:var(--gray-400);">/night</span></span>
+                <a href="#" class="btn btn-primary">Reserve</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#7C3AED,#EC4899); font-size:56px;">🏛️</div>
+            <div class="card-body">
+                <div class="card-meta">
+                    <span class="stars">★★★★☆</span>
+                    <span>4.7 · 189 reviews</span>
+                </div>
+                <div class="card-title">Medina Heritage Riad</div>
+                <p class="card-text">An authentic boutique riad in the heart of the Medina. Traditional Tunisian architecture with modern comforts.</p>
+                <div style="font-size:13px; color:var(--gray-500);">📍 Tunis Medina &nbsp;·&nbsp; 🛏 Deluxe Suite</div>
+            </div>
+            <div class="card-footer">
+                <span class="price">180 TND<span style="font-size:13px; font-weight:400; color:var(--gray-400);">/night</span></span>
+                <a href="#" class="btn btn-primary">Reserve</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#F59E0B,#10B981); font-size:56px;">🌴</div>
+            <div class="card-body">
+                <div class="card-meta">
+                    <span class="stars">★★★★★</span>
+                    <span>4.9 · 312 reviews</span>
+                </div>
+                <div class="card-title">Sahara Luxury Camp</div>
+                <p class="card-text">Sleep under the stars in glamorous desert tents with gourmet dining. An unforgettable once-in-a-lifetime experience.</p>
+                <div style="font-size:13px; color:var(--gray-500);">📍 Douz, Tunisia &nbsp;·&nbsp; 🛏 Royal Tent</div>
+            </div>
+            <div class="card-footer">
+                <span class="price">450 TND<span style="font-size:13px; font-weight:400; color:var(--gray-400);">/night</span></span>
+                <a href="#" class="btn btn-primary">Reserve</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#059669,#1D4ED8); font-size:56px;">🌊</div>
+            <div class="card-body">
+                <div class="card-meta">
+                    <span class="stars">★★★★☆</span>
+                    <span>4.5 · 156 reviews</span>
+                </div>
+                <div class="card-title">Sidi Bou Said Cliffside Hotel</div>
+                <p class="card-text">Perched on white cliffs above the Mediterranean, this boutique hotel offers panoramic sea views and exquisite dining.</p>
+                <div style="font-size:13px; color:var(--gray-500);">📍 Sidi Bou Said &nbsp;·&nbsp; 🛏 Sea View Room</div>
+            </div>
+            <div class="card-footer">
+                <span class="price">240 TND<span style="font-size:13px; font-weight:400; color:var(--gray-400);">/night</span></span>
+                <a href="#" class="btn btn-primary">Reserve</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#EF4444,#8B5CF6); font-size:56px;">🏰</div>
+            <div class="card-body">
+                <div class="card-meta">
+                    <span class="stars">★★★★★</span>
+                    <span>5.0 · 87 reviews</span>
+                </div>
+                <div class="card-title">Dougga Palace Hotel</div>
+                <p class="card-text">A restored Ottoman palace turned luxury hotel. Stunning courtyards, mosaic floors, and a Michelin-starred restaurant.</p>
+                <div style="font-size:13px; color:var(--gray-500);">📍 Dougga, Tunisia &nbsp;·&nbsp; 🛏 Presidential Suite</div>
+            </div>
+            <div class="card-footer">
+                <span class="price">580 TND<span style="font-size:13px; font-weight:400; color:var(--gray-400);">/night</span></span>
+                <a href="#" class="btn btn-primary">Reserve</a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-img" style="background: linear-gradient(135deg,#0EA5E9,#10B981); font-size:56px;">⛺</div>
+            <div class="card-body">
+                <div class="card-meta">
+                    <span class="stars">★★★★☆</span>
+                    <span>4.3 · 201 reviews</span>
+                </div>
+                <div class="card-title">Cap Bon Eco Lodge</div>
+                <p class="card-text">Sustainable eco-lodge surrounded by olive groves and vineyards. Organic meals, yoga classes, and nature walks included.</p>
+                <div style="font-size:13px; color:var(--gray-500);">📍 Cap Bon, Tunisia &nbsp;·&nbsp; 🛏 Garden Cabin</div>
+            </div>
+            <div class="card-footer">
+                <span class="price">135 TND<span style="font-size:13px; font-weight:400; color:var(--gray-400);">/night</span></span>
+                <a href="#" class="btn btn-primary">Reserve</a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+{% endblock %}
