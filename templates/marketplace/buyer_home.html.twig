@@ -1,0 +1,122 @@
+{% extends 'base.html.twig' %}
+{% block title %}Shop — WanderLust Marketplace{% endblock %}
+{% block content %}
+
+<!-- BUYER TOP NAV -->
+<div class="mp-topnav">
+    <div class="mp-topnav-inner">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <a href="{{ path('app_marketplace') }}" class="mp-nav-btn mp-nav-back">⬅ Home</a>
+            <span style="font-size:16px; font-weight:700; color:white;">🌿 WanderLust — Buyer</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <a href="{{ path('app_marketplace_orders') }}" class="mp-nav-btn">📋 My Orders</a>
+            <a href="{{ path('app_marketplace_cart') }}" class="mp-nav-btn mp-cart-badge">
+                🛒 My Cart ({{ cartCount }})
+            </a>
+        </div>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="mp-filter-bar">
+        <form method="GET" action="{{ path('app_marketplace_buyer') }}" style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; width:100%;">
+            <input type="text" name="search" value="{{ search }}"
+                   placeholder="🔍 Search products..."
+                   class="mp-input" style="min-width:240px;">
+
+            <select name="category" class="mp-select">
+                <option value="all">📂 All Categories</option>
+                <option value="camping"  {% if category == 'camping'  %}selected{% endif %}>⛺ Camping</option>
+                <option value="hiking"   {% if category == 'hiking'   %}selected{% endif %}>🥾 Hiking</option>
+                <option value="beach"    {% if category == 'beach'    %}selected{% endif %}>🏖️ Beach</option>
+                <option value="nature"   {% if category == 'nature'   %}selected{% endif %}>🌿 Nature</option>
+            </select>
+
+            <select name="type" class="mp-select">
+                <option value="all">🏷️ All Types</option>
+                <option value="For Sale" {% if type == 'For Sale' %}selected{% endif %}>For Sale</option>
+                <option value="For Rent" {% if type == 'For Rent' %}selected{% endif %}>For Rent</option>
+            </select>
+
+            <select name="sort" class="mp-select">
+                <option value="">💰 Sort by Date</option>
+                <option value="low"  {% if sort == 'low'  %}selected{% endif %}>Price: Low to High</option>
+                <option value="high" {% if sort == 'high' %}selected{% endif %}>Price: High to Low</option>
+            </select>
+
+            <button type="submit" class="mp-btn-primary">🔍 Search</button>
+            <a href="{{ path('app_marketplace_buyer') }}" class="mp-btn-ghost">🔄 Reset</a>
+        </form>
+    </div>
+</div>
+
+<!-- Flash messages -->
+<div style="max-width:1200px; margin:16px auto; padding:0 24px;">
+    {% for msg in app.flashes('success') %}
+        <div class="flash flash-success">{{ msg }}</div>
+    {% endfor %}
+    {% for msg in app.flashes('error') %}
+        <div class="flash flash-error">{{ msg }}</div>
+    {% endfor %}
+</div>
+
+<!-- Products Grid -->
+<div class="mp-page-content">
+    {% if products is empty %}
+        <div class="mp-empty">
+            <div style="font-size:64px; margin-bottom:16px;">😕</div>
+            <h3>No products found</h3>
+            <p>Try adjusting your filters or check back later.</p>
+        </div>
+    {% else %}
+        <div class="mp-product-grid">
+            {% for p in products %}
+                <div class="mp-product-card">
+                    <!-- Image -->
+                    <div class="mp-card-img">
+                        {% if p.image %}
+                            <img src="{{ p.image }}" alt="{{ p.title }}" onerror="this.src='https://dummyimage.com/300x200/cccccc/666666&text=No+Photo'">
+                        {% else %}
+                            <div class="mp-card-img-placeholder">📦</div>
+                        {% endif %}
+                        <!-- Type badge -->
+                        <span class="mp-type-badge {{ p.type == 'For Rent' ? 'rent' : 'sale' }}">
+                            {{ p.type }}
+                        </span>
+                    </div>
+
+                    <div class="mp-card-body">
+                        <div class="mp-card-category">📂 {{ p.category }}</div>
+                        <h3 class="mp-card-title">{{ p.title }}</h3>
+                        <p class="mp-card-desc">{{ p.description|slice(0,80) }}{% if p.description|length > 80 %}...{% endif %}</p>
+
+                        <div class="mp-card-price">{{ p.price|number_format(2) }} TND</div>
+
+                        {% if p.available_quantity > 0 %}
+                            <div class="mp-stock in-stock">✅ In Stock ({{ p.available_quantity }})</div>
+                        {% else %}
+                            <div class="mp-stock out-stock">❌ Out of Stock</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mp-card-footer">
+                        <a href="{{ path('app_marketplace_product_details', {id: p.id}) }}" class="mp-btn-outline">🔍 Details</a>
+
+                        {% if p.available_quantity > 0 %}
+                            <form method="POST" action="{{ path('app_marketplace_cart_add') }}" style="display:flex; gap:6px; align-items:center;">
+                                <input type="hidden" name="product_id" value="{{ p.id }}">
+                                <input type="number" name="quantity" value="1" min="1" max="{{ p.available_quantity }}"
+                                       class="mp-qty-input">
+                                <button type="submit" class="mp-btn-primary" style="padding:8px 14px; font-size:12px;">🛒 Add</button>
+                            </form>
+                        {% else %}
+                            <button disabled class="mp-btn-disabled">Out of Stock</button>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
