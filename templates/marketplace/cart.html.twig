@@ -1,0 +1,85 @@
+{% extends 'base.html.twig' %}
+{% block title %}My Cart — WanderLust{% endblock %}
+{% block content %}
+
+<div class="mp-topnav">
+    <div class="mp-topnav-inner">
+        <a href="{{ path('app_marketplace_buyer') }}" class="mp-nav-btn mp-nav-back">← Back to Products</a>
+        <span style="font-size:16px; font-weight:700; color:white;">🛒 Your Shopping Cart</span>
+        <span></span>
+    </div>
+</div>
+
+<div class="mp-page-content" style="max-width:900px;">
+    {% for msg in app.flashes('success') %}
+        <div class="flash flash-success">{{ msg }}</div>
+    {% endfor %}
+    {% for msg in app.flashes('error') %}
+        <div class="flash flash-error">{{ msg }}</div>
+    {% endfor %}
+
+    {% if cartItems is empty %}
+        <div class="mp-empty">
+            <div style="font-size:64px; margin-bottom:16px;">🛒</div>
+            <h3>Your cart is empty</h3>
+            <p>Add some products to get started!</p>
+            <a href="{{ path('app_marketplace_buyer') }}" class="mp-btn-primary" style="margin-top:16px; display:inline-block;">🛍️ Browse Products</a>
+        </div>
+    {% else %}
+        <!-- Cart Items -->
+        <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:24px;">
+            {% for item in cartItems %}
+                <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:20px; display:flex; gap:20px; align-items:center; box-shadow:var(--shadow-sm);">
+                    <!-- Image -->
+                    <div style="width:90px; height:90px; border-radius:10px; overflow:hidden; flex-shrink:0; background:var(--gray-100);">
+                        {% if item.image %}
+                            <img src="{{ item.image }}" alt="{{ item.product_title }}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentNode.innerHTML='<div style=font-size:32px;display:flex;align-items:center;justify-content:center;height:100%>📦</div>'">
+                        {% else %}
+                            <div style="display:flex; align-items:center; justify-content:center; height:100%; font-size:32px;">📦</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Info -->
+                    <div style="flex:1;">
+                        <h4 style="font-family:var(--font-display); font-size:16px; font-weight:700; color:var(--gray-900); margin-bottom:4px;">{{ item.product_title }}</h4>
+                        <div style="font-size:12px; color:var(--gray-400); margin-bottom:8px;">📂 {{ item.category }} · {{ item.type }}</div>
+                        <div style="font-size:18px; font-weight:700; color:#2E7D32;">{{ item.price|number_format(2) }} TND</div>
+                    </div>
+
+                    <!-- Quantity update -->
+                    <form method="POST" action="{{ path('app_marketplace_cart_update') }}" style="display:flex; align-items:center; gap:8px;">
+                        <input type="hidden" name="product_id" value="{{ item.product_id }}">
+                        <input type="number" name="quantity" value="{{ item.cart_qty }}" min="1" max="{{ item.stock }}"
+                               class="mp-qty-input" style="width:70px;" onchange="this.form.submit()">
+                    </form>
+
+                    <!-- Subtotal -->
+                    <div style="text-align:right; min-width:100px;">
+                        <div style="font-size:12px; color:var(--gray-400);">Subtotal</div>
+                        <div style="font-size:18px; font-weight:800; color:var(--blue-primary);">{{ (item.price * item.cart_qty)|number_format(2) }} TND</div>
+                    </div>
+
+                    <!-- Remove -->
+                    <form method="POST" action="{{ path('app_marketplace_cart_remove', {productId: item.product_id}) }}">
+                        <button type="submit" style="background:none; border:none; cursor:pointer; font-size:20px; color:#EF4444;" title="Remove">🗑️</button>
+                    </form>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Total & Checkout -->
+        <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:24px; box-shadow:var(--shadow-sm);">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                    <div style="font-size:14px; color:var(--gray-500);">Total ({{ cartItems|length }} item{{ cartItems|length > 1 ? 's' : '' }})</div>
+                    <div style="font-family:var(--font-display); font-size:36px; font-weight:900; color:#2E7D32;">{{ total|number_format(2) }} TND</div>
+                </div>
+                <a href="{{ path('app_marketplace_checkout') }}" class="mp-btn-primary" style="padding:16px 40px; font-size:16px; border-radius:50px;">
+                    🛒 Proceed to Checkout
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

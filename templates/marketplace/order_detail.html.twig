@@ -1,0 +1,57 @@
+{% extends 'base.html.twig' %}
+{% block title %}Order #{{ facture.id_facture }} — WanderLust{% endblock %}
+{% block content %}
+<div class="mp-topnav">
+    <div class="mp-topnav-inner">
+        <a href="{{ path('app_marketplace_orders') }}" class="mp-nav-btn mp-nav-back">← My Orders</a>
+        <span style="font-size:16px; font-weight:700; color:white;">🧾 Invoice #{{ facture.id_facture }}</span>
+        <span></span>
+    </div>
+</div>
+<div class="mp-page-content" style="max-width:800px;">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px;">
+        <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:24px; box-shadow:var(--shadow-sm);">
+            <h3 style="font-family:var(--font-display); font-size:18px; font-weight:700; margin-bottom:16px;">📋 Order Info</h3>
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:14px;">
+                <div><span style="color:var(--gray-400);">Order #:</span> <strong>{{ facture.id_facture }}</strong></div>
+                <div><span style="color:var(--gray-400);">Date:</span> <strong>{{ facture.date_facture|date('d M Y, H:i') }}</strong></div>
+                <div><span style="color:var(--gray-400);">Payment:</span> <strong>{{ facture.payment_method == 'online' ? '💳 Online' : '💵 Cash on Delivery' }}</strong></div>
+                <div><span style="color:var(--gray-400);">Status:</span>
+                    <span class="mp-status-badge {{ facture.delivery_status }}" style="margin-left:4px;">
+                        {% if facture.delivery_status == 'confirmed' %}✅ Confirmed{% elseif facture.delivery_status == 'cancelled' %}❌ Cancelled{% else %}⏳ Pending{% endif %}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% if address %}
+        <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:24px; box-shadow:var(--shadow-sm);">
+            <h3 style="font-family:var(--font-display); font-size:18px; font-weight:700; margin-bottom:16px;">📦 Delivery Address</h3>
+            <div style="font-size:14px; color:var(--gray-700); line-height:1.8;">
+                <div><strong>{{ address.full_name }}</strong></div>
+                <div>📞 {{ address.phone }}</div>
+                <div>📍 {{ address.address }}, {{ address.city }} {{ address.postal_code }}</div>
+                {% if address.notes %}<div style="color:var(--gray-400);">📝 {{ address.notes }}</div>{% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:24px; box-shadow:var(--shadow-sm);">
+        <h3 style="font-family:var(--font-display); font-size:18px; font-weight:700; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--gray-100);">🛍️ Items Ordered</h3>
+        {% for item in items %}
+        <div style="display:flex; gap:16px; align-items:center; padding:12px 0; border-bottom:1px solid var(--gray-100);">
+            <div style="width:60px; height:60px; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--gray-100);">
+                {% if item.product_image %}
+                    <img src="{{ item.product_image }}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentNode.innerHTML='📦'">
+                {% else %}<div style="display:flex; align-items:center; justify-content:center; height:100%; font-size:24px;">📦</div>{% endif %}
+            </div>
+            <div style="flex:1;"><div style="font-weight:600; color:var(--gray-900); margin-bottom:4px;">{{ item.product_title }}</div><div style="font-size:12px; color:var(--gray-400);">× {{ item.quantity }} · {{ item.price|number_format(2) }} TND each</div></div>
+            <div style="font-weight:700; color:var(--blue-primary); white-space:nowrap;">{{ (item.price * item.quantity)|number_format(2) }} TND</div>
+        </div>
+        {% endfor %}
+        <div style="display:flex; justify-content:space-between; align-items:center; padding-top:16px; margin-top:8px;">
+            <span style="font-size:16px; font-weight:600;">Total:</span>
+            <span style="font-family:var(--font-display); font-size:28px; font-weight:900; color:#2E7D32;">{{ facture.total_price|number_format(2) }} TND</span>
+        </div>
+    </div>
+</div>
+{% endblock %}

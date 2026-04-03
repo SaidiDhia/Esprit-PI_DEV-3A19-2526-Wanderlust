@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+{% block title %}My Orders — WanderLust{% endblock %}
+{% block content %}
+
+<div class="mp-topnav">
+    <div class="mp-topnav-inner">
+        <a href="{{ path('app_marketplace_buyer') }}" class="mp-nav-btn mp-nav-back">← Back to Shop</a>
+        <span style="font-size:16px; font-weight:700; color:white;">🧾 My Invoices</span>
+        <span></span>
+    </div>
+</div>
+
+<div class="mp-page-content" style="max-width:900px;">
+    {% for msg in app.flashes('success') %}
+        <div class="flash flash-success">{{ msg }}</div>
+    {% endfor %}
+
+    {% if factures is empty %}
+        <div class="mp-empty">
+            <div style="font-size:64px; margin-bottom:16px;">🧾</div>
+            <h3>No orders yet</h3>
+            <p>Your purchase history will appear here.</p>
+            <a href="{{ path('app_marketplace_buyer') }}" class="mp-btn-primary" style="margin-top:16px; display:inline-block;">🛍️ Start Shopping</a>
+        </div>
+    {% else %}
+        <div style="display:flex; flex-direction:column; gap:16px;">
+            {% for f in factures %}
+                <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:24px; box-shadow:var(--shadow-sm);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <div style="font-size:12px; color:var(--gray-400); margin-bottom:4px;">Order #{{ f.id_facture }}</div>
+                            <div style="font-family:var(--font-display); font-size:20px; font-weight:700; color:var(--gray-900);">
+                                {{ f.total_price|number_format(2) }} TND
+                            </div>
+                            <div style="font-size:13px; color:var(--gray-500); margin-top:4px;">
+                                📅 {{ f.date_facture|date('d M Y, H:i') }}
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                            <span class="mp-status-badge {{ f.delivery_status }}">
+                                {% if f.delivery_status == 'confirmed' %}✅ Confirmed
+                                {% elseif f.delivery_status == 'cancelled' %}❌ Cancelled
+                                {% else %}⏳ Pending{% endif %}
+                            </span>
+                            <span style="font-size:12px; background:var(--gray-100); padding:3px 10px; border-radius:20px; color:var(--gray-500);">
+                                {{ f.payment_method == 'online' ? '💳 Online' : '💵 Cash' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--gray-100);">
+                        <a href="{{ path('app_marketplace_order_detail', {id: f.id_facture}) }}" class="mp-btn-outline">🔍 View Details</a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
