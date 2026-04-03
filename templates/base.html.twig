@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}WanderLust{% endblock %}</title>
@@ -18,12 +19,7 @@
     <div class="header-top">
         <!-- Contact Info -->
         <div class="contact-info">
-            <span class="contact-line">📞 (+216) 71 862 710</span>
-            <span class="contact-line">📱 (+216) 95 768 683</span>
-        </div>
-
-        <!-- Logo Center -->
-        <div class="logo-wrap">
+            <div class="logo-wrap">
             <a href="{{ path('app_home') }}" class="logo-link">
                 <div class="logo-icon">
                     <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -36,6 +32,30 @@
                 </div>
                 <span class="logo-text">WanderLust</span>
             </a>
+        </div>
+        </div>
+
+        <!-- Logo Center -->
+        <div class="logo-wrap">
+        <!-- Nav Bar -->
+    <nav class="nav-bar">
+        <a href="{{ path('app_activities') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_activities' %}active{% endif %}">
+            <span class="nav-icon">📅</span> ACTIVITÉS
+        </a>
+        <a href="{{ path('app_booking') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_booking' %}active{% endif %}">
+            <span class="nav-icon">🏨</span> BOOKING
+        </a>
+        <a href="{{ path('app_messaging') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_messaging' %}active{% endif %}">
+            <span class="nav-icon">💬</span> MESSAGING
+        </a>
+        <a href="{{ path('app_blog') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_blog' %}active{% endif %}">
+            <span class="nav-icon">📝</span> BLOG
+        </a>
+        <a href="{{ path('app_marketplace') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_marketplace' %}active{% endif %}">
+            <span class="nav-icon">🛒</span> MARKETPLACE
+        </a>
+    </nav>
+            
         </div>
 
         <!-- Profile -->
@@ -56,24 +76,7 @@
         </div>
     </div>
 
-    <!-- Nav Bar -->
-    <nav class="nav-bar">
-        <a href="{{ path('app_activities') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_activities' %}active{% endif %}">
-            <span class="nav-icon">📅</span> ACTIVITÉS
-        </a>
-        <a href="{{ path('app_booking') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_booking' %}active{% endif %}">
-            <span class="nav-icon">🏨</span> BOOKING
-        </a>
-        <a href="{{ path('app_messaging') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_messaging' %}active{% endif %}">
-            <span class="nav-icon">💬</span> MESSAGING
-        </a>
-        <a href="{{ path('app_blog') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_blog' %}active{% endif %}">
-            <span class="nav-icon">📝</span> BLOG
-        </a>
-        <a href="{{ path('app_marketplace') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_marketplace' %}active{% endif %}">
-            <span class="nav-icon">🛒</span> MARKETPLACE
-        </a>
-    </nav>
+    
     <div class="header-separator"></div>
 </header>
 

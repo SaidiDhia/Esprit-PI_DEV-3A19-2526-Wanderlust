@@ -1,0 +1,108 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ action }} Product — WanderLust{% endblock %}
+{% block content %}
+
+<div class="mp-page-content" style="max-width:700px;">
+    <div class="mp-form-card">
+        <div class="mp-form-header">
+            <h2>{{ action == 'Add' ? '➕ Add New Product' : '✏️ Edit Product' }}</h2>
+            <a href="{{ path('app_marketplace_seller') }}" class="mp-btn-ghost">← Back</a>
+        </div>
+
+        {% for msg in app.flashes('success') %}
+            <div class="flash flash-success">{{ msg }}</div>
+        {% endfor %}
+        {% for msg in app.flashes('error') %}
+            <div class="flash flash-error">{{ msg }}</div>
+        {% endfor %}
+
+        <form method="POST" action="{{ action == 'Add' ? path('app_marketplace_product_add') : path('app_marketplace_product_edit', {id: product.id}) }}">
+
+            <div class="mp-form-group">
+                <label class="mp-form-label">Product Title *</label>
+                <input type="text" name="title" required class="mp-form-input"
+                       placeholder="e.g. Sahara Backpack 60L"
+                       value="{{ product ? product.title : '' }}">
+            </div>
+
+            <div class="mp-form-group">
+                <label class="mp-form-label">Description *</label>
+                <textarea name="description" required class="mp-form-input" rows="4"
+                          placeholder="Describe your product...">{{ product ? product.description : '' }}</textarea>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Type *</label>
+                    <select name="type" required class="mp-form-input">
+                        <option value="For Sale" {{ product and product.type == 'For Sale' ? 'selected' : '' }}>For Sale</option>
+                        <option value="For Rent"  {{ product and product.type == 'For Rent'  ? 'selected' : '' }}>For Rent</option>
+                    </select>
+                </div>
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Category *</label>
+                    <select name="category" required class="mp-form-input">
+                        <option value="camping" {{ product and product.category == 'camping' ? 'selected' : '' }}>⛺ Camping</option>
+                        <option value="hiking"  {{ product and product.category == 'hiking'  ? 'selected' : '' }}>🥾 Hiking</option>
+                        <option value="beach"   {{ product and product.category == 'beach'   ? 'selected' : '' }}>🏖️ Beach</option>
+                        <option value="nature"  {{ product and product.category == 'nature'  ? 'selected' : '' }}>🌿 Nature</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Price (TND) *</label>
+                    <input type="number" name="price" required class="mp-form-input"
+                           placeholder="0.00" step="0.01" min="0"
+                           value="{{ product ? product.price : '' }}">
+                </div>
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Quantity *</label>
+                    <input type="number" name="quantity" required class="mp-form-input"
+                           placeholder="0" min="0"
+                           value="{{ product ? product.quantity : '' }}">
+                </div>
+            </div>
+
+            <div class="mp-form-group">
+                <label class="mp-form-label">Image URL</label>
+                <input type="url" name="image" class="mp-form-input"
+                       placeholder="https://... (Cloudinary, Unsplash, etc.)"
+                       value="{{ product ? product.image : '' }}"
+                       id="imageUrlInput">
+                <!-- Preview -->
+                <div id="imgPreview" style="margin-top:10px; display:{{ product and product.image ? 'block' : 'none' }};">
+                    <img id="previewImg" src="{{ product ? product.image : '' }}"
+                         style="max-width:200px; border-radius:8px; border:1px solid var(--gray-200);"
+                         onerror="this.style.display='none'">
+                </div>
+            </div>
+
+            <div style="display:flex; gap:12px; margin-top:24px;">
+                <button type="submit" class="mp-btn-primary" style="flex:1; padding:14px; font-size:15px;">
+                    {{ action == 'Add' ? '➕ Add Product' : '💾 Save Changes' }}
+                </button>
+                <a href="{{ path('app_marketplace_seller') }}" class="mp-btn-ghost" style="padding:14px 24px;">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+<script>
+document.getElementById('imageUrlInput').addEventListener('input', function() {
+    const preview = document.getElementById('imgPreview');
+    const img = document.getElementById('previewImg');
+    if (this.value) {
+        img.src = this.value;
+        preview.style.display = 'block';
+        img.style.display = 'block';
+    } else {
+        preview.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}
