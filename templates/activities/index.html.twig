@@ -1,127 +1,177 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Activités — WanderLust{% endblock %}
+{% block title %}Activités{% endblock %}
 
 {% block content %}
-
-<div class="page-hero">
-    <div class="page-hero-content">
-        <span class="page-hero-icon">📅</span>
-        <h1 class="page-hero-title">Activités & Events</h1>
-        <p class="page-hero-subtitle">Discover unforgettable experiences, tours, and events tailored for every type of traveler.</p>
+<div class="container mt-4 mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="mb-0">Liste des Activités</h1>
+        <a href="{{ path('app_activities_new') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Ajouter une activité
+        </a>
     </div>
+
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('info') %}
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+
+    {% if activities is empty %}
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-hiking fa-5x text-muted"></i>
+            </div>
+            <h3 class="text-muted mb-3">Aucune activité enregistrée</h3>
+            <p class="text-muted mb-4">Commencez par ajouter votre première activité !</p>
+            <a href="{{ path('app_activities_new') }}" class="btn btn-primary">
+                Créer une activité
+            </a>
+        </div>
+    {% else %}
+        <div class="row">
+            {% for activity in activities %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm border-0 rounded-3">
+                        {% if activity.image %}
+                            <img src="{{ asset('uploads/activities/' ~ activity.image) }}" class="card-img-top rounded-top-3" alt="{{ activity.titre }}" style="height: 200px; object-fit: cover;">
+                        {% else %}
+                            <div class="card-img-top rounded-top-3 bg-light d-flex align-items-center justify-content-center" style="height: 200px;">
+                                <i class="fas fa-hiking fa-3x text-muted"></i>
+                            </div>
+                        {% endif %}
+                        <div class="card-body d-flex flex-column">
+                            <div class="mb-2">
+                                <span class="badge bg-secondary me-1">{{ activity.categorie ? activity.categorie.value : 'N/A' }}</span>
+                                <span class="badge bg-primary">{{ activity.typeActivite ?: 'N/A' }}</span>
+                            </div>
+                            <h5 class="card-title">{{ activity.titre }}</h5>
+                            <p class="card-text text-muted small">{{ activity.description|slice(0, 100) }}{% if activity.description|length > 100 %}...{% endif %}</p>
+                            <div class="mt-auto">
+                                <div class="btn-group w-100" role="group">
+                                    <a href="{{ path('app_activities_show', {'id': activity.id}) }}" class="btn btn-outline-info btn-sm">
+                                        Voir
+                                    </a>
+                                    <a href="{{ path('app_activities_edit', {'id': activity.id}) }}" class="btn btn-outline-warning btn-sm">
+                                        Modifier
+                                    </a>
+                                    <form method="post" action="{{ path('app_activities_delete', {'id': activity.id}) }}" class="delete-form" style="display: inline;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ activity.id) }}">
+                                        <button type="button" class="btn btn-outline-danger btn-sm delete-btn" data-title="{{ activity.titre }}">
+                                            Supprimer
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
 </div>
+{% endblock %}
 
-<div class="page-content">
-
-    <!-- Filters -->
-    <div class="search-filters-bar">
-        <div class="filter-group">
-            <span class="filter-label">Destination</span>
-            <input type="text" class="filter-input" placeholder="Where? (e.g. Tunis, Paris...)">
-        </div>
-        <div class="filter-group">
-            <span class="filter-label">Category</span>
-            <select class="filter-input">
-                <option>All Categories</option>
-                <option>Adventure</option>
-                <option>Cultural</option>
-                <option>Gastronomy</option>
-                <option>Nature</option>
-                <option>Sports</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <span class="filter-label">Date</span>
-            <input type="date" class="filter-input">
-        </div>
-        <div class="filter-group" style="flex:0 0 auto;">
-            <button class="btn btn-primary" style="width:100%; justify-content:center;">🔍 Search</button>
-        </div>
-    </div>
-
-    <!-- Cards Grid -->
-    <div class="content-grid">
-
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#1D4ED8,#7C3AED);">🧗</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Cap Bon, Tunisia &nbsp;·&nbsp; 🗓️ Apr 15</div>
-                <div class="card-title">Rock Climbing Adventure</div>
-                <p class="card-text">Guided half-day rock climbing session with certified instructors. All equipment provided. Suitable for beginners.</p>
-            </div>
-            <div class="card-footer">
-                <span class="price">79 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#059669,#0EA5E9);">🏛️</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Carthage, Tunisia &nbsp;·&nbsp; 🗓️ Apr 18</div>
-                <div class="card-title">Ancient Ruins Tour</div>
-                <p class="card-text">Walk through 3,000 years of history with an expert archaeologist guide. Includes museum entry.</p>
-            </div>
-            <div class="card-footer">
-                <span class="price">45 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#F59E0B,#EF4444);">🍽️</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Tunis Medina &nbsp;·&nbsp; 🗓️ Apr 20</div>
-                <div class="card-title">Tunisian Cooking Class</div>
-                <p class="card-text">Learn to prepare traditional Tunisian dishes with a local chef in the heart of the Medina. Lunch included.</p>
-            </div>
-            <div class="card-footer">
-                <span class="price">120 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#8B5CF6,#EC4899);">🐪</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Douz, Tunisia &nbsp;·&nbsp; 🗓️ Apr 25</div>
-                <div class="card-title">Sahara Desert Camel Trek</div>
-                <p class="card-text">Spend a magical sunset on camelback in the Sahara dunes. Overnight camping option available.</p>
-            </div>
-            <div class="card-footer">
-                <span class="price">200 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#10B981,#3B82F6);">🏄</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Hammamet &nbsp;·&nbsp; 🗓️ May 2</div>
-                <div class="card-title">Surfing Lessons</div>
-                <p class="card-text">2-hour beginner surfing course on the Mediterranean coast. Board rental and wetsuit included.</p>
-            </div>
-            <div class="card-footer">
-                <span class="price">95 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#6366F1,#0EA5E9);">🎨</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Sidi Bou Said &nbsp;·&nbsp; 🗓️ May 5</div>
-                <div class="card-title">Art & Ceramics Workshop</div>
-                <p class="card-text">Create your own traditional Tunisian ceramic art piece guided by local artisans. Take your work home.</p>
-            </div>
-            <div class="card-footer">
-                <span class="price">65 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
-            </div>
-        </div>
-
-    </div>
-</div>
-
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gérer les confirmations de suppression
+    document.querySelectorAll('.delete-btn').forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const title = this.getAttribute('data-title');
+            const form = this.closest('.delete-form');
+            
+            // Créer une modal de confirmation
+            const modal = document.createElement('div');
+            modal.className = 'modal fade show';
+            modal.style.display = 'block';
+            modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+            modal.style.position = 'fixed';
+            modal.style.top = '0';
+            modal.style.left = '0';
+            modal.style.width = '100%';
+            modal.style.height = '100%';
+            modal.style.zIndex = '9999';
+            
+            modal.innerHTML = `
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Confirmation de suppression
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" onclick="closeModal(this)"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p><strong>Êtes-vous sûr de vouloir supprimer cette activité ?</strong></p>
+                            <p class="text-muted">Cette action est irréversible et supprimera définitivement l'activité "<strong>${title}</strong>".</p>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal(this)">
+                                <i class="fas fa-times me-2"></i>Annuler
+                            </button>
+                            <button type="button" class="btn btn-danger" onclick="executeDelete(this)">
+                                <i class="fas fa-trash me-2"></i>Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Fermeture avec Escape
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') {
+                    closeModal(modal);
+                    document.removeEventListener('keydown', handleEscape);
+                }
+            };
+            document.addEventListener('keydown', handleEscape);
+            
+            // Fermeture en cliquant à l'extérieur
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeModal(modal);
+                }
+            });
+        });
+    });
+    
+    function closeModal(modalElement) {
+        if (modalElement instanceof HTMLElement) {
+            modalElement.remove();
+        } else {
+            const modal = document.querySelector('.modal');
+            if (modal) {
+                modal.remove();
+            }
+        }
+    }
+    
+    function executeDelete(button) {
+        const modal = button.closest('.modal');
+        closeModal(modal);
+        const form = button.closest('.delete-form');
+        form.submit();
+    }
+});
+</script>
 {% endblock %}
