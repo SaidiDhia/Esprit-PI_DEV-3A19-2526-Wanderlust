@@ -64,10 +64,9 @@
                         
                         <!-- Delete Button (only for creator) -->
                         {% if conv.user_role == 'CREATOR' %}
-                            <form method="POST" action="{{ path('messaging_conversation_delete', {id: conv.id}) }}" 
-                                  onsubmit="return confirm('Delete this conversation and all messages? This cannot be undone!')" style="display: inline;">
-                                <button type="submit" class="btn" style="padding: 6px 16px; background: #EF4444; color: white; border: none; border-radius: 8px; cursor: pointer;">🗑️ Delete</button>
+                            <form method="POST" id="deleteForm_{{ conv.id }}" action="{{ path('messaging_conversation_delete', {id: conv.id}) }}" style="display: none;">
                             </form>
+                            <button type="button" class="btn" style="padding: 6px 16px; background: #EF4444; color: white; border: none; border-radius: 8px; cursor: pointer;" onclick="prepareDeleteConversation({{ conv.id }})">🗑️ Delete</button>
                         {% endif %}
                     </div>
                 </div>
@@ -113,8 +112,21 @@
         </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 16px; padding: 32px; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+            <h2 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2937;">Delete Conversation</h2>
+            <p style="color: #6b7280; margin: 0 0 24px 0;">Are you sure you want to delete this conversation and all messages? This cannot be undone.</p>
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button type="button" onclick="closeDeleteModal()" class="btn" style="padding: 8px 16px; background: #e5e7eb; color: #1f2937; border: none; border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button type="button" onclick="submitDelete()" class="btn" style="padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer;">Delete</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let currentConversationId = null;
+        let deleteConversationId = null;
         
         function renameConversation(id, currentName) {
             currentConversationId = id;
@@ -137,9 +149,36 @@
             }
         }
         
+        function prepareDeleteConversation(id) {
+            deleteConversationId = id;
+            document.getElementById('deleteModal').style.display = 'flex';
+        }
+        
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+            deleteConversationId = null;
+        }
+        
+        function submitDelete() {
+            if (deleteConversationId) {
+                const form = document.getElementById('deleteForm_' + deleteConversationId);
+                if (form) {
+                    form.submit();
+                }
+            }
+            closeDeleteModal();
+        }
+        
+        // Close modals when clicking outside
         document.getElementById('renameModal')?.addEventListener('click', function(e) {
             if (e.target === this) {
                 closeRenameModal();
+            }
+        });
+        
+        document.getElementById('deleteModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeDeleteModal();
             }
         });
     </script>

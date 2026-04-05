@@ -17,7 +17,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 class MessagingController extends AbstractController
 {
     // Hardcoded current user (replace later with real auth)
-    private string $CURRENT_USER_ID = '123e4567-e89b-12d3-a456-426614174000';
+    private string $CURRENT_USER_ID = 'f99dd272-244b-432b-9f35-9b746ba4e2f9';
     
 
    private string $uploadDir;
@@ -118,7 +118,7 @@ public function index(EntityManagerInterface $em): Response
         if ($request->isMethod('POST')) {
             $name = trim($request->request->get('name'));
             $type = $request->request->get('type');
-            $participantEmail = trim($request->request->get('participant_email'));
+            $participantEmails = $request->request->get('participant_emails', []);
             
             // Validate: name cannot be empty
             if (empty($name)) {
@@ -126,23 +126,37 @@ public function index(EntityManagerInterface $em): Response
                 return $this->redirectToRoute('app_messaging');
             }
             
-            // Validate: email cannot be empty
-            if (empty($participantEmail)) {
-                $this->addFlash('error', 'Participant email cannot be empty!');
+            // For GROUP conversations, need at least 2 participants (excluding current user)
+            if ($type === 'GROUP' && count($participantEmails) < 2) {
+                $this->addFlash('error', 'Group conversation needs at least 2 participants!');
                 return $this->redirectToRoute('app_messaging');
             }
             
-            // Find participant by email
-            $conn = $em->getConnection();
-            $sql = "SELECT user_id FROM users WHERE email = :email";
-            $stmt = $conn->prepare($sql);
-            $stmt->bindValue('email', $participantEmail);
-            $result = $stmt->executeQuery();
-            $participant = $result->fetchAssociative();
-            
-            if (!$participant) {
-                $this->addFlash('error', 'User not found with email: ' . $participantEmail);
+            // For PERSONAL, need exactly 1 participant
+            if ($type === 'PERSONAL' && count($participantEmails) != 1) {
+                $this->addFlash('error', 'Personal conversation needs exactly 1 participant!');
                 return $this->redirectToRoute('app_messaging');
+            }
+            
+            // Find all participants
+            $conn = $em->getConnection();
+            $participantIds = [];
+            
+            foreach ($participantEmails as $email) {
+                $email = trim($email);
+                if (empty($email)) continue;
+                
+                $sql = "SELECT user_id FROM users WHERE email = :email";
+                $stmt = $conn->prepare($sql);
+                $stmt->bindValue('email', $email);
+                $result = $stmt->executeQuery();
+                $participant = $result->fetchAssociative();
+                
+                if (!$participant) {
+                    $this->addFlash('error', 'User not found with email: ' . $email);
+                    return $this->redirectToRoute('app_messaging');
+                }
+                $participantIds[] = $participant['user_id'];
             }
             
             // Create conversation
@@ -161,12 +175,14 @@ public function index(EntityManagerInterface $em): Response
             $cu->setRole('CREATOR');
             $em->persist($cu);
             
-            // Add participant as MEMBER
-            $cu2 = new ConversationUser();
-            $cu2->setConversationId($conversation->getId());
-            $cu2->setUserId($participant['user_id']);
-            $cu2->setRole('MEMBER');
-            $em->persist($cu2);
+            // Add participants as MEMBERS
+            foreach ($participantIds as $userId) {
+                $cu2 = new ConversationUser();
+                $cu2->setConversationId($conversation->getId());
+                $cu2->setUserId($userId);
+                $cu2->setRole('MEMBER');
+                $em->persist($cu2);
+            }
             
             $em->flush();
             
@@ -434,6 +450,263 @@ public function archiveConversation(int $id, EntityManagerInterface $em): Respon
     
     $this->addFlash('success', 'Conversation archived/unarchived!');
     return $this->redirectToRoute('app_messaging');
+}
+
+#[Route('/conversation/{id}/participants', name: 'messaging_conversation_participants', methods: ['GET'])]
+public function getParticipants(int $id, EntityManagerInterface $em): Response
+{
+    $conn = $em->getConnection();
+    
+    // Check if user is in conversation
+    $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('convId', $id);
+    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $result = $stmt->executeQuery();
+    $userRole = $result->fetchOne();
+    
+    if (!$userRole) {
+        $this->addFlash('error', 'You are not in this conversation');
+        return $this->redirectToRoute('app_messaging');
+    }
+    
+    // Get all participants
+    $sql = "SELECT cu.user_id, cu.role, cu.joined_at, cu.added_by, u.email, u.full_name 
+            FROM conversation_user cu
+            JOIN users u ON cu.user_id = u.user_id
+            WHERE cu.conversation_id = :convId AND cu.is_active = 1
+            ORDER BY 
+                CASE cu.role 
+                    WHEN 'CREATOR' THEN 1
+                    WHEN 'ADMIN' THEN 2
+                    ELSE 3
+                END, u.full_name";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('convId', $id);
+    $result = $stmt->executeQuery();
+    $participants = $result->fetchAllAssociative();
+    
+    return $this->render('messaging/participants.html.twig', [
+        'conversationId' => $id,
+        'participants' => $participants,
+        'userRole' => $userRole,
+    ]);
+}
+
+#[Route('/conversation/{id}/participant/add', name: 'messaging_conversation_add_participant', methods: ['POST'])]
+public function addParticipant(int $id, Request $request, EntityManagerInterface $em): Response
+{
+    $email = trim($request->request->get('email'));
+    $conn = $em->getConnection();
+    
+    // Check if current user is CREATOR or ADMIN
+    $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('convId', $id);
+    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $result = $stmt->executeQuery();
+    $userRole = $result->fetchOne();
+    
+    if (!in_array($userRole, ['CREATOR', 'ADMIN'])) {
+        $this->addFlash('error', 'Only CREATOR and ADMIN can add participants');
+        return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+    }
+    
+    // Find user by email
+    $sql = "SELECT user_id FROM users WHERE email = :email";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('email', $email);
+    $result = $stmt->executeQuery();
+    $newUser = $result->fetchAssociative();
+    
+    if (!$newUser) {
+        $this->addFlash('error', 'User not found with email: ' . $email);
+        return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+    }
+    
+        // Check if user was previously in conversation (soft deleted)
+        $sql = "SELECT id, is_active FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('convId', $id);
+        $stmt->bindValue('userId', $newUser['user_id']);
+        $result = $stmt->executeQuery();
+        $existing = $result->fetchAssociative();
+        
+        if ($existing) {
+            if ($existing['is_active'] == 1) {
+                $this->addFlash('error', 'User already in conversation');
+                return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+            } else {
+                // Reactivate the user (was soft deleted)
+                $sql = "UPDATE conversation_user SET is_active = 1, joined_at = NOW(), added_by = :addedBy WHERE id = :id";
+                $stmt = $conn->prepare($sql);
+                $stmt->bindValue('id', $existing['id']);
+                $stmt->bindValue('addedBy', $this->CURRENT_USER_ID);
+                $stmt->executeStatement();
+                
+                // Add system message
+                $sql = "INSERT INTO message (conversation_id, sender_id, content, message_type, created_at) 
+                        VALUES (:convId, :senderId, :content, 'TEXT', NOW())";
+                $stmt = $conn->prepare($sql);
+                $stmt->bindValue('convId', $id);
+                $stmt->bindValue('senderId', $this->CURRENT_USER_ID);
+                $stmt->bindValue('content', '👤 ' . $email . ' was re-added to the conversation');
+                $stmt->executeStatement();
+                
+                $this->addFlash('success', 'User re-added to conversation!');
+                return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+            }
+        }
+        
+        // Add new participant as MEMBER
+        $sql = "INSERT INTO conversation_user (conversation_id, user_id, role, added_by, joined_at, is_active) 
+                VALUES (:convId, :userId, 'MEMBER', :addedBy, NOW(), 1)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('convId', $id);
+        $stmt->bindValue('userId', $newUser['user_id']);
+        $stmt->bindValue('addedBy', $this->CURRENT_USER_ID);
+        $stmt->executeStatement();
+        
+        $this->addFlash('success', 'Participant added successfully!');
+        return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+    }
+
+    #[Route('/conversation/{id}/participant/{userId}/remove', name: 'messaging_conversation_remove_participant', methods: ['POST'])]
+    public function removeParticipant(int $id, string $userId, EntityManagerInterface $em): Response
+    {
+        $conn = $em->getConnection();
+        
+        // Check if current user is CREATOR or ADMIN
+        $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('convId', $id);
+        $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+        $result = $stmt->executeQuery();
+        $userRole = $result->fetchOne();
+        
+        if (!in_array($userRole, ['CREATOR', 'ADMIN'])) {
+            $this->addFlash('error', 'Only CREATOR and ADMIN can remove participants');
+            return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+        }
+        
+        // Cannot remove CREATOR
+        $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('convId', $id);
+        $stmt->bindValue('userId', $userId);
+        $result = $stmt->executeQuery();
+        $targetRole = $result->fetchOne();
+        
+        if ($targetRole === 'CREATOR') {
+            $this->addFlash('error', 'Cannot remove the conversation creator');
+            return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+        }
+        
+        // Soft delete (set is_active = 0)
+        $sql = "UPDATE conversation_user SET is_active = 0 WHERE conversation_id = :convId AND user_id = :userId";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('convId', $id);
+        $stmt->bindValue('userId', $userId);
+        $stmt->executeStatement();
+        
+        // Add system message
+        $sql = "INSERT INTO message (conversation_id, sender_id, content, message_type, created_at) 
+                VALUES (:convId, :senderId, :content, 'TEXT', NOW())";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('convId', $id);
+        $stmt->bindValue('senderId', $this->CURRENT_USER_ID);
+        $stmt->bindValue('content', '👤 A participant was removed from the conversation');
+        $stmt->executeStatement();
+        
+        $this->addFlash('success', 'Participant removed successfully!');
+        return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+}
+
+#[Route('/conversation/{id}/leave', name: 'messaging_conversation_leave', methods: ['POST'])]
+public function leaveConversation(int $id, EntityManagerInterface $em): Response
+{
+    $conn = $em->getConnection();
+    
+    // Check if user is CREATOR (creator cannot leave, must delete)
+    $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('convId', $id);
+    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $result = $stmt->executeQuery();
+    $userRole = $result->fetchOne();
+    
+    if ($userRole === 'CREATOR') {
+        $this->addFlash('error', 'Creator cannot leave. Delete the conversation instead.');
+        return $this->redirectToRoute('app_messaging');
+    }
+    
+    // Soft delete user from conversation
+    $sql = "UPDATE conversation_user SET is_active = 0 WHERE conversation_id = :convId AND user_id = :userId";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('convId', $id);
+    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $stmt->executeStatement();
+    
+    $this->addFlash('success', 'You left the conversation');
+    return $this->redirectToRoute('app_messaging');
+}
+
+#[Route('/conversation/{id}/promote/{userId}', name: 'messaging_conversation_promote', methods: ['POST'])]
+public function promoteToAdmin(int $id, string $userId, EntityManagerInterface $em): Response
+{
+    $conn = $em->getConnection();
+    
+    // Check if current user is CREATOR
+    $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('convId', $id);
+    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $result = $stmt->executeQuery();
+    $userRole = $result->fetchOne();
+    
+    if ($userRole !== 'CREATOR') {
+        $this->addFlash('error', 'Only CREATOR can promote to ADMIN');
+        return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+    }
+    
+    // Promote user to ADMIN
+    $sql = "UPDATE conversation_user SET role = 'ADMIN' WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('convId', $id);
+    $stmt->bindValue('userId', $userId);
+    $stmt->executeStatement();
+    
+    $this->addFlash('success', 'User promoted to ADMIN');
+    return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+}
+
+#[Route('/conversation/{id}/demote/{userId}', name: 'messaging_conversation_demote', methods: ['POST'])]
+public function demoteToMember(int $id, string $userId, EntityManagerInterface $em): Response
+{
+    $conn = $em->getConnection();
+    
+    // Check if current user is CREATOR or ADMIN
+    $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('convId', $id);
+    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $result = $stmt->executeQuery();
+    $userRole = $result->fetchOne();
+    
+    if (!in_array($userRole, ['CREATOR', 'ADMIN'])) {
+        $this->addFlash('error', 'Only CREATOR and ADMIN can demote');
+        return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+    }
+    
+    // Demote user to MEMBER
+    $sql = "UPDATE conversation_user SET role = 'MEMBER' WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('convId', $id);
+    $stmt->bindValue('userId', $userId);
+    $stmt->executeStatement();
+    
+    $this->addFlash('success', 'User demoted to MEMBER');
+    return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
 }
 
 }
