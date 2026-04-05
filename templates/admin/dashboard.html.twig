@@ -1,0 +1,486 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Admin Dashboard — Wanderlust{% endblock %}
+
+{% block content %}
+<section class="min-h-[calc(100vh-64px)] bg-background px-4 py-10">
+    <div class="container mx-auto space-y-8">
+        {% for message in app.flashes('success') %}
+            <div class="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-medium text-primary">{{ message }}</div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">{{ message }}</div>
+        {% endfor %}
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-2xl border border-border bg-card p-5">
+                <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Total users</p>
+                <p class="mt-2 text-3xl font-heading font-bold text-foreground">{{ stats.total }}</p>
+            </div>
+            <div class="rounded-2xl border border-border bg-card p-5">
+                <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Active users</p>
+                <p class="mt-2 text-3xl font-heading font-bold text-primary">{{ stats.active }}</p>
+            </div>
+            <div class="rounded-2xl border border-border bg-card p-5">
+                <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Banned users</p>
+                <p class="mt-2 text-3xl font-heading font-bold text-destructive">{{ stats.banned }}</p>
+            </div>
+            <div class="rounded-2xl border border-border bg-card p-5">
+                <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">New this month</p>
+                <p class="mt-2 text-3xl font-heading font-bold text-accent">{{ stats.newThisMonth }}</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-[280px_1fr]">
+            <aside class="rounded-[2rem] border border-border bg-card p-6 xl:sticky xl:top-24 xl:h-fit">
+                <div class="mb-6">
+                    <p class="text-xs font-bold uppercase tracking-[0.28em] text-primary">Navigation</p>
+                    <h2 class="mt-2 text-xl font-heading font-bold text-foreground">Modules</h2>
+                    <p class="mt-1 text-sm text-muted-foreground">Use this sidebar to move between platform sections.</p>
+                </div>
+
+                <nav class="space-y-2">
+                    <a href="{{ path('app_admin_dashboard') }}" class="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-bold text-primary">
+                        <span>Admin Dashboard</span>
+                        <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">Current</span>
+                    </a>
+                    <a href="{{ path('app_marketplace') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Marketplace</a>
+                    <a href="{{ path('app_booking') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Booking</a>
+                    <a href="{{ path('app_activities') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Activities</a>
+                    <a href="{{ path('app_blog') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Blog</a>
+                    <a href="{{ path('app_messaging') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Messaging</a>
+                </nav>
+
+                <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
+                    <div class="rounded-xl border border-border bg-secondary/20 p-3">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Admins</p>
+                        <p class="mt-1 text-xl font-heading font-bold text-foreground">{{ stats.admins }}</p>
+                    </div>
+                    <div class="rounded-xl border border-border bg-secondary/20 p-3">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Hosts</p>
+                        <p class="mt-1 text-xl font-heading font-bold text-foreground">{{ stats.hosts }}</p>
+                    </div>
+                    <div class="rounded-xl border border-border bg-secondary/20 p-3">
+                        <p class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Travelers</p>
+                        <p class="mt-1 text-xl font-heading font-bold text-foreground">{{ stats.participants }}</p>
+                    </div>
+                </div>
+            </aside>
+
+            <div class="space-y-6">
+                <div class="rounded-[2rem] border border-border bg-card p-6">
+                    <form method="get" action="{{ path('app_admin_dashboard') }}" class="grid grid-cols-1 gap-3 md:grid-cols-4">
+                        <input type="text" name="q" value="{{ filters.q }}" placeholder="Search name, email, phone" class="md:col-span-2 rounded-xl border border-border bg-secondary/30 px-3 py-2 text-sm">
+                        <select name="role" class="rounded-xl border border-border bg-secondary/30 px-3 py-2 text-sm">
+                            <option value="">All roles</option>
+                            {% for role in roles %}
+                                <option value="{{ role.value }}" {% if filters.role == role.value %}selected{% endif %}>{{ role.label }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="status" class="rounded-xl border border-border bg-secondary/30 px-3 py-2 text-sm">
+                            <option value="">Any status</option>
+                            <option value="active" {% if filters.status == 'active' %}selected{% endif %}>Active</option>
+                            <option value="banned" {% if filters.status == 'banned' %}selected{% endif %}>Banned</option>
+                        </select>
+                        <button type="submit" class="md:col-span-4 rounded-xl border border-border px-3 py-2 text-sm font-semibold transition-colors hover:bg-secondary/50">Apply Filters</button>
+                    </form>
+                </div>
+
+                <div class="rounded-[2rem] border border-border bg-card p-6">
+                    <div class="mb-5 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <h2 class="text-xl font-heading font-bold text-foreground">Users</h2>
+                            <p class="text-sm text-muted-foreground">Click Edit to open a modal, update avatars, passwords, roles, and 2FA values.</p>
+                        </div>
+                        <button type="button" onclick="openCreateUserModal()" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">
+                            <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+                            New User
+                        </button>
+                    </div>
+
+                    <div class="mb-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Users by Role</h3>
+                                <span class="text-xs text-muted-foreground">Circle chart</span>
+                            </div>
+                            <div class="mx-auto max-w-[320px]">
+                                <canvas id="usersRoleChart" height="220"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Users Trend</h3>
+                                <span class="text-xs text-muted-foreground">Curve chart</span>
+                            </div>
+                            <canvas id="usersTrendChart" height="220"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[1100px] border-collapse">
+                            <thead>
+                            <tr class="border-b border-border text-left">
+                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">User</th>
+                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Role</th>
+                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">2FA</th>
+                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</th>
+                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Created</th>
+                                <th class="py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for user in users %}
+                                {% set protectedUser = user.isAdmin or app.user.id == user.id %}
+                                {% set avatarSrc = user.profilePicture ? asset('uploads/profiles/' ~ user.profilePicture) : 'https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ user.fullName|url_encode %}
+                                <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                    <td class="py-4 pr-3">
+                                        <div class="flex items-center gap-4">
+                                            <div class="h-14 w-14 shrink-0 overflow-hidden rounded-full border-2 border-border bg-secondary/20">
+                                                <img src="{{ avatarSrc }}" alt="{{ user.fullName }}" class="h-full w-full object-cover">
+                                            </div>
+                                            <div class="min-w-0">
+                                                <p class="truncate font-semibold text-foreground">{{ user.fullName }}</p>
+                                                <p class="truncate text-sm text-muted-foreground">{{ user.email }}</p>
+                                                <p class="truncate text-xs text-muted-foreground">{{ user.phoneNumber ?: 'No phone number' }}</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 pr-3 text-sm font-medium text-foreground">{{ user.roleLabel }}</td>
+                                    <td class="py-4 pr-3 text-sm text-muted-foreground">{{ user.tfaLabel }}</td>
+                                    <td class="py-4 pr-3">
+                                        {% if user.isIsActive %}
+                                            <span class="inline-flex rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">Active</span>
+                                        {% else %}
+                                            <span class="inline-flex rounded-full bg-destructive/10 px-3 py-1 text-xs font-bold text-destructive">Banned</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="py-4 pr-3 text-sm text-muted-foreground">{{ user.createdAt|date('Y-m-d H:i') }}</td>
+                                    <td class="py-4">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onclick="openEditUserModal(this)"
+                                                data-update-url="{{ path('app_admin_user_update', { id: user.id }) }}"
+                                                data-update-token="{{ csrf_token('admin_user_update_' ~ user.id) }}"
+                                                data-id="{{ user.id }}"
+                                                data-full-name="{{ user.fullName|e('html_attr') }}"
+                                                data-email="{{ user.email|e('html_attr') }}"
+                                                data-phone-number="{{ user.phoneNumber|default('')|e('html_attr') }}"
+                                                data-role="{{ user.roleValue }}"
+                                                data-tfa-method="{{ user.tfaValue }}"
+                                                data-avatar-src="{{ user.profilePicture ? asset('uploads/profiles/' ~ user.profilePicture) : '' }}"
+                                                class="rounded-xl bg-foreground px-3 py-2 text-xs font-bold text-background transition-opacity hover:opacity-90"
+                                            >
+                                                Edit
+                                            </button>
+
+                                            <form method="post" action="{{ path('app_admin_user_toggle_ban', { id: user.id }) }}">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('admin_user_ban_' ~ user.id) }}">
+                                                <button type="submit" class="rounded-xl px-3 py-2 text-xs font-bold {{ protectedUser ? 'cursor-not-allowed bg-muted text-muted-foreground' : (user.isIsActive ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' : 'bg-primary/10 text-primary hover:bg-primary/20') }}" {% if protectedUser %}disabled title="Protected user"{% endif %}>
+                                                    {{ user.isIsActive ? 'Ban' : 'Unban' }}
+                                                </button>
+                                            </form>
+
+                                            <form method="post" action="{{ path('app_admin_user_delete', { id: user.id }) }}" onsubmit="return confirm('Delete this user? This action cannot be undone.');">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('admin_user_delete_' ~ user.id) }}">
+                                                <button type="submit" class="rounded-xl px-3 py-2 text-xs font-bold {{ protectedUser ? 'cursor-not-allowed bg-muted text-muted-foreground' : 'bg-destructive text-white hover:bg-destructive/90' }}" {% if protectedUser %}disabled title="Protected user"{% endif %}>Delete</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% else %}
+                                <tr>
+                                    <td colspan="6" class="py-10 text-center text-sm text-muted-foreground">No users found for current filters.</td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="user-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm">
+    <div class="w-full max-w-3xl rounded-[2rem] border border-border bg-background shadow-2xl">
+        <div class="flex items-start justify-between border-b border-border px-6 py-5">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[0.28em] text-primary">Administration</p>
+                <h3 id="user-modal-title" class="mt-1 text-2xl font-heading font-bold text-foreground">Create User</h3>
+                <p id="user-modal-subtitle" class="mt-1 text-sm text-muted-foreground">Add a user with avatar and 2FA settings.</p>
+            </div>
+            <button type="button" onclick="closeUserModal()" class="rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            </button>
+        </div>
+
+        <form id="user-form" method="post" action="{{ path('app_admin_user_create') }}" enctype="multipart/form-data" class="grid gap-6 px-6 py-6 lg:grid-cols-[220px_1fr]">
+            <input id="user-form-token" type="hidden" name="_token" value="{{ csrf_token('admin_user_create') }}">
+
+            <div class="space-y-4">
+                <div class="rounded-3xl border border-dashed border-border bg-secondary/30 p-4">
+                    <div id="user-avatar-frame" class="relative flex aspect-square items-center justify-center overflow-hidden rounded-3xl bg-secondary/50">
+                        <svg id="user-avatar-placeholder" class="h-14 w-14 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        <img id="user-avatar-image" class="absolute inset-0 hidden h-full w-full object-cover" alt="User avatar preview">
+                    </div>
+                    <label class="mt-4 block cursor-pointer rounded-xl border border-border bg-background px-4 py-2 text-center text-sm font-bold text-foreground transition-colors hover:bg-secondary/50">
+                        Change profile picture
+                        <input id="user-profile-picture" type="file" name="profilePicture" accept="image/*" class="hidden" onchange="previewModalAvatar(event)">
+                    </label>
+                </div>
+
+                <div class="rounded-2xl border border-border bg-secondary/20 p-4 text-sm text-muted-foreground">
+                    <p class="font-bold text-foreground">2FA options</p>
+                    <p class="mt-1">Authenticator App is available now. Face ID is kept as a placeholder for future support.</p>
+                </div>
+            </div>
+
+            <div class="space-y-5">
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div class="space-y-2">
+                        <label for="user-fullName" class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Full Name</label>
+                        <input id="user-fullName" type="text" name="fullName" required minlength="2" class="w-full rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    </div>
+                    <div class="space-y-2">
+                        <label for="user-email" class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Email</label>
+                        <input id="user-email" type="email" name="email" required class="w-full rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    </div>
+                    <div class="space-y-2">
+                        <label for="user-phoneNumber" class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Phone</label>
+                        <input id="user-phoneNumber" type="text" name="phoneNumber" pattern="\+?[0-9\s\-]{8,20}" placeholder="+216 22 333 444" class="w-full rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    </div>
+                    <div class="space-y-2">
+                        <label for="user-role" class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Role</label>
+                        <select id="user-role" name="role" class="w-full rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            {% for role in roles %}
+                                <option value="{{ role.value }}">{{ role.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="space-y-2">
+                        <label for="user-tfaMethod" class="text-xs font-bold uppercase tracking-wider text-muted-foreground">2FA Method</label>
+                        <select id="user-tfaMethod" name="tfaMethod" class="w-full rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                            {% for method in tfaMethods %}
+                                <option value="{{ method.value }}">{{ method.label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="space-y-2 md:col-span-2">
+                        <label for="user-password" class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Password</label>
+                        <input id="user-password" type="password" name="password" minlength="8" placeholder="Upper+lower+number" class="w-full rounded-xl border border-border bg-secondary/30 px-4 py-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20">
+                        <p class="text-xs text-muted-foreground">Leave blank when editing to keep the current password.</p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeUserModal()" class="rounded-xl border border-border px-5 py-3 text-sm font-bold text-foreground transition-colors hover:bg-secondary/50">Cancel</button>
+                    <button id="user-modal-submit" type="submit" class="rounded-xl bg-primary px-5 py-3 text-sm font-bold text-white transition-all hover:bg-primary/90">Create User</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const userModal = document.getElementById('user-modal');
+    const userForm = document.getElementById('user-form');
+    const userModalTitle = document.getElementById('user-modal-title');
+    const userModalSubtitle = document.getElementById('user-modal-subtitle');
+    const userModalSubmit = document.getElementById('user-modal-submit');
+    const userFormToken = document.getElementById('user-form-token');
+    const userFullName = document.getElementById('user-fullName');
+    const userEmail = document.getElementById('user-email');
+    const userPhoneNumber = document.getElementById('user-phoneNumber');
+    const userRole = document.getElementById('user-role');
+    const userTfaMethod = document.getElementById('user-tfaMethod');
+    const userPassword = document.getElementById('user-password');
+    const userAvatarImage = document.getElementById('user-avatar-image');
+    const userAvatarPlaceholder = document.getElementById('user-avatar-placeholder');
+    const profileInput = document.getElementById('user-profile-picture');
+
+    function initUserCharts() {
+        if (typeof Chart === 'undefined') {
+            return;
+        }
+
+        const roleChartElement = document.getElementById('usersRoleChart');
+        if (roleChartElement) {
+            new Chart(roleChartElement, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Admins', 'Hosts', 'Travelers'],
+                    datasets: [{
+                        data: [{{ stats.admins }}, {{ stats.hosts }}, {{ stats.participants }}],
+                        backgroundColor: ['#0ea5e9', '#f59e0b', '#10b981'],
+                        borderColor: ['#0ea5e9', '#f59e0b', '#10b981'],
+                        borderWidth: 1,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8,
+                            },
+                        },
+                    },
+                },
+            });
+        }
+
+        const trendChartElement = document.getElementById('usersTrendChart');
+        if (trendChartElement) {
+            const userCreationDates = [{% for user in users %}'{{ user.createdAt|date('Y-m-d') }}'{% if not loop.last %}, {% endif %}{% endfor %}];
+            const now = new Date();
+            const labels = [];
+            const counts = [];
+
+            for (let i = 5; i >= 0; i--) {
+                const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const year = date.getFullYear();
+                const month = date.getMonth();
+                const label = date.toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                labels.push(label);
+
+                let monthlyCount = 0;
+                userCreationDates.forEach((value) => {
+                    const createdAt = new Date(value + 'T00:00:00');
+                    if (createdAt.getFullYear() === year && createdAt.getMonth() === month) {
+                        monthlyCount++;
+                    }
+                });
+
+                counts.push(monthlyCount);
+            }
+
+            new Chart(trendChartElement, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'New Users',
+                        data: counts,
+                        borderColor: '#0ea5e9',
+                        backgroundColor: 'rgba(14, 165, 233, 0.16)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false,
+                        },
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0,
+                            },
+                        },
+                    },
+                },
+            });
+        }
+    }
+
+    function openCreateUserModal() {
+        userForm.action = '{{ path('app_admin_user_create') }}';
+        userFormToken.value = '{{ csrf_token('admin_user_create') }}';
+        userModalTitle.textContent = 'Create User';
+        userModalSubtitle.textContent = 'Add a user with avatar and 2FA settings.';
+        userModalSubmit.textContent = 'Create User';
+        userPassword.required = true;
+        userPassword.value = '';
+        userPassword.placeholder = 'Upper+lower+number';
+        userRole.value = 'PARTICIPANT';
+        userTfaMethod.value = 'NONE';
+        userFullName.value = '';
+        userEmail.value = '';
+        userPhoneNumber.value = '';
+        profileInput.value = '';
+        setAvatarPreview('', 'Wanderlust');
+        userModal.classList.remove('hidden');
+        userModal.classList.add('flex');
+    }
+
+    function openEditUserModal(button) {
+        const data = button.dataset;
+        userForm.action = data.updateUrl;
+        userFormToken.value = data.updateToken;
+        userModalTitle.textContent = 'Edit User';
+        userModalSubtitle.textContent = 'Update account details, avatar, role, and 2FA.';
+        userModalSubmit.textContent = 'Save Changes';
+        userPassword.required = false;
+        userPassword.value = '';
+        userPassword.placeholder = 'Leave blank to keep current password';
+        userFullName.value = data.fullName || '';
+        userEmail.value = data.email || '';
+        userPhoneNumber.value = data.phoneNumber || '';
+        userRole.value = data.role || 'PARTICIPANT';
+        userTfaMethod.value = data.tfaMethod || 'NONE';
+        profileInput.value = '';
+        setAvatarPreview(data.avatarSrc || '', data.fullName || 'Wanderlust');
+        userModal.classList.remove('hidden');
+        userModal.classList.add('flex');
+    }
+
+    function closeUserModal() {
+        userModal.classList.add('hidden');
+        userModal.classList.remove('flex');
+    }
+
+    function setAvatarPreview(src, seed) {
+        if (src) {
+            userAvatarImage.src = src;
+        } else {
+            userAvatarImage.src = 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + encodeURIComponent(seed || 'Wanderlust');
+        }
+
+        userAvatarImage.classList.remove('hidden');
+        userAvatarPlaceholder.classList.add('hidden');
+    }
+
+    function previewModalAvatar(event) {
+        const file = event.target.files && event.target.files[0];
+        if (!file) {
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function () {
+            userAvatarImage.src = reader.result;
+            userAvatarImage.classList.remove('hidden');
+            userAvatarPlaceholder.classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    userModal.addEventListener('click', function (event) {
+        if (event.target === userModal) {
+            closeUserModal();
+        }
+    });
+
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && !userModal.classList.contains('hidden')) {
+            closeUserModal();
+        }
+    });
+
+    initUserCharts();
+</script>
+{% endblock %}
