@@ -16,7 +16,7 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 #[Route('/messaging')]
 class MessagingController extends AbstractController
 {
-    // Hardcoded current user (replace later with real auth)
+    // Hardcoded current user hethia baddalha
     private string $CURRENT_USER_ID = 'f99dd272-244b-432b-9f35-9b746ba4e2f9';
     
 
@@ -707,6 +707,109 @@ public function demoteToMember(int $id, string $userId, EntityManagerInterface $
     
     $this->addFlash('success', 'User demoted to MEMBER');
     return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+}
+
+#[Route('/admin', name: 'messaging_admin_menu')]
+public function adminMenu(EntityManagerInterface $em): Response
+{
+    $conn = $em->getConnection();
+    
+    // Get quick stats for the menu page
+    $totalMessages = $conn->executeQuery("SELECT COUNT(*) FROM message")->fetchOne();
+    $totalUsers = $conn->executeQuery("SELECT COUNT(*) FROM users")->fetchOne();
+    $totalConversations = $conn->executeQuery("SELECT COUNT(*) FROM conversation")->fetchOne();
+    
+    return $this->render('messaging/admin_menu.html.twig', [
+        'totalMessages' => $totalMessages,
+        'totalUsers' => $totalUsers,
+        'totalConversations' => $totalConversations,
+    ]);
+}
+
+#[Route('/admin/dashboard', name: 'messaging_admin_dashboard')]
+public function adminDashboard(EntityManagerInterface $em): Response
+{
+    $conn = $em->getConnection();
+    
+    // Total users
+    $sql = "SELECT COUNT(*) as total FROM users";
+    $totalUsers = $conn->executeQuery($sql)->fetchOne();
+    
+    // Total conversations
+    $sql = "SELECT COUNT(*) as total FROM conversation";
+    $totalConversations = $conn->executeQuery($sql)->fetchOne();
+    
+    // Total messages
+    $sql = "SELECT COUNT(*) as total FROM message";
+    $totalMessages = $conn->executeQuery($sql)->fetchOne();
+    
+    // Total media messages (images, videos, audio, files)
+    $sql = "SELECT COUNT(*) as total FROM message WHERE message_type != 'TEXT'";
+    $totalMedia = $conn->executeQuery($sql)->fetchOne();
+    
+    // Messages per day (last 7 days)
+    $sql = "
+        SELECT DATE(created_at) as date, COUNT(*) as count 
+        FROM message 
+        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY DATE(created_at)
+        ORDER BY date DESC
+    ";
+    $messagesPerDay = $conn->executeQuery($sql)->fetchAllAssociative();
+    
+    // Most active conversations (top 5)
+    $sql = "
+        SELECT c.id, c.name, COUNT(m.id) as message_count
+        FROM conversation c
+        JOIN message m ON c.id = m.conversation_id
+        GROUP BY c.id
+        ORDER BY message_count DESC
+        LIMIT 5
+    ";
+    $topConversations = $conn->executeQuery($sql)->fetchAllAssociative();
+    
+    // Top message senders
+    $sql = "
+        SELECT u.full_name, u.email, COUNT(m.id) as message_count
+        FROM users u
+        JOIN message m ON u.user_id = m.sender_id
+        GROUP BY u.user_id
+        ORDER BY message_count DESC
+        LIMIT 5
+    ";
+    $topSenders = $conn->executeQuery($sql)->fetchAllAssociative();
+    
+    // Recent activity (last 10 messages)
+    $sql = "
+        SELECT m.*, u.full_name as sender_name, c.name as conversation_name
+        FROM message m
+        JOIN users u ON m.sender_id = u.user_id
+        JOIN conversation c ON m.conversation_id = c.id
+        ORDER BY m.created_at DESC
+        LIMIT 10
+    ";
+    $recentActivity = $conn->executeQuery($sql)->fetchAllAssociative();
+    
+    // Group vs Personal stats
+    $sql = "SELECT type, COUNT(*) as count FROM conversation GROUP BY type";
+    $conversationTypes = $conn->executeQuery($sql)->fetchAllAssociative();
+    
+    // Message types distribution
+    $sql = "SELECT message_type, COUNT(*) as count FROM message GROUP BY message_type";
+    $messageTypes = $conn->executeQuery($sql)->fetchAllAssociative();
+    
+    return $this->render('messaging/admin_dashboard.html.twig', [
+        'totalUsers' => $totalUsers,
+        'totalConversations' => $totalConversations,
+        'totalMessages' => $totalMessages,
+        'totalMedia' => $totalMedia,
+        'messagesPerDay' => $messagesPerDay,
+        'topConversations' => $topConversations,
+        'topSenders' => $topSenders,
+        'recentActivity' => $recentActivity,
+        'conversationTypes' => $conversationTypes,
+        'messageTypes' => $messageTypes,
+    ]);
 }
 
 }

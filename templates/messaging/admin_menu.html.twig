@@ -1,0 +1,115 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Admin Panel - WanderLust{% endblock %}
+
+{% block content %}
+<div class="page-hero" style="background: linear-gradient(135deg, #1e3a8a, #1D4ED8); padding: 40px;">
+    <div class="page-hero-content">
+        <span class="page-hero-icon">👑</span>
+        <h1 class="page-hero-title">Admin Panel</h1>
+        <p class="page-hero-subtitle">Manage your WanderLust platform</p>
+    </div>
+</div>
+
+<div class="page-content" style="max-width: 1000px;">
+    
+    <!-- Admin Modules Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+        
+        <!-- Messaging Admin Card -->
+        <a href="{{ path('messaging_admin_dashboard') }}" style="text-decoration: none;">
+            <div style="background: white; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; transition: all 0.3s; cursor: pointer;">
+                <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+                <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-900);">Messaging Dashboard</h3>
+                <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+                    View conversation stats, message analytics, user activity, and media usage reports.
+                </p>
+                <div style="margin-top: 16px;">
+                    <span style="display: inline-block; padding: 6px 16px; background: var(--blue-primary); color: white; border-radius: 20px; font-size: 12px;">Access →</span>
+                </div>
+            </div>
+        </a>
+        
+        <!-- Placeholder for User Management (to be added by friend) -->
+        <div style="background: #f5f5f5; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; opacity: 0.6;">
+            <div style="font-size: 48px; margin-bottom: 16px;">👥</div>
+            <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-500);">User Management</h3>
+            <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+                Manage users, roles, permissions, and authentication settings.
+            </p>
+            <div style="margin-top: 16px;">
+                <span style="display: inline-block; padding: 6px 16px; background: #ccc; color: #666; border-radius: 20px; font-size: 12px;">Coming Soon</span>
+            </div>
+        </div>
+        
+        <!-- Placeholder for Activity Logs (to be added by friend) -->
+        <div style="background: #f5f5f5; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; opacity: 0.6;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
+            <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-500);">Activity Logs</h3>
+            <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+                Track user actions, system events, and security audits.
+            </p>
+            <div style="margin-top: 16px;">
+                <span style="display: inline-block; padding: 6px 16px; background: #ccc; color: #666; border-radius: 20px; font-size: 12px;">Coming Soon</span>
+            </div>
+        </div>
+        
+        <!-- Placeholder for System Settings (to be added by friend) -->
+        <div style="background: #f5f5f5; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; opacity: 0.6;">
+            <div style="font-size: 48px; margin-bottom: 16px;">⚙️</div>
+            <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-500);">System Settings</h3>
+            <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+                Configure platform settings, features, and integrations.
+            </p>
+            <div style="margin-top: 16px;">
+                <span style="display: inline-block; padding: 6px 16px; background: #ccc; color: #666; border-radius: 20px; font-size: 12px;">Coming Soon</span>
+            </div>
+        </div>
+        
+        <!-- Placeholder for Reports (to be added by friend) -->
+        <div style="background: #f5f5f5; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; opacity: 0.6;">
+            <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+            <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-500);">Advanced Reports</h3>
+            <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+                Generate custom reports, export data, and analyze trends.
+            </p>
+            <div style="margin-top: 16px;">
+                <span style="display: inline-block; padding: 6px 16px; background: #ccc; color: #666; border-radius: 20px; font-size: 12px;">Coming Soon</span>
+            </div>
+        </div>
+        
+        <!-- Placeholder for Notifications (to be added by friend) -->
+        <div style="background: #f5f5f5; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; opacity: 0.6;">
+            <div style="font-size: 48px; margin-bottom: 16px;">🔔</div>
+            <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-500);">Broadcast Messages</h3>
+            <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+                Send announcements to all users or specific groups.
+            </p>
+            <div style="margin-top: 16px;">
+                <span style="display: inline-block; padding: 6px 16px; background: #ccc; color: #666; border-radius: 20px; font-size: 12px;">Coming Soon</span>
+            </div>
+        </div>
+        
+    </div>
+    
+    <!-- Quick Stats Summary -->
+    <div style="margin-top: 40px; background: white; border-radius: 16px; border: 1px solid var(--gray-200); padding: 24px;">
+        <h3 style="margin-bottom: 16px;">📈 Quick Stats</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
+            <div style="text-align: center;">
+                <div style="font-size: 28px; font-weight: 700; color: var(--blue-primary);">{{ totalMessages }}</div>
+                <div style="font-size: 12px; color: var(--gray-400);">Total Messages</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 28px; font-weight: 700; color: var(--blue-primary);">{{ totalUsers }}</div>
+                <div style="font-size: 12px; color: var(--gray-400);">Total Users</div>
+            </div>
+            <div style="text-align: center;">
+                <div style="font-size: 28px; font-weight: 700; color: var(--blue-primary);">{{ totalConversations }}</div>
+                <div style="font-size: 12px; color: var(--gray-400);">Conversations</div>
+            </div>
+        </div>
+    </div>
+    
+</div>
+{% endblock %}

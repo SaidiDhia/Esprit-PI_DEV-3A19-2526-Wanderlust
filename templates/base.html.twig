@@ -54,6 +54,9 @@
         <a href="{{ path('app_marketplace') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_marketplace' %}active{% endif %}">
             <span class="nav-icon">🛒</span> MARKETPLACE
         </a>
+        <a href="{{ path('messaging_admin_menu') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'messaging_admin' %}active{% endif %}">
+            <span class="nav-icon">👑</span> ADMIN
+        </a>
     </nav>
             
         </div>
