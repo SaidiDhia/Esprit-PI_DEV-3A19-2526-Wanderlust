@@ -1,0 +1,184 @@
+{% extends 'base.html.twig' %}
+{% block title %}{{ action }} Product — Admin{% endblock %}
+{% block content %}
+
+<div class="admin-topnav">
+    <div class="admin-topnav-inner">
+        <a href="{{ path('app_marketplace_product_management') }}" class="admin-nav-btn">⬅ All Products</a>
+        <span class="admin-nav-title">{{ action == 'Add' ? '➕ Add Product (Admin)' : '✏️ Edit Product (Admin)' }}</span>
+        <span></span>
+    </div>
+</div>
+
+<div class="admin-page-content" style="max-width:760px;">
+    <div class="mp-form-card">
+        <div class="mp-form-header">
+            <h2 style="display:flex; align-items:center; gap:10px;">
+                <span style="background:linear-gradient(135deg,#1D4ED8,#7C3AED); color:white; padding:6px 14px; border-radius:8px; font-size:13px;">ADMIN</span>
+                {{ action == 'Add' ? 'Add New Product' : 'Edit Product #' ~ product.id }}
+            </h2>
+            <a href="{{ path('app_marketplace_product_management') }}" class="mp-btn-ghost" style="background:var(--gray-100); color:var(--gray-700); border-color:var(--gray-200);">← Back</a>
+        </div>
+
+        {% for msg in app.flashes('success') %}<div class="flash flash-success">{{ msg }}</div>{% endfor %}
+        {% for msg in app.flashes('error') %}<div class="flash flash-error">{{ msg }}</div>{% endfor %}
+
+        <form method="POST" action="{{ action == 'Add' ? path('app_marketplace_admin_product_add') : path('app_marketplace_admin_product_edit', {id: product.id}) }}">
+
+            <!-- ── USER ID (Admin only field) ─────────────────────────────── -->
+            <div class="mp-form-group" style="background:linear-gradient(135deg,#EFF6FF,#F5F3FF); border:2px solid #C7D2FE; border-radius:12px; padding:16px; margin-bottom:20px;">
+                <label class="mp-form-label" style="color:#4338CA; font-size:14px;">
+                    👤 Owner User ID <span style="color:#EF4444;">*</span>
+                    <span style="font-weight:400; color:#6B7280; font-size:12px;">— The seller this product belongs to</span>
+                </label>
+                <div style="display:flex; gap:10px; align-items:flex-start;">
+                    <div style="flex:1;">
+                        <input type="text" name="userId" required class="mp-form-input"
+                               placeholder="e.g. seller-001, user@email.com, 1..."
+                               value="{{ product ? product.userId : '' }}"
+                               id="userIdInput" list="userIdSuggestions"
+                               style="border-color:#C7D2FE;">
+                        <datalist id="userIdSuggestions">
+                            {% for uid in userIds %}
+                                <option value="{{ uid }}">
+                            {% endfor %}
+                        </datalist>
+                        <div style="font-size:11px; color:#6B7280; margin-top:5px;">
+                            💡 Existing user IDs: 
+                            {% for uid in userIds %}
+                                <span onclick="document.getElementById('userIdInput').value='{{ uid }}'"
+                                      style="background:#E0E7FF; color:#4338CA; padding:1px 8px; border-radius:10px; cursor:pointer; margin:2px;">{{ uid }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Product fields ─────────────────────────────────────────── -->
+            <div class="mp-form-group">
+                <label class="mp-form-label">Product Title *</label>
+                <input type="text" name="title" required class="mp-form-input"
+                       placeholder="e.g. Sahara Backpack 60L"
+                       value="{{ product ? product.title : '' }}">
+            </div>
+
+            <div class="mp-form-group">
+                <label class="mp-form-label">Description *</label>
+                <textarea name="description" required class="mp-form-input" rows="3"
+                          placeholder="Describe the product...">{{ product ? product.description : '' }}</textarea>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Type *</label>
+                    <select name="type" required class="mp-form-input">
+                        <option value="For Sale" {{ product and product.type == 'For Sale' ? 'selected' : '' }}>For Sale</option>
+                        <option value="For Rent"  {{ product and product.type == 'For Rent'  ? 'selected' : '' }}>For Rent</option>
+                    </select>
+                </div>
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Category *</label>
+                    <select name="category" required class="mp-form-input">
+                        <option value="camping" {{ product and product.category == 'camping' ? 'selected' : '' }}>⛺ Camping</option>
+                        <option value="hiking"  {{ product and product.category == 'hiking'  ? 'selected' : '' }}>🥾 Hiking</option>
+                        <option value="beach"   {{ product and product.category == 'beach'   ? 'selected' : '' }}>🏖️ Beach</option>
+                        <option value="nature"  {{ product and product.category == 'nature'  ? 'selected' : '' }}>🌿 Nature</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px;">
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Price (TND) *</label>
+                    <input type="number" name="price" required class="mp-form-input"
+                           placeholder="0.00" step="0.01" min="0"
+                           value="{{ product ? product.price : '' }}">
+                </div>
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Quantity (Stock) *</label>
+                    <input type="number" name="quantity" required class="mp-form-input"
+                           placeholder="0" min="0"
+                           value="{{ product ? product.quantity : '' }}">
+                </div>
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Reserved Qty</label>
+                    <input type="number" name="reserved_quantity" class="mp-form-input"
+                           placeholder="0" min="0"
+                           value="{{ product ? (product.reserved_quantity ?? 0) : 0 }}"
+                           style="border-color:#FCD34D;">
+                </div>
+            </div>
+
+           <div class="mp-form-group">
+    <label class="mp-form-label">Product Image</label>
+    <input type="file" id="adminFileInput" accept="image/*" class="mp-form-input" style="padding:8px;">
+    <input type="hidden" name="image" id="adminImgUrl" value="{{ product ? product.image : '' }}">
+    <div id="adminUploadStatus" style="font-size:12px; color:var(--gray-500); margin-top:6px;"></div>
+    <div id="adminImgPreview" style="margin-top:8px; display:{{ product and product.image ? 'block' : 'none' }};">
+        <img id="adminPreviewImg" src="{{ product ? product.image : '' }}"
+             style="max-width:160px; border-radius:8px; border:1px solid var(--gray-200);"
+             onerror="this.style.display='none'">
+    </div>
+</div>>
+
+            <div style="display:flex; gap:12px; margin-top:24px; padding-top:16px; border-top:1px solid var(--gray-100);">
+                <button type="submit" class="mp-btn-primary" style="flex:1; padding:14px; font-size:15px; border-radius:12px;">
+                    {{ action == 'Add' ? '➕ Add Product' : '💾 Save Changes' }}
+                </button>
+                <a href="{{ path('app_marketplace_product_management') }}" class="mp-btn-ghost"
+                   style="padding:14px 24px; background:var(--gray-100); color:var(--gray-700); border-color:var(--gray-200);">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+{% block javascripts %}
+<script>
+const CLOUD_NAME = 'dvxulayhm';
+const UPLOAD_PRESET = 'cloudinarypreset1';
+
+// Store original values on page load
+const originalValues = {};
+document.querySelectorAll('input[name], select[name], textarea[name]').forEach(el => {
+    originalValues[el.name] = el.value;
+});
+
+// Block submit if nothing changed (only in Edit mode)
+const isEdit = '{{ action }}' === 'Edit';
+document.querySelector('form').addEventListener('submit', function(e) {
+    if (!isEdit) return;
+    let changed = false;
+    document.querySelectorAll('input[name], select[name], textarea[name]').forEach(el => {
+        if (el.value !== originalValues[el.name]) changed = true;
+    });
+    if (!changed) {
+        e.preventDefault();
+        alert('⚠️ You have not changed anything. Please modify at least one field before saving.');
+    }
+});
+
+// Cloudinary upload
+document.getElementById('adminFileInput').addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
+    const status = document.getElementById('adminUploadStatus');
+    status.textContent = '⏳ Uploading...';
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+    try {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
+        const data = await res.json();
+        document.getElementById('adminImgUrl').value = data.secure_url;
+        document.getElementById('adminPreviewImg').src = data.secure_url;
+        document.getElementById('adminImgPreview').style.display = 'block';
+        status.textContent = '✅ Image uploaded!';
+        status.style.color = '#059669';
+    } catch(e) {
+        status.textContent = '❌ Upload failed. Try again.';
+        status.style.color = '#EF4444';
+    }
+});
+</script>
+{% endblock %}

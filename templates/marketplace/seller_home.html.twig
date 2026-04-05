@@ -86,15 +86,20 @@
                         </div>
                     </div>
 
-                    <div class="mp-card-footer" style="flex-direction:column; gap:8px; align-items:stretch;">
-                        <div style="display:flex; gap:8px;">
-                            <a href="{{ path('app_marketplace_product_edit', {id: p.id}) }}" class="mp-btn-outline" style="flex:1; text-align:center;">✏️ Edit</a>
-                            <form method="POST" action="{{ path('app_marketplace_product_delete', {id: p.id}) }}"
-                                  onsubmit="return confirm('Delete this product?')" style="flex:1;">
-                                <button type="submit" class="mp-btn-danger" style="width:100%;">🗑️ Delete</button>
-                            </form>
-                        </div>
-                    </div>
+                    <div class="mp-card-footer mp-card-footer-actions">
+    <a href="{{ path('app_marketplace_product_edit', {id: p.id}) }}"
+       class="mp-btn-action mp-btn-edit">
+        ✏️ Edit
+    </a>
+
+    <form method="POST"
+          action="{{ path('app_marketplace_product_delete', {id: p.id}) }}"
+          onsubmit="return confirm('Delete this product?')">
+        <button type="submit" class="mp-btn-action mp-btn-delete">
+            🗑 Delete
+        </button>
+    </form>
+</div>
                 </div>
             {% endfor %}
         </div>

@@ -1424,3 +1424,152 @@ body {
     .mp-filter-bar   { flex-direction: column; align-items: stretch; }
     .mp-form-card { padding: 20px; }
 }
+/* ============================================
+   SELLER ACTION BUTTONS (PRO STYLE)
+   ============================================ */
+
+.mp-card-footer-actions {
+    display: flex;
+    gap: 10px;
+    padding: 14px;
+}
+
+/* Base button */
+.mp-btn-action {
+    flex: 1;
+    text-align: center;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+/* EDIT BUTTON */
+.mp-btn-edit {
+    background: linear-gradient(135deg, #3B82F6, #1D4ED8);
+    color: white;
+    box-shadow: 0 4px 12px rgba(59,130,246,0.25);
+}
+
+.mp-btn-edit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(59,130,246,0.35);
+}
+
+/* DELETE BUTTON */
+.mp-btn-delete {
+    background: linear-gradient(135deg, #EF4444, #DC2626);
+    color: white;
+    box-shadow: 0 4px 12px rgba(239,68,68,0.25);
+}
+
+.mp-btn-delete:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(239,68,68,0.35);
+}
+
+/* Small press effect */
+.mp-btn-action:active {
+    transform: scale(0.97);
+}
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
+}
+
+/* Tablet */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+/* ============================================================
+   ADMIN — Specific styles
+   Append this AFTER the marketplace styles in style.css
+   ============================================================ */
+/* ============================================================
+   ADMIN — Specific styles
+   ============================================================ */
+
+.admin-topnav {
+    background: linear-gradient(135deg, #0f2460, #1D4ED8);
+    position: sticky; top: 0; z-index: 99;
+    box-shadow: 0 3px 16px rgba(0,0,0,0.25);
+    border-bottom: 2px solid rgba(255,200,0,0.4);
+}
+.admin-topnav-inner {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    padding: 13px 24px; gap: 12px;
+}
+.admin-nav-title {
+    font-size: 15px; font-weight: 700; color: white;
+    font-family: var(--font-body);
+}
+.admin-nav-btn {
+    background: rgba(255,255,255,0.12);
+    color: white; text-decoration: none;
+    padding: 7px 16px; border-radius: 20px;
+    font-size: 12px; font-weight: 600;
+    font-family: var(--font-body); border: none;
+    cursor: pointer; transition: background 0.2s;
+    white-space: nowrap;
+}
+.admin-nav-btn:hover { background: rgba(255,255,255,0.25); color: white; }
+.admin-btn-orange { background: #FF6F00 !important; font-weight: 700; }
+.admin-btn-orange:hover { background: #E65100 !important; }
+
+.admin-filter-bar {
+    display: flex; align-items: center;
+    padding: 10px 24px; background: rgba(0,0,0,0.2);
+    gap: 10px; flex-wrap: wrap;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+.admin-input {
+    padding: 8px 14px; border-radius: 20px;
+    border: none; font-size: 13px;
+    font-family: var(--font-body); outline: none; flex: 1;
+}
+.admin-select {
+    padding: 8px 12px; border-radius: 20px; border: none;
+    font-size: 13px; font-family: var(--font-body);
+    outline: none; background: white; cursor: pointer;
+}
+.admin-btn-primary {
+    background: #FFB300; color: #1a1a1a;
+    padding: 8px 18px; border-radius: 20px;
+    font-size: 13px; font-weight: 700;
+    font-family: var(--font-body); border: none;
+    cursor: pointer; transition: all 0.2s;
+}
+.admin-btn-primary:hover { background: #FF8F00; transform: translateY(-1px); }
+.admin-btn-ghost {
+    background: rgba(255,255,255,0.12); color: white;
+    padding: 8px 14px; border-radius: 20px;
+    font-size: 13px; font-weight: 500;
+    font-family: var(--font-body);
+    border: 1px solid rgba(255,255,255,0.25);
+    cursor: pointer; text-decoration: none;
+    display: inline-block; transition: all 0.2s;
+}
+.admin-btn-ghost:hover { background: rgba(255,255,255,0.25); color: white; }
+
+.admin-page-content {
+    max-width: 1300px; margin: 0 auto; padding: 32px 24px;
+}
