@@ -1,0 +1,185 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ activity.titre }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow border-0 rounded-4">
+                <div class="card-body p-5">
+                    <div class="d-flex justify-content-between align-items-start mb-4">
+                        <div>
+                            <h1 class="display-5 fw-bold mb-2">{{ activity.titre }}</h1>
+                            <div class="d-flex gap-2">
+                                <span class="badge bg-secondary">
+                                    {{ activity.categorie ? activity.categorie.value : 'Non définie' }}
+                                </span>
+                                <span class="badge bg-primary">
+                                    {{ activity.typeActivite ?: 'Non défini' }}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="mb-4">
+                        <h5 class="text-muted mb-3"><i class="fas fa-align-left me-2"></i>Description</h5>
+                        <p class="lead">{{ activity.description|nl2br }}</p>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="mb-4">
+                        <h5 class="text-muted mb-3"><i class="fas fa-image me-2"></i>Image</h5>
+                        {% if activity.image %}
+                            <img src="{{ asset('uploads/activities/' ~ activity.image) }}" class="img-fluid rounded-3 shadow" alt="Image de {{ activity.titre }}">
+                        {% else %}
+                            <div class="alert alert-light">
+                                <i class="fas fa-info-circle me-2"></i>Aucune image enregistrée pour cette activité.
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <a href="{{ path('app_activities_index') }}" class="btn btn-outline-secondary me-2">
+                                Retour à la liste
+                            </a>
+                            <a href="{{ path('app_activities_edit', {'id': activity.id}) }}" class="btn btn-warning me-2">
+                                Modifier
+                            </a>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-danger" onclick="executeDelete()">
+                                Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card shadow border-0 rounded-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Actions rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ path('app_activities_index') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-list me-2"></i>Liste
+                        </a>
+                        <a href="{{ path('app_activities_edit', {'id': activity.id}) }}" class="btn btn-warning btn-sm">
+                            <i class="fas fa-edit me-2"></i>Modifier
+                        </a>
+                        <form method="post" action="{{ path('app_activities_delete', {'id': activity.id}) }}" id="deleteForm">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ activity.id) }}">
+                            <button type="button" class="btn btn-danger btn-sm" onclick="confirmDelete()">
+                                <i class="fas fa-trash me-2"></i>Supprimer
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+function confirmDelete() {
+    // Créer une modal de confirmation
+    const modal = document.createElement('div');
+    modal.className = 'modal fade show';
+    modal.style.display = 'block';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.zIndex = '9999';
+    
+    modal.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Confirmation de suppression
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" onclick="closeModal()"></button>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Êtes-vous sûr de vouloir supprimer cette activité ?</strong></p>
+                    <p class="text-muted">Cette action est irréversible et supprimera définitivement l'activité "<strong>{{ activity.titre }}</strong>".</p>
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <small>Activité : {{ activity.titre }}</small><br>
+                        <small>Catégorie : {{ activity.categorie ? activity.categorie.value : 'N/A' }}</small><br>
+                        <small>Type : {{ activity.typeActivite ?: 'N/A' }}</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">
+                        <i class="fas fa-times me-2"></i>Annuler
+                    </button>
+                    <button type="button" class="btn btn-danger" onclick="executeDelete()">
+                        <i class="fas fa-trash me-2"></i>Supprimer définitivement
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Fermeture avec Escape
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            closeModal();
+            document.removeEventListener('keydown', handleEscape);
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
+    
+    // Fermeture en cliquant à l'extérieur
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+}
+
+function closeModal() {
+    const modal = document.querySelector('.modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function executeDelete() {
+    closeModal();
+    document.getElementById('deleteForm').submit();
+}
+</script>
+{% endblock %}

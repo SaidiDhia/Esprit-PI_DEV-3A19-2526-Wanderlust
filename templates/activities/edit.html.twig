@@ -1,0 +1,248 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier l'activité{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('info') %}
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    {% endfor %}
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow border-0 rounded-4">
+                <div class="card-header bg-warning text-dark rounded-top-4 py-3 d-flex align-items-center">
+                    <h3 class="mb-0">Modifier l'activité</h3>
+                </div>
+                
+                <div class="card-body p-4 p-md-5">
+                    {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'class': 'needs-validation'}}) }}
+                        {{ form_errors(form) }}
+                        
+                    <div class="mb-4">
+                        {{ form_label(form.titre, 'Titre de l\'activité', {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                        {{ form_widget(form.titre, {'attr': {'class': 'form-control form-control-lg'}}) }}
+                        {{ form_errors(form.titre) }}
+                    </div>
+
+                    <div class="mb-4">
+                        {{ form_label(form.description, 'Description', {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                        {{ form_widget(form.description, {'attr': {'class': 'form-control', 'rows': 5}}) }}
+                        {{ form_errors(form.description) }}
+                    </div>
+
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            {{ form_label(form.categorie, 'Catégorie', {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.categorie, {'attr': {'class': 'form-select'}}) }}
+                            {{ form_errors(form.categorie) }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form_label(form.type_activite, 'Type d\'activité', {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                            {{ form_widget(form.type_activite, {'attr': {'class': 'form-select'}}) }}
+                            {{ form_errors(form.type_activite) }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        {{ form_label(form.image, 'Image de l\'activité', {'label_attr': {'class': 'form-label fw-bold'}}) }}
+                        {{ form_widget(form.image, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_errors(form.image) }}
+                        <div class="form-text">Formats acceptés : JPG, PNG, GIF (Max 5Mo)</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <div>
+                            <a href="{{ path('app_activities_index') }}" class="btn btn-outline-secondary me-2">
+                                Retour
+                            </a>
+                            <a href="{{ path('app_activities_show', {'id': activity.id}) }}" class="btn btn-outline-info me-2">
+                                Voir
+                            </a>
+                        </div>
+                        <div>
+                            <button type="submit" class="btn btn-warning btn-lg px-5">
+                                Enregistrer les modifications
+                            </button>
+                        </div>
+                    </div>
+
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form.needs-validation');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    
+    // Validation en temps réel
+    function validateField(field) {
+        const value = field.value.trim();
+        let isValid = true;
+        let errorMessage = '';
+        
+        // Validation du titre
+        if (field.name === 'activities[titre]') {
+            if (value.length < 3) {
+                isValid = false;
+                errorMessage = 'Le titre doit contenir au moins 3 caractères';
+            } else if (value.length > 150) {
+                isValid = false;
+                errorMessage = 'Le titre ne peut pas dépasser 150 caractères';
+            }
+        }
+        
+        // Validation de la description
+        if (field.name === 'activities[description]') {
+            if (value.length < 10) {
+                isValid = false;
+                errorMessage = 'La description doit contenir au moins 10 caractères';
+            }
+        }
+        
+        // Validation du type d'activité
+        if (field.name === 'activities[type_activite]') {
+            if (value.length < 3) {
+                isValid = false;
+                errorMessage = 'Le type d\'activité doit contenir au moins 3 caractères';
+            } else if (value.length > 100) {
+                isValid = false;
+                errorMessage = 'Le type d\'activité ne peut pas dépasser 100 caractères';
+            }
+        }
+        
+        // Validation de l'image
+        if (field.name === 'activities[image]') {
+            if (field.files.length > 0) {
+                const file = field.files[0];
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                const maxSize = 5 * 1024 * 1024; // 5MB
+                
+                if (!allowedTypes.includes(file.type)) {
+                    isValid = false;
+                    errorMessage = 'Format d\'image non valide (JPG, PNG, GIF uniquement)';
+                } else if (file.size > maxSize) {
+                    isValid = false;
+                    errorMessage = 'L\'image ne peut pas dépasser 5MB';
+                }
+            }
+        }
+        
+        // Affichage des erreurs
+        const errorDiv = field.parentNode.querySelector('.invalid-feedback') || field.parentNode.querySelector('.text-danger');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+        
+        if (!isValid && errorMessage) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+            
+            const errorElement = document.createElement('div');
+            errorElement.className = 'invalid-feedback';
+            errorElement.textContent = errorMessage;
+            field.parentNode.appendChild(errorElement);
+        } else if (value) {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+        } else {
+            field.classList.remove('is-valid', 'is-invalid');
+        }
+        
+        return isValid;
+    }
+    
+    // Validation au changement
+    form.addEventListener('input', function(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            validateField(e.target);
+        }
+    });
+    
+    form.addEventListener('change', function(e) {
+        if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') {
+            validateField(e.target);
+        }
+    });
+    
+    // Validation à la soumission
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const fields = form.querySelectorAll('input, textarea, select');
+        let isFormValid = true;
+        
+        fields.forEach(field => {
+            if (!validateField(field)) {
+                isFormValid = false;
+            }
+        });
+        
+        // Validation spécifique pour la catégorie (enum)
+        const categorieField = form.querySelector('select[name="activities[categorie]"]');
+        if (!categorieField.value) {
+            categorieField.classList.add('is-invalid');
+            if (!categorieField.parentNode.querySelector('.invalid-feedback')) {
+                const errorElement = document.createElement('div');
+                errorElement.className = 'invalid-feedback';
+                errorElement.textContent = 'Veuillez sélectionner une catégorie';
+                categorieField.parentNode.appendChild(errorElement);
+            }
+            isFormValid = false;
+        } else {
+            categorieField.classList.add('is-valid');
+            categorieField.classList.remove('is-invalid');
+        }
+        
+        if (isFormValid) {
+            // Désactiver le bouton pour éviter les doubles soumissions
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Mise à jour...';
+            
+            // Soumettre le formulaire
+            form.submit();
+        } else {
+            // Faire défiler vers le premier champ invalide
+            const firstInvalid = form.querySelector('.is-invalid');
+            if (firstInvalid) {
+                firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                firstInvalid.focus();
+            }
+        }
+    });
+    
+    // Nettoyage des classes de validation
+    form.addEventListener('reset', function() {
+        form.querySelectorAll('.is-valid, .is-invalid, .invalid-feedback').forEach(element => {
+            element.classList.remove('is-valid', 'is-invalid');
+            if (element.classList.contains('invalid-feedback')) {
+                element.remove();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
