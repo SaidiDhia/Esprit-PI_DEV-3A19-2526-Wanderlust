@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}New Conversation - WanderLust{% endblock %}
+
+{% block content %}
+<div class="page-hero" style="padding: 30px 40px;">
+    <div class="page-hero-content">
+        <a href="{{ path('app_messaging') }}" style="color: white; text-decoration: none; display: inline-block; margin-bottom: 16px;">← Back</a>
+        <h1 class="page-hero-title">New Conversation</h1>
+        <p class="page-hero-subtitle">Start chatting with someone</p>
+    </div>
+</div>
+
+<div class="page-content">
+    <div style="max-width: 500px; margin: 0 auto;">
+        {% for message in app.flashes('error') %}
+            <div class="flash flash-error">{{ message }}</div>
+        {% endfor %}
+        
+        <form method="POST" style="background: white; padding: 32px; border-radius: 16px; border: 1px solid var(--gray-200);">
+            <div class="form-group">
+                <label class="form-label">Conversation Name</label>
+                <input type="text" name="name" class="form-input" placeholder="e.g., Tunisia Trip" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Conversation Type</label>
+                <select name="type" class="form-input">
+                    <option value="PERSONAL">Personal</option>
+                    <option value="GROUP">Group</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Participant Email</label>
+                <input type="email" name="participant_email" class="form-input" placeholder="friend@example.com" required>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Create Conversation</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
