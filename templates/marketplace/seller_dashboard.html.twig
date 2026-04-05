@@ -11,7 +11,7 @@
 <div class="mp-page-content" style="max-width:1000px;">
 
     <!-- Stats Cards -->
-    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:32px;">
+    <div class="stats-grid">
         <div class="mp-stat-card">
             <div class="mp-stat-icon">📦</div>
             <div class="mp-stat-value">{{ totalProducts }}</div>
@@ -27,6 +27,13 @@
             <div class="mp-stat-value">{{ pendingOrders }}</div>
             <div class="mp-stat-label">Pending Orders</div>
         </div>
+        <div class="mp-stat-card" style="background:linear-gradient(135deg,#DC2626,#F87171);">
+    <div class="mp-stat-icon">❌</div>
+    <div class="mp-stat-value">{{ cancelledOrders }}</div>
+    <div class="mp-stat-label">Cancelled Orders</div>
+</div>
+
+
         <div class="mp-stat-card" style="background:linear-gradient(135deg,#7C3AED,#EC4899);">
             <div class="mp-stat-icon">💰</div>
             <div class="mp-stat-value">{{ totalRevenue|number_format(0) }}</div>

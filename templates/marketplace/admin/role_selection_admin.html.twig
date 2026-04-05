@@ -1,0 +1,93 @@
+{% extends 'base.html.twig' %}
+{% block title %}Admin Panel — WanderLust{% endblock %}
+{% block content %}
+
+<div class="admin-page-bg">
+    <div class="admin-home-wrap">
+
+        <!-- Admin Badge -->
+        <div class="admin-badge">🔐 ADMIN PANEL</div>
+
+        <h1 class="admin-home-title">WanderLust<br><span>Administration</span></h1>
+        <p class="admin-home-sub">Full control over products, orders, users & platform stats.</p>
+
+        <!-- Cards -->
+        <div class="admin-home-grid">
+
+            <a href="{{ path('app_marketplace_product_management') }}" class="admin-home-card">
+                <div class="ahc-icon" style="background:linear-gradient(135deg,#1D4ED8,#7C3AED);">📦</div>
+                <div class="ahc-title">Product Management</div>
+                <div class="ahc-desc">View, add, edit & delete all products from all sellers. Reassign userId.</div>
+                <span class="ahc-arrow">Manage →</span>
+            </a>
+
+            <a href="{{ path('app_marketplace_admin_dashboard') }}" class="admin-home-card">
+                <div class="ahc-icon" style="background:linear-gradient(135deg,#059669,#10B981);">📊</div>
+                <div class="ahc-title">Global Dashboard</div>
+                <div class="ahc-desc">Platform-wide stats: revenue, orders, top products — broken down per user.</div>
+                <span class="ahc-arrow">View stats →</span>
+            </a>
+
+            <a href="{{ path('app_marketplace_admin_orders') }}" class="admin-home-card">
+                <div class="ahc-icon" style="background:linear-gradient(135deg,#F59E0B,#EF4444);">🚚</div>
+                <div class="ahc-title">Orders Management</div>
+                <div class="ahc-desc">See all orders from all buyers. Confirm or cancel any order instantly.</div>
+                <span class="ahc-arrow">Manage orders →</span>
+            </a>
+
+            <a href="{{ path('app_marketplace_admin_factures') }}" class="admin-home-card">
+                <div class="ahc-icon" style="background:linear-gradient(135deg,#8B5CF6,#EC4899);">🧾</div>
+                <div class="ahc-title">All Factures</div>
+                <div class="ahc-desc">Complete invoice history across all users. Filter by buyer or status.</div>
+                <span class="ahc-arrow">View factures →</span>
+            </a>
+
+        </div>
+
+        
+    </div>
+</div>
+
+<style>
+.admin-page-bg {
+    min-height: calc(100vh - 145px);
+    background: linear-gradient(135deg, #0f2460 0%, #1D4ED8 50%, #1565C0 100%);
+    display: flex; align-items: center; justify-content: center; padding: 48px 24px;
+}
+.admin-home-wrap { text-align: center; width: 100%; max-width: 860px; }
+.admin-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.3);
+    color: white; font-size: 11px; font-weight: 700; letter-spacing: 0.2em;
+    padding: 6px 18px; border-radius: 30px; margin-bottom: 24px;
+}
+.admin-home-title {
+    font-family: var(--font-display); font-size: clamp(32px,6vw,56px);
+    font-weight: 900; color: white; line-height: 1.1; margin-bottom: 12px;
+}
+.admin-home-title span { color: #93C5FD; font-style: italic; }
+.admin-home-sub { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 48px; }
+
+.admin-home-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px;
+}
+.admin-home-card {
+    background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px; padding: 28px 20px; text-decoration: none; color: white;
+    display: flex; flex-direction: column; align-items: center;
+    transition: all 0.3s; backdrop-filter: blur(8px);
+}
+.admin-home-card:hover {
+    background: rgba(255,255,255,0.18); transform: translateY(-6px);
+    box-shadow: 0 16px 40px rgba(0,0,0,0.3); color: white;
+}
+.ahc-icon {
+    width: 64px; height: 64px; border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; margin-bottom: 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+}
+.ahc-title { font-weight: 700; font-size: 16px; margin-bottom: 8px; }
+.ahc-desc { font-size: 12px; opacity: 0.7; line-height: 1.5; flex: 1; margin-bottom: 16px; }
+.ahc-arrow { font-size: 12px; font-weight: 700; color: #93C5FD; }
+</style>
+{% endblock %}
