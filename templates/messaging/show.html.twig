@@ -15,6 +15,9 @@
     {% for message in app.flashes('success') %}
         <div class="flash flash-success">{{ message }}</div>
     {% endfor %}
+    {% for message in app.flashes('error') %}
+        <div class="flash flash-error">{{ message }}</div>
+    {% endfor %}
     
     <!-- Messages Area -->
 <div style="background: white; border-radius: 16px; border: 1px solid var(--gray-200); min-height: 400px; max-height: 500px; overflow-y: auto; padding: 20px; margin-bottom: 20px;">
