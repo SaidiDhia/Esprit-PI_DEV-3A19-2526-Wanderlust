@@ -16,29 +16,45 @@ use Symfony\Component\HttpFoundation\File\UploadedFile;
 #[Route('/messaging')]
 class MessagingController extends AbstractController
 {
-    // Hardcoded current user hethia baddalha
-    private string $CURRENT_USER_ID = 'f99dd272-244b-432b-9f35-9b746ba4e2f9';
-    
+    private string $uploadDir;
 
-   private string $uploadDir;
+    public function __construct()
+    {
+        $this->uploadDir = __DIR__ . '/../../public/uploads/';
 
-public function __construct()
-{
-    // Get the project root directory
-    $projectRoot = dirname(__DIR__, 2); // Goes up two levels from src/Controller
-    $this->uploadDir = __DIR__ . '/../../public/uploads/';
-    
-    // Create upload directory if it doesn't exist
-    if (!is_dir($this->uploadDir)) {
-        mkdir($this->uploadDir, 0777, true);
+        if (!is_dir($this->uploadDir)) {
+            mkdir($this->uploadDir, 0777, true);
+        }
     }
-    
-    error_log('Upload directory set to: ' . $this->uploadDir);
-}
 
-   #[Route('/', name: 'app_messaging')]
+    private function getCurrentUserId(): string
+    {
+        $user = $this->getUser();
+        if ($user === null) {
+            throw $this->createAccessDeniedException('You must be logged in to use messaging.');
+        }
+
+        if (method_exists($user, 'getId')) {
+            $id = $user->getId();
+            if (is_string($id) && $id !== '') {
+                return $id;
+            }
+        }
+
+        if (method_exists($user, 'getUserId')) {
+            $id = $user->getUserId();
+            if (is_string($id) && $id !== '') {
+                return $id;
+            }
+        }
+
+        throw $this->createAccessDeniedException('Authenticated user ID is unavailable.');
+    }
+
+#[Route('/', name: 'app_messaging')]
 public function index(EntityManagerInterface $em): Response
 {
+    $currentUserId = $this->getCurrentUserId();
     $conn = $em->getConnection();
     
     // Get active conversations (not archived)
@@ -52,7 +68,7 @@ public function index(EntityManagerInterface $em): Response
     ";
     
     $stmt = $conn->prepare($sql);
-    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $stmt->bindValue('userId', $currentUserId);
     $result = $stmt->executeQuery();
     $conversations = $result->fetchAllAssociative();
     
@@ -67,7 +83,7 @@ public function index(EntityManagerInterface $em): Response
     ";
     
     $stmtArchived = $conn->prepare($sqlArchived);
-    $stmtArchived->bindValue('userId', $this->CURRENT_USER_ID);
+    $stmtArchived->bindValue('userId', $currentUserId);
     $resultArchived = $stmtArchived->executeQuery();
     $archivedConversations = $resultArchived->fetchAllAssociative();
     
@@ -171,7 +187,7 @@ public function index(EntityManagerInterface $em): Response
             // Add current user as CREATOR
             $cu = new ConversationUser();
             $cu->setConversationId($conversation->getId());
-            $cu->setUserId($this->CURRENT_USER_ID);
+            $cu->setUserId($this->getCurrentUserId());
             $cu->setRole('CREATOR');
             $em->persist($cu);
             
@@ -223,7 +239,7 @@ public function index(EntityManagerInterface $em): Response
         $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId";
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('convId', $id);
-        $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+        $stmt->bindValue('userId', $this->getCurrentUserId());
         $result = $stmt->executeQuery();
         $role = $result->fetchOne();
         
@@ -260,7 +276,7 @@ public function index(EntityManagerInterface $em): Response
         
         $message = new Message();
         $message->setConversationId($conversationId);
-        $message->setSenderId($this->CURRENT_USER_ID);
+        $message->setSenderId($this->getCurrentUserId());
         $message->setContent($content);
         $message->setMessageType('TEXT');
         $message->setCreatedAt(new \DateTime());
@@ -303,7 +319,7 @@ public function editMessage(int $id, Request $request, EntityManagerInterface $e
     $stmt = $conn->prepare($sql);
     $stmt->bindValue('content', $newContent);
     $stmt->bindValue('id', $id);
-    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $stmt->bindValue('userId', $this->getCurrentUserId());
     $stmt->executeStatement();
     
     // Get conversation ID to redirect back
@@ -326,7 +342,7 @@ public function editMessage(int $id, Request $request, EntityManagerInterface $e
         $sql = "SELECT conversation_id FROM message WHERE id = :id AND sender_id = :userId";
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('id', $id);
-        $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+        $stmt->bindValue('userId', $this->getCurrentUserId());
         $result = $stmt->executeQuery();
         $convId = $result->fetchOne();
         
@@ -393,7 +409,7 @@ public function uploadFile(Request $request, EntityManagerInterface $em): Respon
     
     $message = new Message();
     $message->setConversationId($conversationId);
-    $message->setSenderId($this->CURRENT_USER_ID);
+    $message->setSenderId($this->getCurrentUserId());
     $message->setContent('[' . $messageType . '] ' . $originalName);
     $message->setMessageType($messageType);
     $message->setFileUrl('/uploads/' . $newName);
@@ -461,7 +477,7 @@ public function getParticipants(int $id, EntityManagerInterface $em): Response
     $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
     $stmt = $conn->prepare($sql);
     $stmt->bindValue('convId', $id);
-    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $stmt->bindValue('userId', $this->getCurrentUserId());
     $result = $stmt->executeQuery();
     $userRole = $result->fetchOne();
     
@@ -503,7 +519,7 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
     $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
     $stmt = $conn->prepare($sql);
     $stmt->bindValue('convId', $id);
-    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $stmt->bindValue('userId', $this->getCurrentUserId());
     $result = $stmt->executeQuery();
     $userRole = $result->fetchOne();
     
@@ -541,7 +557,7 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
                 $sql = "UPDATE conversation_user SET is_active = 1, joined_at = NOW(), added_by = :addedBy WHERE id = :id";
                 $stmt = $conn->prepare($sql);
                 $stmt->bindValue('id', $existing['id']);
-                $stmt->bindValue('addedBy', $this->CURRENT_USER_ID);
+                $stmt->bindValue('addedBy', $this->getCurrentUserId());
                 $stmt->executeStatement();
                 
                 // Add system message
@@ -549,7 +565,7 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
                         VALUES (:convId, :senderId, :content, 'TEXT', NOW())";
                 $stmt = $conn->prepare($sql);
                 $stmt->bindValue('convId', $id);
-                $stmt->bindValue('senderId', $this->CURRENT_USER_ID);
+                $stmt->bindValue('senderId', $this->getCurrentUserId());
                 $stmt->bindValue('content', '👤 ' . $email . ' was re-added to the conversation');
                 $stmt->executeStatement();
                 
@@ -564,7 +580,7 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('convId', $id);
         $stmt->bindValue('userId', $newUser['user_id']);
-        $stmt->bindValue('addedBy', $this->CURRENT_USER_ID);
+        $stmt->bindValue('addedBy', $this->getCurrentUserId());
         $stmt->executeStatement();
         
         $this->addFlash('success', 'Participant added successfully!');
@@ -580,7 +596,7 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
         $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('convId', $id);
-        $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+        $stmt->bindValue('userId', $this->getCurrentUserId());
         $result = $stmt->executeQuery();
         $userRole = $result->fetchOne();
         
@@ -614,7 +630,7 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
                 VALUES (:convId, :senderId, :content, 'TEXT', NOW())";
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('convId', $id);
-        $stmt->bindValue('senderId', $this->CURRENT_USER_ID);
+        $stmt->bindValue('senderId', $this->getCurrentUserId());
         $stmt->bindValue('content', '👤 A participant was removed from the conversation');
         $stmt->executeStatement();
         
@@ -631,7 +647,7 @@ public function leaveConversation(int $id, EntityManagerInterface $em): Response
     $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
     $stmt = $conn->prepare($sql);
     $stmt->bindValue('convId', $id);
-    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $stmt->bindValue('userId', $this->getCurrentUserId());
     $result = $stmt->executeQuery();
     $userRole = $result->fetchOne();
     
@@ -644,7 +660,7 @@ public function leaveConversation(int $id, EntityManagerInterface $em): Response
     $sql = "UPDATE conversation_user SET is_active = 0 WHERE conversation_id = :convId AND user_id = :userId";
     $stmt = $conn->prepare($sql);
     $stmt->bindValue('convId', $id);
-    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $stmt->bindValue('userId', $this->getCurrentUserId());
     $stmt->executeStatement();
     
     $this->addFlash('success', 'You left the conversation');
@@ -660,7 +676,7 @@ public function promoteToAdmin(int $id, string $userId, EntityManagerInterface $
     $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
     $stmt = $conn->prepare($sql);
     $stmt->bindValue('convId', $id);
-    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $stmt->bindValue('userId', $this->getCurrentUserId());
     $result = $stmt->executeQuery();
     $userRole = $result->fetchOne();
     
@@ -689,7 +705,7 @@ public function demoteToMember(int $id, string $userId, EntityManagerInterface $
     $sql = "SELECT role FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId AND is_active = 1";
     $stmt = $conn->prepare($sql);
     $stmt->bindValue('convId', $id);
-    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $stmt->bindValue('userId', $this->getCurrentUserId());
     $result = $stmt->executeQuery();
     $userRole = $result->fetchOne();
     

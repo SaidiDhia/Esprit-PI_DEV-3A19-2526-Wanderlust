@@ -4,123 +4,128 @@
 
 {% block content %}
 
-<div class="page-hero">
-    <div class="page-hero-content">
-        <span class="page-hero-icon">📅</span>
-        <h1 class="page-hero-title">Activités & Events</h1>
-        <p class="page-hero-subtitle">Discover unforgettable experiences, tours, and events tailored for every type of traveler.</p>
+<div class="bg-primary/5 border-b border-border py-12 px-4">
+    <div class="container mx-auto text-center">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4 text-primary text-3xl">📅</div>
+        <h1 class="text-3xl md:text-5xl font-heading font-bold text-foreground mb-4">Activités & Events</h1>
+        <p class="text-muted-foreground max-w-2xl mx-auto">Discover unforgettable experiences, tours, and events tailored for every type of traveler.</p>
     </div>
 </div>
 
-<div class="page-content">
-
-    <!-- Filters -->
-    <div class="search-filters-bar">
-        <div class="filter-group">
-            <span class="filter-label">Destination</span>
-            <input type="text" class="filter-input" placeholder="Where? (e.g. Tunis, Paris...)">
-        </div>
-        <div class="filter-group">
-            <span class="filter-label">Category</span>
-            <select class="filter-input">
-                <option>All Categories</option>
-                <option>Adventure</option>
-                <option>Cultural</option>
-                <option>Gastronomy</option>
-                <option>Nature</option>
-                <option>Sports</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <span class="filter-label">Date</span>
-            <input type="date" class="filter-input">
-        </div>
-        <div class="filter-group" style="flex:0 0 auto;">
-            <button class="btn btn-primary" style="width:100%; justify-content:center;">🔍 Search</button>
+<div class="container mx-auto px-4 py-12">
+    <!-- Search Filters -->
+    <div class="glass-strong rounded-2xl p-6 mb-12 shadow-sm">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="flex flex-col gap-2">
+                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Destination</label>
+                <input type="text" class="bg-secondary/50 border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Where? (e.g. Tunis, Paris...)">
+            </div>
+            <div class="flex flex-col gap-2">
+                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Category</label>
+                <select class="bg-secondary/50 border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+                    <option>All Categories</option>
+                    <option>Adventure</option>
+                    <option>Cultural</option>
+                    <option>Gastronomy</option>
+                    <option>Nature</option>
+                    <option>Sports</option>
+                </select>
+            </div>
+            <div class="flex flex-col gap-2">
+                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Date</label>
+                <input type="date" class="bg-secondary/50 border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+            </div>
+            <div class="flex items-end">
+                <button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    Search
+                </button>
+            </div>
         </div>
     </div>
 
     <!-- Cards Grid -->
-    <div class="content-grid">
-
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#1D4ED8,#7C3AED);">🧗</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Cap Bon, Tunisia &nbsp;·&nbsp; 🗓️ Apr 15</div>
-                <div class="card-title">Rock Climbing Adventure</div>
-                <p class="card-text">Guided half-day rock climbing session with certified instructors. All equipment provided. Suitable for beginners.</p>
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Activity 1 -->
+        <div class="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all">
+            <div class="relative h-56 overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center text-6xl">🧗</div>
+                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground">Adventure</div>
             </div>
-            <div class="card-footer">
-                <span class="price">79 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#059669,#0EA5E9);">🏛️</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Carthage, Tunisia &nbsp;·&nbsp; 🗓️ Apr 18</div>
-                <div class="card-title">Ancient Ruins Tour</div>
-                <p class="card-text">Walk through 3,000 years of history with an expert archaeologist guide. Includes museum entry.</p>
-            </div>
-            <div class="card-footer">
-                <span class="price">45 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#F59E0B,#EF4444);">🍽️</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Tunis Medina &nbsp;·&nbsp; 🗓️ Apr 20</div>
-                <div class="card-title">Tunisian Cooking Class</div>
-                <p class="card-text">Learn to prepare traditional Tunisian dishes with a local chef in the heart of the Medina. Lunch included.</p>
-            </div>
-            <div class="card-footer">
-                <span class="price">120 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-heading font-bold text-xl group-hover:text-primary transition-colors">Rock Climbing Adventure</h3>
+                    <div class="flex items-center gap-1 text-sm font-bold">
+                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <span>4.9</span>
+                    </div>
+                </div>
+                <p class="text-muted-foreground text-sm mb-4">Guided half-day rock climbing session with certified instructors. All equipment provided.</p>
+                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-6">
+                    <span>📍 Cap Bon, Tunisia</span>
+                    <span>•</span>
+                    <span>🗓️ Apr 15</span>
+                </div>
+                <div class="flex items-center justify-between border-t border-border pt-4">
+                    <p class="text-foreground font-bold text-xl">79 TND</p>
+                    <a href="#" class="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-6 py-2 rounded-lg transition-all">Book Now</a>
+                </div>
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#8B5CF6,#EC4899);">🐪</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Douz, Tunisia &nbsp;·&nbsp; 🗓️ Apr 25</div>
-                <div class="card-title">Sahara Desert Camel Trek</div>
-                <p class="card-text">Spend a magical sunset on camelback in the Sahara dunes. Overnight camping option available.</p>
+        <!-- Activity 2 -->
+        <div class="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all">
+            <div class="relative h-56 overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-blue-500/20 flex items-center justify-center text-6xl">🏛️</div>
+                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground">Cultural</div>
             </div>
-            <div class="card-footer">
-                <span class="price">200 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#10B981,#3B82F6);">🏄</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Hammamet &nbsp;·&nbsp; 🗓️ May 2</div>
-                <div class="card-title">Surfing Lessons</div>
-                <p class="card-text">2-hour beginner surfing course on the Mediterranean coast. Board rental and wetsuit included.</p>
-            </div>
-            <div class="card-footer">
-                <span class="price">95 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-img" style="background: linear-gradient(135deg,#6366F1,#0EA5E9);">🎨</div>
-            <div class="card-body">
-                <div class="card-meta">📍 Sidi Bou Said &nbsp;·&nbsp; 🗓️ May 5</div>
-                <div class="card-title">Art & Ceramics Workshop</div>
-                <p class="card-text">Create your own traditional Tunisian ceramic art piece guided by local artisans. Take your work home.</p>
-            </div>
-            <div class="card-footer">
-                <span class="price">65 TND</span>
-                <a href="#" class="btn btn-primary">Book Now</a>
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-heading font-bold text-xl group-hover:text-primary transition-colors">Ancient Ruins Tour</h3>
+                    <div class="flex items-center gap-1 text-sm font-bold">
+                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <span>4.8</span>
+                    </div>
+                </div>
+                <p class="text-muted-foreground text-sm mb-4">Walk through 3,000 years of history with an expert archaeologist guide. Museum entry included.</p>
+                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-6">
+                    <span>📍 Carthage, Tunisia</span>
+                    <span>•</span>
+                    <span>🗓️ Apr 18</span>
+                </div>
+                <div class="flex items-center justify-between border-t border-border pt-4">
+                    <p class="text-foreground font-bold text-xl">45 TND</p>
+                    <a href="#" class="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-6 py-2 rounded-lg transition-all">Book Now</a>
+                </div>
             </div>
         </div>
 
+        <!-- Activity 3 -->
+        <div class="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all">
+            <div class="relative h-56 overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-red-500/20 flex items-center justify-center text-6xl">🍽️</div>
+                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground">Gastronomy</div>
+            </div>
+            <div class="p-6">
+                <div class="flex justify-between items-start mb-2">
+                    <h3 class="font-heading font-bold text-xl group-hover:text-primary transition-colors">Tunisian Cooking Class</h3>
+                    <div class="flex items-center gap-1 text-sm font-bold">
+                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                        <span>5.0</span>
+                    </div>
+                </div>
+                <p class="text-muted-foreground text-sm mb-4">Learn to prepare traditional Tunisian dishes with a local chef in the heart of the Medina.</p>
+                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-6">
+                    <span>📍 Tunis Medina</span>
+                    <span>•</span>
+                    <span>🗓️ Apr 20</span>
+                </div>
+                <div class="flex items-center justify-between border-t border-border pt-4">
+                    <p class="text-foreground font-bold text-xl">120 TND</p>
+                    <a href="#" class="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-6 py-2 rounded-lg transition-all">Book Now</a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
