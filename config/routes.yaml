@@ -3,3 +3,6 @@ controllers:
         path: ../src/Controller/
         namespace: App\Controller
     type: attribute
+
+# At the end of config/routes.yaml
+# Serve static files from public/uploads

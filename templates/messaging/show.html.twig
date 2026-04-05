@@ -1,0 +1,131 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ conversation.name }} - WanderLust{% endblock %}
+
+{% block content %}
+<div class="page-hero" style="padding: 30px 40px;">
+    <div class="page-hero-content">
+        <a href="{{ path('app_messaging') }}" style="color: white; text-decoration: none; display: inline-block; margin-bottom: 16px;">← Back to conversations</a>
+        <h1 class="page-hero-title">{{ conversation.name ?: 'Conversation #' ~ conversation.id }}</h1>
+        <p class="page-hero-subtitle">{{ conversation.type }} chat</p>
+    </div>
+</div>
+
+<div class="page-content">
+    {% for message in app.flashes('success') %}
+        <div class="flash flash-success">{{ message }}</div>
+    {% endfor %}
+    
+    <!-- Messages Area -->
+<div style="background: white; border-radius: 16px; border: 1px solid var(--gray-200); min-height: 400px; max-height: 500px; overflow-y: auto; padding: 20px; margin-bottom: 20px;">
+    {% if messages is empty %}
+        <div style="text-align: center; padding: 60px; color: var(--gray-400);">
+            <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
+            <p>No messages yet. Start the conversation!</p>
+        </div>
+    {% else %}
+        {% for msg in messages %}
+            <div style="margin-bottom: 16px; display: flex; justify-content: {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}flex-end{% else %}flex-start{% endif %};">
+                <div style="max-width: 70%; background: {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}var(--blue-primary){% else %}var(--gray-100){% endif %}; color: {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}white{% else %}var(--gray-900){% endif %}; border-radius: 16px; padding: 10px 16px;">
+                    <div style="font-size: 11px; opacity: 0.7; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>{{ msg.sender_name ?: 'User ' ~ msg.sender_id|slice(0,8) }} • {{ msg.created_at|date('H:i') }}</span>
+                        
+                        {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}
+                            <div style="display: flex; gap: 8px; margin-left: 12px;">
+                                <!-- Edit Button -->
+                                <button onclick="editMessage({{ msg.id }}, '{{ msg.content|e('js') }}')" 
+                                        style="background: none; border: none; color: inherit; cursor: pointer; font-size: 12px; opacity: 0.7;"
+                                        title="Edit">✏️</button>
+                                <!-- Delete Button -->
+                                <form method="POST" action="{{ path('messaging_message_delete', {id: msg.id}) }}" 
+                                      style="display: inline; margin: 0; padding: 0;"
+                                      onsubmit="return confirm('Delete this message?')">
+                                    <button type="submit" style="background: none; border: none; color: inherit; cursor: pointer; font-size: 12px; opacity: 0.7;" title="Delete">🗑️</button>
+                                </form>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div id="message-content-{{ msg.id }}">
+                        {% if msg.message_type == 'IMAGE' %}
+                            📷 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit;">{{ msg.file_name ?: 'Image' }}</a>
+                        {% elseif msg.message_type == 'VIDEO' %}
+                            🎥 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit;">{{ msg.file_name ?: 'Video' }}</a>
+                        {% elseif msg.message_type == 'AUDIO' %}
+                            🎵 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit;">{{ msg.file_name ?: 'Audio' }}</a>
+                        {% elseif msg.message_type == 'FILE' %}
+                            📎 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit;">{{ msg.file_name ?: 'File' }}</a>
+                        {% else %}
+                            {{ msg.content }}
+                        {% endif %}
+                    </div>
+                    {% if msg.edited_at %}
+                        <div style="font-size: 9px; opacity: 0.5; margin-top: 4px;">edited</div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+<!-- Edit Message Modal (hidden by default) -->
+<div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+    <div style="background: white; border-radius: 16px; padding: 24px; width: 400px; max-width: 90%;">
+        <h3 style="margin-bottom: 16px;">Edit Message</h3>
+        <textarea id="editContent" style="width: 100%; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; margin-bottom: 16px; font-family: inherit;" rows="3"></textarea>
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button onclick="closeEditModal()" style="padding: 8px 16px; border: 1px solid var(--gray-200); background: white; border-radius: 8px; cursor: pointer;">Cancel</button>
+            <button onclick="submitEdit()" style="padding: 8px 16px; background: var(--blue-primary); color: white; border: none; border-radius: 8px; cursor: pointer;">Save</button>
+        </div>
+        <form id="editForm" method="POST" style="display: none;">
+            <input type="hidden" name="content" id="editFormContent">
+        </form>
+    </div>
+</div>
+
+<script>
+    let currentMessageId = null;
+    
+    function editMessage(id, content) {
+        currentMessageId = id;
+        document.getElementById('editContent').value = content;
+        document.getElementById('editModal').style.display = 'flex';
+    }
+    
+    function closeEditModal() {
+        document.getElementById('editModal').style.display = 'none';
+        currentMessageId = null;
+    }
+    
+    function submitEdit() {
+        if (currentMessageId) {
+            const newContent = document.getElementById('editContent').value;
+            const form = document.getElementById('editForm');
+            form.action = '{{ path("messaging_message_edit", {id: 0}) }}'.replace('0', currentMessageId);
+            document.getElementById('editFormContent').value = newContent;
+            form.submit();
+        }
+    }
+    
+    // Close modal when clicking outside
+    document.getElementById('editModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeEditModal();
+        }
+    });
+</script>
+    
+    <!-- Message Input -->
+    <form method="POST" action="{{ path('messaging_message_send') }}" style="display: flex; gap: 12px; margin-bottom: 12px;">
+        <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
+        <input type="text" name="content" placeholder="Type your message..." style="flex: 1; padding: 12px; border: 1px solid var(--gray-200); border-radius: 24px; outline: none;" required>
+        <button type="submit" class="btn btn-primary" style="border-radius: 24px;">Send</button>
+    </form>
+    
+    <!-- File Upload -->
+    <form method="POST" action="{{ path('messaging_message_upload') }}" enctype="multipart/form-data" style="display: flex; gap: 12px;">
+        <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
+        <input type="file" name="file" style="flex: 1; padding: 8px;">
+        <button type="submit" class="btn btn-outline">📎 Upload</button>
+    </form>
+</div>
+{% endblock %}

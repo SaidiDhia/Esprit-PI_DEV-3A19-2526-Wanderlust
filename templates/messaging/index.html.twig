@@ -1,112 +1,110 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Messaging — WanderLust{% endblock %}
+{% block title %}Messaging - WanderLust{% endblock %}
 
 {% block content %}
-
-<div class="messaging-layout">
-
-    <!-- Contacts List -->
-    <div class="chat-list">
-        <div class="chat-list-header">💬 Messages</div>
-
-        <a href="#" class="chat-item active">
-            <div class="chat-avatar">AH</div>
-            <div class="chat-info">
-                <div class="chat-name">Ahmed Hassan</div>
-                <div class="chat-preview">Your booking is confirmed for Apr 20...</div>
-            </div>
-        </a>
-
-        <a href="#" class="chat-item">
-            <div class="chat-avatar" style="background: linear-gradient(135deg,#059669,#10B981);">LM</div>
-            <div class="chat-info">
-                <div class="chat-name">Leila Mansour</div>
-                <div class="chat-preview">What time shall we meet at the ruins?</div>
-            </div>
-        </a>
-
-        <a href="#" class="chat-item">
-            <div class="chat-avatar" style="background: linear-gradient(135deg,#F59E0B,#EF4444);">KA</div>
-            <div class="chat-info">
-                <div class="chat-name">Karim Aziz</div>
-                <div class="chat-preview">The cooking class was amazing! Thank you</div>
-            </div>
-        </a>
-
-        <a href="#" class="chat-item">
-            <div class="chat-avatar" style="background: linear-gradient(135deg,#8B5CF6,#EC4899);">SB</div>
-            <div class="chat-info">
-                <div class="chat-name">Sara Ben Ali</div>
-                <div class="chat-preview">Is camel trekking suitable for kids?</div>
-            </div>
-        </a>
-
-        <a href="#" class="chat-item">
-            <div class="chat-avatar" style="background: linear-gradient(135deg,#10B981,#3B82F6);">MB</div>
-            <div class="chat-info">
-                <div class="chat-name">Mohamed Boughrara</div>
-                <div class="chat-preview">I have a question about the package...</div>
-            </div>
-        </a>
-
-        <a href="#" class="chat-item">
-            <div class="chat-avatar" style="background: linear-gradient(135deg,#6366F1,#0EA5E9);">FT</div>
-            <div class="chat-info">
-                <div class="chat-name">Fatma Toumi</div>
-                <div class="chat-preview">Can we get an early check-in?</div>
-            </div>
-        </a>
+<div class="page-hero">
+    <div class="page-hero-content">
+        <span class="page-hero-icon">💬</span>
+        <h1 class="page-hero-title">Messaging</h1>
+        <p class="page-hero-subtitle">Connect with fellow adventurers</p>
     </div>
-
-    <!-- Chat Main -->
-    <div class="chat-main">
-        <div class="chat-main-header">
-            <div class="chat-avatar">AH</div>
-            <div>
-                <div style="font-weight:700; font-size:15px; color:var(--gray-900);">Ahmed Hassan</div>
-                <div style="font-size:12px; color:#10B981;">● Online</div>
-            </div>
-        </div>
-
-        <div class="chat-messages">
-
-            <div class="msg msg-received">
-                Bonjour! I'm your guide for the Carthage tour. Are you still joining us on April 18th? 🏛️
-            </div>
-
-            <div class="msg msg-sent">
-                Yes, absolutely! I'm really looking forward to it. What time do we start?
-            </div>
-
-            <div class="msg msg-received">
-                We meet at 9:00 AM at the main entrance of the Carthage site. I'll be wearing a blue WanderLust vest 😊
-            </div>
-
-            <div class="msg msg-sent">
-                Perfect! Should I bring anything specific?
-            </div>
-
-            <div class="msg msg-received">
-                Comfortable walking shoes, sunscreen, and a hat. I'd also recommend bringing some water. The tour lasts about 3 hours and museum entry is included in your booking.
-            </div>
-
-            <div class="msg msg-sent">
-                Thank you so much! Can't wait. See you on the 18th 🎉
-            </div>
-
-            <div class="msg msg-received">
-                Your booking is confirmed for Apr 20. Looking forward to meeting you! If you have any more questions, don't hesitate to message me anytime.
-            </div>
-
-        </div>
-
-        <div class="chat-input-bar">
-            <input type="text" class="chat-input" placeholder="Type a message...">
-            <button class="btn btn-primary" style="border-radius:50px; padding:10px 22px;">Send ➤</button>
-        </div>
-    </div>
-
 </div>
 
+<div class="page-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
+        <h2 style="font-family: var(--font-display);">Your Conversations</h2>
+        <a href="{{ path('messaging_conversation_new') }}" class="btn btn-primary">➕ New Conversation</a>
+    </div>
+    
+    {% for message in app.flashes('success') %}
+        <div class="flash flash-success">{{ message }}</div>
+    {% endfor %}
+    {% for message in app.flashes('error') %}
+        <div class="flash flash-error">{{ message }}</div>
+    {% endfor %}
+    
+    {% if conversations is empty %}
+        <div class="mp-empty">
+            <div style="font-size: 48px;">💬</div>
+            <h3>No conversations yet</h3>
+            <p>Start a new conversation to connect with others!</p>
+        </div>
+    {% else %}
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            {% for conv in conversations %}
+                <div style="background: white; border-radius: 12px; border: 1px solid var(--gray-200); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="margin-bottom: 4px;">
+                            {{ conv.name ?: 'Conversation #' ~ conv.id }}
+                            {% if conv.is_pinned %} 📌{% endif %}
+                            {% if conv.is_archived %} 📦{% endif %}
+                        </h3>
+                        <span style="font-size: 12px; color: var(--gray-400);">{{ conv.type }}</span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="btn btn-primary" style="padding: 6px 16px;">Open</a>
+                        
+                        <!-- Rename Conversation Form -->
+                        <button onclick="renameConversation({{ conv.id }}, '{{ conv.name|e('js') }}')" class="btn btn-outline" style="padding: 6px 16px;">✏️ Rename</button>
+                        
+                        <!-- Delete Conversation (only for creator) -->
+                        {% if conv.user_role == 'CREATOR' %}
+                            <form method="POST" action="{{ path('messaging_conversation_delete', {id: conv.id}) }}" 
+                                  onsubmit="return confirm('Delete this conversation and all messages? This cannot be undone!')">
+                                <button type="submit" class="btn" style="padding: 6px 16px; background: #EF4444; color: white; border: none; border-radius: 8px; cursor: pointer;">🗑️ Delete</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Rename Modal -->
+        <div id="renameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+            <div style="background: white; border-radius: 16px; padding: 24px; width: 400px; max-width: 90%;">
+                <h3 style="margin-bottom: 16px;">Rename Conversation</h3>
+                <input type="text" id="renameInput" style="width: 100%; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; margin-bottom: 16px;">
+                <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                    <button onclick="closeRenameModal()" style="padding: 8px 16px; border: 1px solid var(--gray-200); background: white; border-radius: 8px; cursor: pointer;">Cancel</button>
+                    <button onclick="submitRename()" style="padding: 8px 16px; background: var(--blue-primary); color: white; border: none; border-radius: 8px; cursor: pointer;">Save</button>
+                </div>
+                <form id="renameForm" method="POST" style="display: none;">
+                    <input type="hidden" name="name" id="renameFormName">
+                </form>
+            </div>
+        </div>
+
+        <script>
+            let currentConversationId = null;
+            
+            function renameConversation(id, currentName) {
+                currentConversationId = id;
+                document.getElementById('renameInput').value = currentName;
+                document.getElementById('renameModal').style.display = 'flex';
+            }
+            
+            function closeRenameModal() {
+                document.getElementById('renameModal').style.display = 'none';
+                currentConversationId = null;
+            }
+            
+            function submitRename() {
+                if (currentConversationId) {
+                    const newName = document.getElementById('renameInput').value;
+                    const form = document.getElementById('renameForm');
+                    form.action = '{{ path("messaging_conversation_rename", {id: 0}) }}'.replace('0', currentConversationId);
+                    document.getElementById('renameFormName').value = newName;
+                    form.submit();
+                }
+            }
+            
+            document.getElementById('renameModal')?.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeRenameModal();
+                }
+            });
+        </script>
+    {% endif %}
+</div>
 {% endblock %}
