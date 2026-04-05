@@ -24,34 +24,48 @@
         <div class="flash flash-error">{{ message }}</div>
     {% endfor %}
     
+    <!-- Active Conversations -->
+    <h3 style="margin: 24px 0 16px 0;">Active</h3>
     {% if conversations is empty %}
-        <div class="mp-empty">
+        <div class="mp-empty" style="padding: 40px;">
             <div style="font-size: 48px;">💬</div>
-            <h3>No conversations yet</h3>
-            <p>Start a new conversation to connect with others!</p>
+            <p>No active conversations. Start a new one!</p>
         </div>
     {% else %}
         <div style="display: flex; flex-direction: column; gap: 12px;">
             {% for conv in conversations %}
-                <div style="background: white; border-radius: 12px; border: 1px solid var(--gray-200); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="background: white; border-radius: 12px; border: 1px solid var(--gray-200); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; {% if conv.is_pinned %}border-left: 4px solid #F59E0B;{% endif %}">
                     <div>
                         <h3 style="margin-bottom: 4px;">
                             {{ conv.name ?: 'Conversation #' ~ conv.id }}
                             {% if conv.is_pinned %} 📌{% endif %}
-                            {% if conv.is_archived %} 📦{% endif %}
                         </h3>
                         <span style="font-size: 12px; color: var(--gray-400);">{{ conv.type }}</span>
                     </div>
-                    <div style="display: flex; gap: 8px;">
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="btn btn-primary" style="padding: 6px 16px;">Open</a>
                         
-                        <!-- Rename Conversation Form -->
+                        <!-- Pin/Unpin Button -->
+                        <form method="POST" action="{{ path('messaging_conversation_pin', {id: conv.id}) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-outline" style="padding: 6px 16px;" title="{{ conv.is_pinned ? 'Unpin' : 'Pin' }}">
+                                {{ conv.is_pinned ? '📌 Unpin' : '📍 Pin' }}
+                            </button>
+                        </form>
+                        
+                        <!-- Archive Button -->
+                        <form method="POST" action="{{ path('messaging_conversation_archive', {id: conv.id}) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-outline" style="padding: 6px 16px;" title="Archive">
+                                📦 Archive
+                            </button>
+                        </form>
+                        
+                        <!-- Rename Button -->
                         <button onclick="renameConversation({{ conv.id }}, '{{ conv.name|e('js') }}')" class="btn btn-outline" style="padding: 6px 16px;">✏️ Rename</button>
                         
-                        <!-- Delete Conversation (only for creator) -->
+                        <!-- Delete Button (only for creator) -->
                         {% if conv.user_role == 'CREATOR' %}
                             <form method="POST" action="{{ path('messaging_conversation_delete', {id: conv.id}) }}" 
-                                  onsubmit="return confirm('Delete this conversation and all messages? This cannot be undone!')">
+                                  onsubmit="return confirm('Delete this conversation and all messages? This cannot be undone!')" style="display: inline;">
                                 <button type="submit" class="btn" style="padding: 6px 16px; background: #EF4444; color: white; border: none; border-radius: 8px; cursor: pointer;">🗑️ Delete</button>
                             </form>
                         {% endif %}
@@ -59,52 +73,75 @@
                 </div>
             {% endfor %}
         </div>
-
-        <!-- Rename Modal -->
-        <div id="renameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-            <div style="background: white; border-radius: 16px; padding: 24px; width: 400px; max-width: 90%;">
-                <h3 style="margin-bottom: 16px;">Rename Conversation</h3>
-                <input type="text" id="renameInput" style="width: 100%; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; margin-bottom: 16px;">
-                <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                    <button onclick="closeRenameModal()" style="padding: 8px 16px; border: 1px solid var(--gray-200); background: white; border-radius: 8px; cursor: pointer;">Cancel</button>
-                    <button onclick="submitRename()" style="padding: 8px 16px; background: var(--blue-primary); color: white; border: none; border-radius: 8px; cursor: pointer;">Save</button>
-                </div>
-                <form id="renameForm" method="POST" style="display: none;">
-                    <input type="hidden" name="name" id="renameFormName">
-                </form>
-            </div>
-        </div>
-
-        <script>
-            let currentConversationId = null;
-            
-            function renameConversation(id, currentName) {
-                currentConversationId = id;
-                document.getElementById('renameInput').value = currentName;
-                document.getElementById('renameModal').style.display = 'flex';
-            }
-            
-            function closeRenameModal() {
-                document.getElementById('renameModal').style.display = 'none';
-                currentConversationId = null;
-            }
-            
-            function submitRename() {
-                if (currentConversationId) {
-                    const newName = document.getElementById('renameInput').value;
-                    const form = document.getElementById('renameForm');
-                    form.action = '{{ path("messaging_conversation_rename", {id: 0}) }}'.replace('0', currentConversationId);
-                    document.getElementById('renameFormName').value = newName;
-                    form.submit();
-                }
-            }
-            
-            document.getElementById('renameModal')?.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeRenameModal();
-                }
-            });
-        </script>
     {% endif %}
+    
+    <!-- Archived Conversations Section -->
+    {% if archivedConversations is not empty %}
+        <h3 style="margin: 32px 0 16px 0;">Archived 📦</h3>
+        <div style="display: flex; flex-direction: column; gap: 12px; opacity: 0.7;">
+            {% for conv in archivedConversations %}
+                <div style="background: #f5f5f5; border-radius: 12px; border: 1px solid var(--gray-200); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h3 style="margin-bottom: 4px;">{{ conv.name ?: 'Conversation #' ~ conv.id }}</h3>
+                        <span style="font-size: 12px; color: var(--gray-400);">{{ conv.type }}</span>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="btn btn-primary" style="padding: 6px 16px;">View</a>
+                        
+                        <!-- Unarchive Button -->
+                        <form method="POST" action="{{ path('messaging_conversation_archive', {id: conv.id}) }}" style="display: inline;">
+                            <button type="submit" class="btn btn-outline" style="padding: 6px 16px;">📤 Unarchive</button>
+                        </form>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Rename Modal -->
+    <div id="renameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
+        <div style="background: white; border-radius: 16px; padding: 24px; width: 400px; max-width: 90%;">
+            <h3 style="margin-bottom: 16px;">Rename Conversation</h3>
+            <input type="text" id="renameInput" style="width: 100%; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; margin-bottom: 16px;">
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button onclick="closeRenameModal()" style="padding: 8px 16px; border: 1px solid var(--gray-200); background: white; border-radius: 8px; cursor: pointer;">Cancel</button>
+                <button onclick="submitRename()" style="padding: 8px 16px; background: var(--blue-primary); color: white; border: none; border-radius: 8px; cursor: pointer;">Save</button>
+            </div>
+            <form id="renameForm" method="POST" style="display: none;">
+                <input type="hidden" name="name" id="renameFormName">
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let currentConversationId = null;
+        
+        function renameConversation(id, currentName) {
+            currentConversationId = id;
+            document.getElementById('renameInput').value = currentName;
+            document.getElementById('renameModal').style.display = 'flex';
+        }
+        
+        function closeRenameModal() {
+            document.getElementById('renameModal').style.display = 'none';
+            currentConversationId = null;
+        }
+        
+        function submitRename() {
+            if (currentConversationId) {
+                const newName = document.getElementById('renameInput').value;
+                const form = document.getElementById('renameForm');
+                form.action = '{{ path("messaging_conversation_rename", {id: 0}) }}'.replace('0', currentConversationId);
+                document.getElementById('renameFormName').value = newName;
+                form.submit();
+            }
+        }
+        
+        document.getElementById('renameModal')?.addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeRenameModal();
+            }
+        });
+    </script>
 </div>
 {% endblock %}

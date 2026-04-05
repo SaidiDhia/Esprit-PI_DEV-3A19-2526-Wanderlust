@@ -36,30 +36,46 @@ public function __construct()
     error_log('Upload directory set to: ' . $this->uploadDir);
 }
 
-    #[Route('/', name: 'app_messaging')]
-    public function index(EntityManagerInterface $em): Response
-    {
-        // Get user's conversations
-        $conn = $em->getConnection();
-        
-        $sql = "
-            SELECT c.*, 
-                   (SELECT role FROM conversation_user WHERE conversation_id = c.id AND user_id = :userId) as user_role
-            FROM conversation c
-            JOIN conversation_user cu ON c.id = cu.conversation_id
-            WHERE cu.user_id = :userId AND cu.is_active = 1 AND c.is_archived = 0
-            ORDER BY c.is_pinned DESC, c.created_at DESC
-        ";
-        
-        $stmt = $conn->prepare($sql);
-        $stmt->bindValue('userId', $this->CURRENT_USER_ID);
-        $result = $stmt->executeQuery();
-        $conversations = $result->fetchAllAssociative();
-        
-        return $this->render('messaging/index.html.twig', [
-            'conversations' => $conversations,
-        ]);
-    }
+   #[Route('/', name: 'app_messaging')]
+public function index(EntityManagerInterface $em): Response
+{
+    $conn = $em->getConnection();
+    
+    // Get active conversations (not archived)
+    $sql = "
+        SELECT c.*, 
+               (SELECT role FROM conversation_user WHERE conversation_id = c.id AND user_id = :userId) as user_role
+        FROM conversation c
+        JOIN conversation_user cu ON c.id = cu.conversation_id
+        WHERE cu.user_id = :userId AND cu.is_active = 1 AND c.is_archived = 0
+        ORDER BY c.is_pinned DESC, c.last_activity DESC, c.id DESC
+    ";
+    
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $result = $stmt->executeQuery();
+    $conversations = $result->fetchAllAssociative();
+    
+    // Get archived conversations
+    $sqlArchived = "
+        SELECT c.*, 
+               (SELECT role FROM conversation_user WHERE conversation_id = c.id AND user_id = :userId) as user_role
+        FROM conversation c
+        JOIN conversation_user cu ON c.id = cu.conversation_id
+        WHERE cu.user_id = :userId AND cu.is_active = 1 AND c.is_archived = 1
+        ORDER BY c.last_activity DESC, c.id DESC
+    ";
+    
+    $stmtArchived = $conn->prepare($sqlArchived);
+    $stmtArchived->bindValue('userId', $this->CURRENT_USER_ID);
+    $resultArchived = $stmtArchived->executeQuery();
+    $archivedConversations = $resultArchived->fetchAllAssociative();
+    
+    return $this->render('messaging/index.html.twig', [
+        'conversations' => $conversations,
+        'archivedConversations' => $archivedConversations,
+    ]);
+}
 
     #[Route('/conversation/{id}', name: 'messaging_conversation_show', requirements: ['id' => '\d+'])]
     public function showConversation(int $id, EntityManagerInterface $em): Response
@@ -100,9 +116,21 @@ public function __construct()
     public function newConversation(Request $request, EntityManagerInterface $em): Response
     {
         if ($request->isMethod('POST')) {
-            $name = $request->request->get('name');
+            $name = trim($request->request->get('name'));
             $type = $request->request->get('type');
-            $participantEmail = $request->request->get('participant_email');
+            $participantEmail = trim($request->request->get('participant_email'));
+            
+            // Validate: name cannot be empty
+            if (empty($name)) {
+                $this->addFlash('error', 'Conversation name cannot be empty!');
+                return $this->redirectToRoute('app_messaging');
+            }
+            
+            // Validate: email cannot be empty
+            if (empty($participantEmail)) {
+                $this->addFlash('error', 'Participant email cannot be empty!');
+                return $this->redirectToRoute('app_messaging');
+            }
             
             // Find participant by email
             $conn = $em->getConnection();
@@ -152,7 +180,13 @@ public function __construct()
     #[Route('/conversation/{id}/rename', name: 'messaging_conversation_rename', methods: ['POST'])]
     public function renameConversation(int $id, Request $request, EntityManagerInterface $em): Response
     {
-        $newName = $request->request->get('name');
+        $newName = trim($request->request->get('name'));
+        
+        // Validate: name cannot be empty
+        if (empty($newName)) {
+            $this->addFlash('error', 'Conversation name cannot be empty!');
+            return $this->redirectToRoute('app_messaging');
+        }
         
         $conn = $em->getConnection();
         $sql = "UPDATE conversation SET name = :name WHERE id = :id";
@@ -229,28 +263,43 @@ public function __construct()
     }
 
     #[Route('/message/{id}/edit', name: 'messaging_message_edit', methods: ['POST'])]
-    public function editMessage(int $id, Request $request, EntityManagerInterface $em): Response
-    {
-        $newContent = $request->request->get('content');
-        
-        $conn = $em->getConnection();
-        $sql = "UPDATE message SET content = :content, edited_at = NOW() WHERE id = :id AND sender_id = :userId";
-        $stmt = $conn->prepare($sql);
-        $stmt->bindValue('content', $newContent);
-        $stmt->bindValue('id', $id);
-        $stmt->bindValue('userId', $this->CURRENT_USER_ID);
-        $stmt->executeStatement();
+public function editMessage(int $id, Request $request, EntityManagerInterface $em): Response
+{
+    $newContent = trim($request->request->get('content'));
+    
+    // Validate: content cannot be empty
+    if (empty($newContent)) {
+        $this->addFlash('error', 'Message cannot be empty!');
         
         // Get conversation ID to redirect back
+        $conn = $em->getConnection();
         $sql = "SELECT conversation_id FROM message WHERE id = :id";
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('id', $id);
         $result = $stmt->executeQuery();
         $convId = $result->fetchOne();
         
-        $this->addFlash('success', 'Message edited!');
         return $this->redirectToRoute('messaging_conversation_show', ['id' => $convId]);
     }
+    
+    $conn = $em->getConnection();
+    $sql = "UPDATE message SET content = :content, edited_at = NOW() WHERE id = :id AND sender_id = :userId";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('content', $newContent);
+    $stmt->bindValue('id', $id);
+    $stmt->bindValue('userId', $this->CURRENT_USER_ID);
+    $stmt->executeStatement();
+    
+    // Get conversation ID to redirect back
+    $sql = "SELECT conversation_id FROM message WHERE id = :id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('id', $id);
+    $result = $stmt->executeQuery();
+    $convId = $result->fetchOne();
+    
+    $this->addFlash('success', 'Message edited!');
+    return $this->redirectToRoute('messaging_conversation_show', ['id' => $convId]);
+}
 
     #[Route('/message/{id}/delete', name: 'messaging_message_delete', methods: ['POST'])]
     public function deleteMessage(int $id, EntityManagerInterface $em): Response
@@ -361,4 +410,30 @@ public function serveUpload(string $filename): Response
     // Return the file as a response
     return $this->file($filePath, $filename);
 }
+#[Route('/conversation/{id}/pin', name: 'messaging_conversation_pin', methods: ['POST'])]
+public function pinConversation(int $id, EntityManagerInterface $em): Response
+{
+    $conn = $em->getConnection();
+    $sql = "UPDATE conversation SET is_pinned = NOT is_pinned WHERE id = :id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('id', $id);
+    $stmt->executeStatement();
+    
+    $this->addFlash('success', 'Conversation pin status updated!');
+    return $this->redirectToRoute('app_messaging');
+}
+
+#[Route('/conversation/{id}/archive', name: 'messaging_conversation_archive', methods: ['POST'])]
+public function archiveConversation(int $id, EntityManagerInterface $em): Response
+{
+    $conn = $em->getConnection();
+    $sql = "UPDATE conversation SET is_archived = NOT is_archived WHERE id = :id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('id', $id);
+    $stmt->executeStatement();
+    
+    $this->addFlash('success', 'Conversation archived/unarchived!');
+    return $this->redirectToRoute('app_messaging');
+}
+
 }
