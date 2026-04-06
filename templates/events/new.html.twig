@@ -435,19 +435,6 @@
                             {{ form_errors(form.activities) }}
                         </div>
 
-                        <!-- Organisateur -->
-                        <div class="form-group-modern">
-                            <div class="form-floating-modern">
-                                {{ form_widget(form.organisateur, {'attr': {
-                                    'class': 'form-control-modern',
-                                    'placeholder': ' ',
-                                    'id': 'organisateur'
-                                }}) }}
-                                {{ form_label(form.organisateur, 'Organisateur *', {'label_attr': {'for': 'organisateur'}}) }}
-                            </div>
-                            {{ form_errors(form.organisateur) }}
-                        </div>
-
                         <!-- Lieu -->
                         <div class="form-group-modern">
                             <div class="form-floating-modern">
@@ -456,7 +443,7 @@
                                     'placeholder': ' ',
                                     'id': 'lieu'
                                 }}) }}
-                                {{ form_label(form.lieu, 'Lieu de l\'événement *', {'label_attr': {'for': 'lieu'}}) }}
+                                {{ form_label(form.lieu, 'Lieu *', {'label_attr': {'for': 'lieu'}}) }}
                             </div>
                             {{ form_errors(form.lieu) }}
                         </div>
@@ -471,7 +458,7 @@
                                             'placeholder': ' ',
                                             'id': 'date_debut'
                                         }}) }}
-                                        {{ form_label(form.date_debut, 'Date de début *', {'label_attr': {'for': 'date_debut'}}) }}
+                                        {{ form_label(form.date_debut, 'Date et heure de début *', {'label_attr': {'for': 'date_debut'}}) }}
                                     </div>
                                     {{ form_errors(form.date_debut) }}
                                 </div>
@@ -484,7 +471,7 @@
                                             'placeholder': ' ',
                                             'id': 'date_fin'
                                         }}) }}
-                                        {{ form_label(form.date_fin, 'Date de fin *', {'label_attr': {'for': 'date_fin'}}) }}
+                                        {{ form_label(form.date_fin, 'Date et heure de fin *', {'label_attr': {'for': 'date_fin'}}) }}
                                     </div>
                                     {{ form_errors(form.date_fin) }}
                                 </div>
@@ -525,8 +512,7 @@
                                         {{ form_widget(form.places_disponibles, {'attr': {
                                             'class': 'form-control-modern',
                                             'placeholder': ' ',
-                                            'id': 'places_disponibles',
-                                            'readonly': 'readonly'
+                                            'id': 'places_disponibles'
                                         }}) }}
                                         {{ form_label(form.places_disponibles, 'Places disponibles *', {'label_attr': {'for': 'places_disponibles'}}) }}
                                     </div>
@@ -536,7 +522,20 @@
                             </div>
                         </div>
 
-                        <!-- Contact -->
+                        <!-- Organisateur -->
+                        <div class="form-group-modern">
+                            <div class="form-floating-modern">
+                                {{ form_widget(form.organisateur, {'attr': {
+                                    'class': 'form-control-modern',
+                                    'placeholder': ' ',
+                                    'id': 'organisateur'
+                                }}) }}
+                                {{ form_label(form.organisateur, 'Organisateur *', {'label_attr': {'for': 'organisateur'}}) }}
+                            </div>
+                            {{ form_errors(form.organisateur) }}
+                        </div>
+
+                        <!-- Matériels -->
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group-modern">

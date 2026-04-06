@@ -27,19 +27,16 @@ class EventsType extends AbstractType
         $builder
             ->add('activities', EntityType::class, [
                 'class' => Activities::class,
-                'choice_label' => function (Activities $activity) {
-                    return $activity->getTitre() . ' (' . $activity->getCategorie()->value . ')';
-                },
-                'label' => 'Activités associées *',
+                'choice_label' => 'titre',
+                'label' => 'Activités associées',
                 'multiple' => true,
                 'expanded' => false,
-                'required' => true,
+                'required' => false,
                 'attr' => [
                     'class' => 'form-select-modern form-control-modern',
-                    'placeholder' => 'Sélectionnez les activités associées',
-                    'required' => 'required'
+                    'placeholder' => 'Sélectionnez les activités associées (optionnel)'
                 ],
-                'help' => 'Sélectionnez une ou plusieurs activités pour cet événement (obligatoire)'
+                'help' => 'Sélectionnez une ou plusieurs activités pour cet événement (optionnel)'
             ])
             ->add('lieu', TextType::class, [
                 'label' => 'Lieu *',
@@ -129,27 +126,13 @@ class EventsType extends AbstractType
                     'class' => 'form-check-input'
                 ]
             ])
-            ->add('statut', ChoiceType::class, [
-                'label' => 'Statut de l\'événement',
-                'required' => false,
-                'choices' => [
-                    'En attente de validation' => Events::STATUT_EN_ATTENTE,
-                    'Accepté' => Events::STATUT_ACCEPTE,
-                    'Refusé' => Events::STATUT_REFUSE,
-                ],
-                'attr' => [
-                    'class' => 'form-select'
-                ],
-                'help' => 'Seul un administrateur peut modifier le statut de l\'événement'
-            ])
             ->add('image', FileType::class, [
                 'label' => 'Image *',
-                'required' => true,
+                'required' => false,
                 'mapped' => false,
                 'attr' => [
                     'class' => 'form-control',
-                    'accept' => 'image/jpeg,image/png,image/gif',
-                    'required' => 'required'
+                    'accept' => 'image/jpeg,image/png,image/gif'
                 ],
                 'help' => 'Formats acceptés: JPG, PNG, GIF (Max 5MB). Une image est obligatoire.'
             ])

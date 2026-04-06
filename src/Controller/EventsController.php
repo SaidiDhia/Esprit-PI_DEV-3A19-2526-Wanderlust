@@ -33,54 +33,114 @@ final class EventsController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // Gérer la confirmation de l'organisateur
-            $confirmationOrganisateur = $form->get('confirmation_organisateur')->getData();
-            $event->setConfirmationOrganisateur($confirmationOrganisateur);
-            
-            // Set date_creation to current date
-            $event->setDateCreation(new \DateTime());
-            
-            // Gestion de l'upload d'image
-            /** @var UploadedFile $imageFile */
-            $imageFile = $form->get('image')->getData();
-            
-            if ($imageFile) {
-                $originalFilename = pathinfo($imageFile->getClientOriginalName(), PATHINFO_FILENAME);
-                $safeFilename = $slugger->slug($originalFilename);
+            try {
+                // Debug: Afficher les données du formulaire
+                dump($form->getData());
                 
-                // Obtenir l'extension de manière sécurisée sans détection MIME
-                $extension = $imageFile->getClientOriginalExtension();
-                if (!$extension) {
-                    // Fallback si l'extension n'est pas disponible
-                    $extension = 'jpg'; // Extension par défaut
+                // Gérer la confirmation de l'organisateur
+                $confirmationOrganisateur = $form->get('confirmation_organisateur')->getData();
+                if (!$confirmationOrganisateur) {
+                    $this->addFlash('error', 'Vous devez confirmer être l\'organisateur de cet événement.');
+                    return $this->redirectToRoute('app_events_new');
                 }
+                $event->setConfirmationOrganisateur($confirmationOrganisateur);
                 
-                $newFilename = $safeFilename.'-'.uniqid().'.'.$extension;
+                // Set date_creation to current date
+                $event->setDateCreation(new \DateTime());
                 
-                try {
-                    $imageFile->move(
-                        $this->getParameter('kernel.project_dir').'/public/uploads/events',
-                        $newFilename
-                    );
-                } catch (FileException $e) {
-                    // Gérer l'erreur si nécessaire
-                    $this->addFlash('error', 'Erreur lors de l\'upload de l\'image: '.$e->getMessage());
+                // Validation des dates
+                $dateDebut = $event->getDateDebut();
+                $dateFin = $event->getDateFin();
+                if ($dateDebut >= $dateFin) {
+                    $this->addFlash('error', 'La date de fin doit être postérieure à la date de début.');
                     return $this->redirectToRoute('app_events_new');
                 }
                 
-                $event->setImage($newFilename);
+                // Validation des places
+                $capaciteMax = $event->getCapaciteMax();
+                $placesDisponibles = $event->getPlacesDisponibles();
+                if ($placesDisponibles > $capaciteMax) {
+                    $this->addFlash('error', 'Les places disponibles ne peuvent pas dépasser la capacité maximale.');
+                    return $this->redirectToRoute('app_events_new');
+                }
+                
+                // Gestion de l'upload d'image
+                /** @var UploadedFile $imageFile */
+                $imageFile = $form->get('image')->getData();
+                
+                if ($imageFile) {
+                    // Debug: Afficher les infos du fichier
+                    dump([
+                        'filename' => $imageFile->getClientOriginalName(),
+                        'size' => $imageFile->getSize(),
+                        'mimeType' => $imageFile->getMimeType(),
+                        'error' => $imageFile->getError()
+                    ]);
+                    
+                    // Validation de l'image
+                    $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                    if (!in_array($imageFile->getMimeType(), $allowedMimeTypes)) {
+                        $this->addFlash('error', 'Format d\'image non valide. Formats acceptés: JPG, PNG, GIF.');
+                        return $this->redirectToRoute('app_events_new');
+                    }
+                    
+                    if ($imageFile->getSize() > 5 * 1024 * 1024) { // 5MB
+                        $this->addFlash('error', 'L\'image est trop volumineuse. Taille maximale: 5MB.');
+                        return $this->redirectToRoute('app_events_new');
+                    }
+                    
+                    $originalFilename = pathinfo($imageFile->getClientOriginalName(), PATHINFO_FILENAME);
+                    $safeFilename = $slugger->slug($originalFilename);
+                    
+                    // Obtenir l'extension de manière sécurisée
+                    $extension = $imageFile->getClientOriginalExtension();
+                    if (!$extension) {
+                        $extension = 'jpg'; // Extension par défaut
+                    }
+                    
+                    $newFilename = $safeFilename.'-'.uniqid().'.'.$extension;
+                    
+                    try {
+                        $imageFile->move(
+                            $this->getParameter('kernel.project_dir').'/public/uploads/events',
+                            $newFilename
+                        );
+                    } catch (FileException $e) {
+                        $this->addFlash('error', 'Erreur lors de l\'upload de l\'image: '.$e->getMessage());
+                        return $this->redirectToRoute('app_events_new');
+                    }
+                    
+                    $event->setImage($newFilename);
+                } else {
+                    $this->addFlash('error', 'Une image est obligatoire pour créer un événement.');
+                    return $this->redirectToRoute('app_events_new');
+                }
+                
+                // Synchroniser les places disponibles avec la capacité maximale
+                $event->setPlacesDisponibles($capaciteMax);
+                
+                // Définir le statut par défaut
+                $event->setStatut('en_attente');
+                
+                $entityManager->persist($event);
+                $entityManager->flush();
+
+                $this->addFlash('success', 'L\'événement a été créé avec succès et est en attente de validation.');
+
+                return $this->redirectToRoute('app_events_index', [], Response::HTTP_SEE_OTHER);
+                
+            } catch (\Exception $e) {
+                $this->addFlash('error', 'Une erreur est survenue lors de la création de l\'événement: '.$e->getMessage());
+                return $this->redirectToRoute('app_events_new');
             }
-            
-            // Synchroniser les places disponibles avec la capacité maximale
-            $capaciteMax = $event->getCapaciteMax();
-            $event->setPlacesDisponibles($capaciteMax);
-            
-            $entityManager->persist($event);
-            $entityManager->flush();
-
-            $this->addFlash('success', 'L\'événement a été créé avec succès.');
-
-            return $this->redirectToRoute('app_events_index', [], Response::HTTP_SEE_OTHER);
+        } else {
+            // Debug: Afficher les erreurs de formulaire
+            if ($form->isSubmitted()) {
+                dump('Form submitted but invalid');
+                foreach ($form->getErrors(true) as $error) {
+                    dump($error->getMessage());
+                }
+            }
         }
 
         return $this->render('events/new.html.twig', [

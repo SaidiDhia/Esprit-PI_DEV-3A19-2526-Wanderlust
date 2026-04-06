@@ -164,14 +164,48 @@ class ReservationsRepository extends ServiceEntityRepository
     {
         $result = $this->createQueryBuilder('r')
             ->select('SUM(r.prixTotal)')
-            ->where('r.dateReservation BETWEEN :startDate AND :endDate')
+            ->where('r.dateCreation BETWEEN :startDate AND :endDate')
             ->andWhere('r.statut != :annulee')
             ->setParameter('startDate', $startDate)
             ->setParameter('endDate', $endDate)
-            ->setParameter('annulee', Reservations::STATUT_ANNULEE)
+            ->setParameter('annulee', 'annulee')
             ->getQuery()
             ->getSingleScalarResult();
 
         return $result ? (float) $result : null;
+    }
+
+    /**
+     * Obtenir le nombre de réservations par mois
+     */
+    public function getMonthlyReservationsCount(): array
+    {
+        return $this->createQueryBuilder('r')
+            ->select('MONTH(r.dateCreation) as month, YEAR(r.dateCreation) as year, COUNT(r.id) as count')
+            ->where('r.dateCreation >= :startDate')
+            ->setParameter('startDate', (new \DateTime())->modify('-12 months'))
+            ->groupBy('year, month')
+            ->orderBy('year', 'DESC')
+            ->addOrderBy('month', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    /**
+     * Obtenir les revenus mensuels
+     */
+    public function getMonthlyRevenue(): array
+    {
+        return $this->createQueryBuilder('r')
+            ->select('MONTH(r.dateCreation) as month, YEAR(r.dateCreation) as year, SUM(r.prixTotal) as revenue')
+            ->where('r.dateCreation >= :startDate')
+            ->andWhere('r.statut != :annulee')
+            ->setParameter('startDate', (new \DateTime())->modify('-12 months'))
+            ->setParameter('annulee', 'annulee')
+            ->groupBy('year, month')
+            ->orderBy('year', 'DESC')
+            ->addOrderBy('month', 'DESC')
+            ->getQuery()
+            ->getResult();
     }
 }

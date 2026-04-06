@@ -434,7 +434,7 @@
                                     <a href="{{ path('app_activities_edit', {'id': activity.id}) }}" class="btn btn-outline-warning btn-modern btn-sm rounded-pill flex-fill">
                                         <i class="fas fa-edit me-1"></i>Modifier
                                     </a>
-                                    <form method="post" action="{{ path('app_activities_delete', {'id': activity.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette activité ?');" class="d-inline">
+                                    <form method="post" action="{{ path('app_activities_delete', {'id': activity.id}) }}" onsubmit="return confirmActivityDeletion({{ activity.id }}, '{{ activity.titre|e('js') }}');" class="d-inline">
                                         <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ activity.id) }}">
                                         <button type="submit" class="btn btn-outline-danger btn-modern btn-sm rounded-pill">
                                             <i class="fas fa-trash me-1"></i>Supprimer
@@ -450,4 +450,23 @@
     {% endif %}
 </div>
 
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+function confirmActivityDeletion(activityId, activityTitle) {
+    const confirmation = confirm(
+        '⚠️ CONFIRMATION DE SUPPRESSION ⚠️\n\n' +
+        'Êtes-vous sûr de vouloir supprimer l\'activité #' + activityId + ' : ' + activityTitle + ' ?\n\n' +
+        'Cette action est IRRÉVERSIBLE et :\n' +
+        '• Supprimera définitivement l\'activité\n' +
+        '• Retirera l\'activité de tous les événements associés\n' +
+        '• Effacera toutes les données associées\n\n' +
+        'Cliquez sur OK pour confirmer ou Annuler pour garder l\'activité.'
+    );
+    
+    return confirmation;
+}
+</script>
 {% endblock %}
