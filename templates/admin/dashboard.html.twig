@@ -3,7 +3,7 @@
 {% block title %}Admin Dashboard — Wanderlust{% endblock %}
 
 {% block content %}
-<section class="min-h-[calc(100vh-64px)] bg-background px-4 py-10">
+<section class="min-h-[calc(100vh-64px)] bg-white px-4 py-10">
     <div class="container mx-auto space-y-8">
         {% for message in app.flashes('success') %}
             <div class="rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm font-medium text-primary">{{ message }}</div>
@@ -40,15 +40,28 @@
                 </div>
 
                 <nav class="space-y-2">
-                    <a href="{{ path('app_admin_dashboard') }}" class="flex items-center justify-between rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-bold text-primary">
+                    <a href="{{ path('app_admin_dashboard', { section: 'users' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-bold transition-colors {{ activeSection == 'users' ? 'border-primary/30 bg-primary/15 text-primary shadow-sm' : 'border-primary/20 bg-transparent text-foreground hover:bg-secondary/40' }}">
                         <span>Admin Dashboard</span>
-                        <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">Current</span>
+                        {% if activeSection == 'users' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">Current</span>
+                        {% endif %}
                     </a>
                     <a href="{{ path('app_marketplace') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Marketplace</a>
                     <a href="{{ path('app_booking') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Booking</a>
                     <a href="{{ path('app_activities') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Activities</a>
                     <a href="{{ path('app_blog') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Blog</a>
-                    <a href="{{ path('app_messaging') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Messaging</a>
+                    <a href="{{ path('app_admin_dashboard', { section: 'messaging' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'messaging' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
+                        <span>Messaging</span>
+                        {% if activeSection == 'messaging' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
+                        {% endif %}
+                    </a>
+                    <a href="{{ path('app_admin_dashboard', { section: 'booking' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'booking' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
+                        <span>Booking</span>
+                        {% if activeSection == 'booking' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
+                        {% endif %}
+                    </a>
                 </nav>
 
                 <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
@@ -68,7 +81,7 @@
             </aside>
 
             <div class="space-y-6">
-                <div class="rounded-[2rem] border border-border bg-card p-6">
+                <div id="users-section" class="{{ activeSection == 'users' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6">
                     <form method="get" action="{{ path('app_admin_dashboard') }}" class="grid grid-cols-1 gap-3 md:grid-cols-4">
                         <input type="text" name="q" value="{{ filters.q }}" placeholder="Search name, email, phone" class="md:col-span-2 rounded-xl border border-border bg-secondary/30 px-3 py-2 text-sm">
                         <select name="role" class="rounded-xl border border-border bg-secondary/30 px-3 py-2 text-sm">
@@ -86,7 +99,7 @@
                     </form>
                 </div>
 
-                <div class="rounded-[2rem] border border-border bg-card p-6">
+                <div class="{{ activeSection == 'users' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6">
                     <div class="mb-5 flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
                         <div>
                             <h2 class="text-xl font-heading font-bold text-foreground">Users</h2>
@@ -104,8 +117,8 @@
                                 <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Users by Role</h3>
                                 <span class="text-xs text-muted-foreground">Circle chart</span>
                             </div>
-                            <div class="mx-auto max-w-[320px]">
-                                <canvas id="usersRoleChart" height="220"></canvas>
+                            <div class="mx-auto h-[260px] w-full max-w-[320px]">
+                                <canvas id="usersRoleChart" class="h-full w-full"></canvas>
                             </div>
                         </div>
 
@@ -114,7 +127,9 @@
                                 <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Users Trend</h3>
                                 <span class="text-xs text-muted-foreground">Curve chart</span>
                             </div>
-                            <canvas id="usersTrendChart" height="220"></canvas>
+                            <div class="h-[260px] w-full">
+                                <canvas id="usersTrendChart" class="h-full w-full"></canvas>
+                            </div>
                         </div>
                     </div>
 
@@ -159,6 +174,11 @@
                                     <td class="py-4 pr-3 text-sm text-muted-foreground">{{ user.createdAt|date('Y-m-d H:i') }}</td>
                                     <td class="py-4">
                                         <div class="flex flex-wrap items-center gap-2">
+                                            {% if user.roleValue == 'HOST' %}
+                                                <a href="{{ path('app_booking_host_view', { id: user.id }) }}" class="rounded-xl bg-sky-600 px-3 py-2 text-xs font-bold text-white transition-opacity hover:opacity-90">
+                                                    Host Dashboard
+                                                </a>
+                                            {% endif %}
                                             <button
                                                 type="button"
                                                 onclick="openEditUserModal(this)"
@@ -197,6 +217,319 @@
                             {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <div id="messaging-analytics" class="{{ activeSection == 'messaging' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6 space-y-6">
+                    <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <h2 class="text-xl font-heading font-bold text-foreground">Messaging Analytics</h2>
+                            <p class="text-sm text-muted-foreground">Data pulled from the messaging module dashboard and merged into the user admin view.</p>
+                        </div>
+                        <a href="{{ path('app_admin_dashboard', { section: 'users' }) }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">
+                            Show Users
+                        </a>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Conversations</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-foreground">{{ messagingStats.totalConversations }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Messages</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-primary">{{ messagingStats.totalMessages }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Media Messages</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-accent">{{ messagingStats.totalMedia }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Top Senders</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-destructive">{{ topSenders|length }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Messages per Day</h3>
+                                <span class="text-xs text-muted-foreground">Last 7 days</span>
+                            </div>
+                            <div class="h-[260px] w-full">
+                                <canvas id="messagesPerDayChart" class="h-full w-full"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-4">
+                            <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                <div class="mb-3 flex items-center justify-between">
+                                    <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Conversation Types</h3>
+                                    <span class="text-xs text-muted-foreground">Distribution</span>
+                                </div>
+                                <div class="h-[210px] w-full">
+                                    <canvas id="conversationTypesChart" class="h-full w-full"></canvas>
+                                </div>
+                            </div>
+
+                            <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                <div class="mb-3 flex items-center justify-between">
+                                    <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Message Types</h3>
+                                    <span class="text-xs text-muted-foreground">Distribution</span>
+                                </div>
+                                <div class="h-[210px] w-full">
+                                    <canvas id="messageTypesChart" class="h-full w-full"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Top Conversations</h3>
+                            <div class="space-y-3">
+                                {% for conv in topConversations %}
+                                    <div class="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+                                        <span class="truncate text-sm font-semibold text-foreground">{{ conv.name ?: 'Conversation #' ~ conv.id }}</span>
+                                        <span class="ml-3 shrink-0 rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{{ conv.message_count }} messages</span>
+                                    </div>
+                                {% else %}
+                                    <p class="text-sm text-muted-foreground">No conversation activity yet.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Top Senders</h3>
+                            <div class="space-y-3">
+                                {% for sender in topSenders %}
+                                    <div class="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+                                        <div class="min-w-0">
+                                            <p class="truncate text-sm font-semibold text-foreground">{{ sender.full_name ?: sender.email }}</p>
+                                            <p class="truncate text-xs text-muted-foreground">{{ sender.email }}</p>
+                                        </div>
+                                        <span class="ml-3 shrink-0 rounded-full bg-accent/10 px-3 py-1 text-xs font-bold text-accent">{{ sender.message_count }} messages</span>
+                                    </div>
+                                {% else %}
+                                    <p class="text-sm text-muted-foreground">No sender activity yet.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Recent Messaging Activity</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[900px] border-collapse">
+                                <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Time</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">User</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Conversation</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Content</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for activity in recentActivity %}
+                                    <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                        <td class="py-3 pr-3 text-sm text-muted-foreground">{{ activity.created_at|date('H:i:s') }}</td>
+                                        <td class="py-3 pr-3 text-sm text-foreground">{{ activity.sender_name ?: activity.sender_id|slice(0,8) }}</td>
+                                        <td class="py-3 pr-3 text-sm text-foreground">{{ activity.conversation_name ?: '#' ~ activity.conversation_id }}</td>
+                                        <td class="py-3 pr-3 text-sm text-muted-foreground">
+                                            {% if activity.message_type == 'TEXT' %}
+                                                {{ activity.content|slice(0, 50) }}
+                                            {% elseif activity.message_type == 'IMAGE' %}
+                                                📷 Image
+                                            {% elseif activity.message_type == 'VIDEO' %}
+                                                🎥 Video
+                                            {% elseif activity.message_type == 'AUDIO' %}
+                                                🎵 Audio
+                                            {% else %}
+                                                📎 File
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="4" class="py-8 text-center text-sm text-muted-foreground">No recent messaging activity.</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="booking-analytics" class="{{ activeSection == 'booking' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6 space-y-6">
+                    <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <h2 class="text-xl font-heading font-bold text-foreground">Booking Analytics</h2>
+                            <p class="text-sm text-muted-foreground">Booking module insights integrated into the main admin dashboard.</p>
+                        </div>
+                        <a href="{{ path('app_admin_dashboard', { section: 'users' }) }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">
+                            Show Users
+                        </a>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Total Places</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-foreground">{{ bookingStats.totalPlaces }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Approved Places</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-primary">{{ bookingStats.approvedPlaces }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pending Places</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-accent">{{ bookingStats.pendingPlaces }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Total Bookings</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-foreground">{{ bookingStats.totalBookings }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Pending Bookings</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-destructive">{{ bookingStats.pendingBookings }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Confirmed Bookings</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-primary">{{ bookingStats.confirmedBookings }}</p>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Create Place</h3>
+                                <p class="text-xs text-muted-foreground">Open the modal to create a place with multiple images.</p>
+                            </div>
+                            <button type="button" onclick="openCreatePlaceModal()" class="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-primary/90">Create Place</button>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Manage Places (CRUD)</h3>
+                        <div class="space-y-3">
+                            {% for place in bookingPlaces %}
+                                {% set placePreviewImage = bookingPlacePreviewImages[place.id]|default(place.imageUrl) %}
+                                {% set placeExistingImages = [] %}
+                                {% for image in place.images %}
+                                    {% set placeExistingImages = placeExistingImages|merge([{ id: image.id, url: image.url }]) %}
+                                {% endfor %}
+                                <div class="rounded-xl border border-border bg-background p-3">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex min-w-0 items-start gap-3">
+                                            {% if placePreviewImage %}
+                                                <img src="{{ placePreviewImage starts with('http') ? placePreviewImage : asset('uploads/places/' ~ placePreviewImage) }}" alt="{{ place.title }}" class="h-14 w-18 rounded-lg object-cover">
+                                            {% endif %}
+                                            <div class="min-w-0">
+                                                <p class="truncate text-sm font-semibold text-foreground">{{ place.title }}</p>
+                                                <p class="truncate text-xs text-muted-foreground">{{ place.city }} · {{ place.host ? place.host.fullName : 'Unknown host' }}</p>
+                                            </div>
+                                        </div>
+                                        <span class="rounded-full bg-secondary/40 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-foreground">{{ place.status }}</span>
+                                    </div>
+                                    <div class="mt-3 flex flex-wrap gap-2">
+                                        <button
+                                            type="button"
+                                            onclick="openEditPlaceModal(this)"
+                                            data-update-url="{{ path('app_admin_place_update', { id: place.id }) }}"
+                                            data-update-token="{{ csrf_token('admin_place_update_' ~ place.id) }}"
+                                            data-title="{{ place.title|e('html_attr') }}"
+                                            data-host-id="{{ place.host ? place.host.id : '' }}"
+                                            data-status="{{ place.status|e('html_attr') }}"
+                                            data-city="{{ place.city|e('html_attr') }}"
+                                            data-category="{{ (place.category ?? '')|e('html_attr') }}"
+                                            data-price-per-day="{{ place.pricePerDay|e('html_attr') }}"
+                                            data-capacity="{{ place.capacity|e('html_attr') }}"
+                                            data-max-guests="{{ place.maxGuests|e('html_attr') }}"
+                                            data-address="{{ place.address|e('html_attr') }}"
+                                            data-latitude="{{ (place.latitude ?: '36.80650000')|e('html_attr') }}"
+                                            data-longitude="{{ (place.longitude ?: '10.18150000')|e('html_attr') }}"
+                                            data-description="{{ (place.description ?? '')|e('html_attr') }}"
+                                            data-existing-images="{{ placeExistingImages|json_encode|e('html_attr') }}"
+                                            class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white"
+                                        >
+                                            Edit
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onclick="openDeletePlaceModal(this)"
+                                            data-delete-url="{{ path('app_admin_place_delete', { id: place.id }) }}"
+                                            data-delete-token="{{ csrf_token('admin_place_delete_' ~ place.id) }}"
+                                            data-place-title="{{ place.title|e('html_attr') }}"
+                                            class="rounded-xl bg-destructive px-4 py-2 text-xs font-bold text-white"
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p class="text-sm text-muted-foreground">No places found.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Pending Place Requests</h3>
+                            <div class="space-y-3">
+                                {% for place in bookingPendingPlaces %}
+                                    {% set placePreviewImage = bookingPlacePreviewImages[place.id]|default(place.imageUrl) %}
+                                    <article class="rounded-xl border border-border bg-background p-3">
+                                        <div class="flex items-start gap-3">
+                                            {% if placePreviewImage %}
+                                                <img src="{{ placePreviewImage starts with('http') ? placePreviewImage : asset('uploads/places/' ~ placePreviewImage) }}" alt="{{ place.title }}" class="h-16 w-20 rounded-lg object-cover">
+                                            {% endif %}
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-sm font-semibold text-foreground">{{ place.title }}</p>
+                                                <p class="truncate text-xs text-muted-foreground">{{ place.city }} · {{ place.host ? place.host.fullName : 'Unknown host' }}</p>
+                                                <p class="mt-1 text-xs font-bold uppercase tracking-wider text-accent">{{ place.status }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="mt-3 flex flex-wrap items-center gap-2">
+                                            <form method="post" action="{{ path('app_admin_place_approve', { id: place.id }) }}">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('admin_place_approve_' ~ place.id) }}">
+                                                <button type="submit" class="rounded-lg bg-primary px-3 py-1.5 text-xs font-bold text-white">Accept</button>
+                                            </form>
+                                            <form method="post" action="{{ path('app_admin_place_reject', { id: place.id }) }}" class="flex items-center gap-2">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('admin_place_reject_' ~ place.id) }}">
+                                                <input type="text" name="reason" placeholder="Reject reason (optional)" class="w-44 rounded-lg border border-border bg-secondary/20 px-2 py-1.5 text-xs">
+                                                <button type="submit" class="rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-white">Reject</button>
+                                            </form>
+                                        </div>
+                                    </article>
+                                {% else %}
+                                    <p class="text-sm text-muted-foreground">No pending places right now.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Recent Bookings</h3>
+                            <div class="space-y-3">
+                                {% for booking in bookingRecentBookings %}
+                                    {% set place = booking.place %}
+                                    {% set placePreviewImage = place ? bookingPlacePreviewImages[place.id]|default(place.imageUrl) : null %}
+                                    <article class="rounded-xl border border-border bg-background p-3">
+                                        <div class="flex items-start gap-3">
+                                            {% if placePreviewImage %}
+                                                <img src="{{ placePreviewImage starts with('http') ? placePreviewImage : asset('uploads/places/' ~ placePreviewImage) }}" alt="{{ place ? place.title : 'Place' }}" class="h-16 w-20 rounded-lg object-cover">
+                                            {% endif %}
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-sm font-semibold text-foreground">{{ place ? place.title : 'Unknown place' }}</p>
+                                                <p class="truncate text-xs text-muted-foreground">Guest: {{ booking.guest ? booking.guest.fullName : 'Unknown user' }}</p>
+                                                <p class="mt-1 text-xs text-muted-foreground">{{ booking.startDate|date('Y-m-d') }} to {{ booking.endDate|date('Y-m-d') }}</p>
+                                                <p class="mt-1 text-xs font-bold uppercase tracking-wider text-primary">{{ booking.status }}</p>
+                                            </div>
+                                        </div>
+                                    </article>
+                                {% else %}
+                                    <p class="text-sm text-muted-foreground">No bookings yet.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -284,6 +617,209 @@
     </div>
 </div>
 
+<div id="place-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm">
+    <div class="w-full max-w-4xl rounded-[2rem] border border-border bg-background shadow-2xl">
+        <div class="flex items-start justify-between border-b border-border px-6 py-5">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[0.28em] text-primary">Booking</p>
+                <h3 class="mt-1 text-2xl font-heading font-bold text-foreground">Create Place</h3>
+                <p class="mt-1 text-sm text-muted-foreground">Add a new place from the admin dashboard.</p>
+            </div>
+            <button type="button" onclick="closeCreatePlaceModal()" class="rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            </button>
+        </div>
+
+        <form id="place-create-form" method="post" action="{{ path('app_admin_place_create') }}" enctype="multipart/form-data" data-validate-form novalidate class="grid max-h-[70vh] grid-cols-1 gap-3 overflow-y-auto px-6 py-6 md:grid-cols-2">
+            <input type="hidden" name="_token" value="{{ csrf_token('admin_place_create') }}">
+            <div class="space-y-1 md:col-span-2">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Title</label>
+                <input type="text" name="title" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Host</label>
+                <select name="host_id" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                    <option value="">Select host</option>
+                    {% for host in bookingHosts %}
+                        <option value="{{ host.id }}">{{ host.fullName }} ({{ host.email }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</label>
+                <select name="status" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                    <option value="PENDING">Pending</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="DENIED">Denied</option>
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">City</label>
+                <input type="text" name="city" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</label>
+                <input type="text" name="category" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Price / day</label>
+                <input type="number" min="0.01" step="0.01" name="price_per_day" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Capacity</label>
+                <input type="number" min="1" name="capacity" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Max Guests</label>
+                <input type="number" min="1" name="max_guests" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1 md:col-span-2">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Address</label>
+                <input type="text" name="address" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Latitude</label>
+                <input type="text" name="latitude" value="36.80650000" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Longitude</label>
+                <input type="text" name="longitude" value="10.18150000" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1 md:col-span-2">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description</label>
+                <textarea name="description" rows="3" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"></textarea>
+            </div>
+            <div class="space-y-2 md:col-span-2" data-image-uploader>
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Place Images (multiple)</label>
+                <div class="flex items-center gap-3">
+                    <button type="button" class="js-upload-trigger rounded-xl border border-border bg-background px-4 py-2 text-xs font-bold">Upload images</button>
+                    <span class="text-xs text-muted-foreground">Select one or many images</span>
+                </div>
+                <input type="file" name="images[]" accept="image/*" multiple required class="js-image-input hidden">
+                <div class="js-image-preview-grid grid grid-cols-3 gap-2 md:grid-cols-6"></div>
+            </div>
+            <div class="md:col-span-2 flex flex-wrap items-center justify-end gap-3 pt-2">
+                <button type="button" onclick="closeCreatePlaceModal()" class="rounded-xl border border-border px-5 py-2.5 text-sm font-bold text-foreground transition-colors hover:bg-secondary/50">Cancel</button>
+                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary/90">Create Place</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="place-edit-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm">
+    <div class="w-full max-w-4xl rounded-[2rem] border border-border bg-background shadow-2xl">
+        <div class="flex items-start justify-between border-b border-border px-6 py-5">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[0.28em] text-primary">Booking</p>
+                <h3 class="mt-1 text-2xl font-heading font-bold text-foreground">Edit Place</h3>
+                <p class="mt-1 text-sm text-muted-foreground">Update place details from the admin dashboard.</p>
+            </div>
+            <button type="button" onclick="closeEditPlaceModal()" class="rounded-full p-2 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground">
+                <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+            </button>
+        </div>
+
+        <form id="place-edit-form" method="post" action="" enctype="multipart/form-data" data-validate-form novalidate class="grid max-h-[70vh] grid-cols-1 gap-3 overflow-y-auto px-6 py-6 md:grid-cols-2">
+            <input id="place-edit-token" type="hidden" name="_token" value="">
+            <div class="space-y-1 md:col-span-2">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Title</label>
+                <input id="place-edit-title" type="text" name="title" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Host</label>
+                <select id="place-edit-host" name="host_id" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                    <option value="">Select host</option>
+                    {% for host in bookingHosts %}
+                        <option value="{{ host.id }}">{{ host.fullName }} ({{ host.email }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</label>
+                <select id="place-edit-status" name="status" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                    <option value="PENDING">Pending</option>
+                    <option value="APPROVED">Approved</option>
+                    <option value="DENIED">Denied</option>
+                </select>
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">City</label>
+                <input id="place-edit-city" type="text" name="city" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</label>
+                <input id="place-edit-category" type="text" name="category" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Price / day</label>
+                <input id="place-edit-price" type="number" min="0.01" step="0.01" name="price_per_day" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Capacity</label>
+                <input id="place-edit-capacity" type="number" min="1" name="capacity" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Max Guests</label>
+                <input id="place-edit-max-guests" type="number" min="1" name="max_guests" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1 md:col-span-2">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Address</label>
+                <input id="place-edit-address" type="text" name="address" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Latitude</label>
+                <input id="place-edit-latitude" type="text" name="latitude" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Longitude</label>
+                <input id="place-edit-longitude" type="text" name="longitude" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+            </div>
+            <div class="space-y-1 md:col-span-2">
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description</label>
+                <textarea id="place-edit-description" name="description" rows="3" class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"></textarea>
+            </div>
+            <div class="space-y-3 md:col-span-2">
+                <div class="flex items-center justify-between gap-3">
+                    <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Current Images</label>
+                    <span class="text-[11px] text-muted-foreground">Click X to remove images already in the place</span>
+                </div>
+                <div id="place-edit-existing-images-empty" class="hidden rounded-xl border border-dashed border-border bg-secondary/20 px-4 py-3 text-sm text-muted-foreground">
+                    No uploaded images are attached to this place yet.
+                </div>
+                <div id="place-edit-existing-images-grid" class="grid grid-cols-3 gap-2 md:grid-cols-6"></div>
+            </div>
+            <div class="space-y-2 md:col-span-2" data-image-uploader>
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Add More Images (multiple)</label>
+                <div class="flex items-center gap-3">
+                    <button type="button" class="js-upload-trigger rounded-xl border border-border bg-background px-4 py-2 text-xs font-bold">Upload images</button>
+                    <span class="text-xs text-muted-foreground">Select one or many images</span>
+                </div>
+                <input type="file" name="images[]" accept="image/*" multiple class="js-image-input hidden">
+                <div class="js-image-preview-grid grid grid-cols-3 gap-2 md:grid-cols-6"></div>
+            </div>
+            <div class="md:col-span-2 flex flex-wrap items-center justify-end gap-3 pt-2">
+                <button type="button" onclick="closeEditPlaceModal()" class="rounded-xl border border-border px-5 py-2.5 text-sm font-bold text-foreground transition-colors hover:bg-secondary/50">Cancel</button>
+                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary/90">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="place-delete-modal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-slate-950/60 px-4 py-8 backdrop-blur-sm">
+    <div class="w-full max-w-lg rounded-[2rem] border border-border bg-background p-6 shadow-2xl">
+        <p class="text-xs font-bold uppercase tracking-[0.28em] text-destructive">Danger Zone</p>
+        <h3 class="mt-2 text-2xl font-heading font-bold text-foreground">Delete Place</h3>
+        <p class="mt-2 text-sm text-muted-foreground">This action cannot be undone.</p>
+        <p class="mt-2 text-sm font-semibold text-foreground" id="place-delete-name"></p>
+
+        <form id="place-delete-form" method="post" action="" class="mt-6 flex flex-wrap items-center justify-end gap-3">
+            <input id="place-delete-token" type="hidden" name="_token" value="">
+            <button type="button" onclick="closeDeletePlaceModal()" class="rounded-xl border border-border px-5 py-2.5 text-sm font-bold text-foreground transition-colors hover:bg-secondary/50">Cancel</button>
+            <button type="submit" class="rounded-xl bg-destructive px-5 py-2.5 text-sm font-bold text-white">Delete</button>
+        </form>
+    </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const userModal = document.getElementById('user-modal');
@@ -301,6 +837,17 @@
     const userAvatarImage = document.getElementById('user-avatar-image');
     const userAvatarPlaceholder = document.getElementById('user-avatar-placeholder');
     const profileInput = document.getElementById('user-profile-picture');
+    const placeModal = document.getElementById('place-modal');
+    const placeEditModal = document.getElementById('place-edit-modal');
+    const placeDeleteModal = document.getElementById('place-delete-modal');
+    const placeEditForm = document.getElementById('place-edit-form');
+    const placeEditToken = document.getElementById('place-edit-token');
+    const placeEditExistingImagesGrid = document.getElementById('place-edit-existing-images-grid');
+    const placeEditExistingImagesEmpty = document.getElementById('place-edit-existing-images-empty');
+    const placeDeleteForm = document.getElementById('place-delete-form');
+    const placeDeleteToken = document.getElementById('place-delete-token');
+    const placeDeleteName = document.getElementById('place-delete-name');
+    const placeUploadsBaseUrl = '{{ asset('uploads/places/') }}';
 
     function initUserCharts() {
         if (typeof Chart === 'undefined') {
@@ -397,6 +944,84 @@
         }
     }
 
+    function initMessagingCharts() {
+        if (typeof Chart === 'undefined') {
+            return;
+        }
+
+        const messagesPerDayElement = document.getElementById('messagesPerDayChart');
+        if (messagesPerDayElement) {
+            const messagesPerDayData = {{ messagesPerDayChart|json_encode|raw }};
+            new Chart(messagesPerDayElement, {
+                type: 'line',
+                data: {
+                    labels: messagesPerDayData.map((item) => item.label),
+                    datasets: [{
+                        label: 'Messages',
+                        data: messagesPerDayData.map((item) => item.count),
+                        borderColor: '#1e4ed8',
+                        backgroundColor: 'rgba(30, 78, 216, 0.14)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
+
+        const conversationTypesElement = document.getElementById('conversationTypesChart');
+        if (conversationTypesElement) {
+            const conversationTypesData = {{ conversationTypeChartData|json_encode|raw }};
+            new Chart(conversationTypesElement, {
+                type: 'doughnut',
+                data: {
+                    labels: conversationTypesData.map((item) => item.label),
+                    datasets: [{
+                        data: conversationTypesData.map((item) => item.count),
+                        backgroundColor: ['#1e4ed8', '#60a5fa', '#93c5fd', '#dbeafe'],
+                        borderColor: ['#1e4ed8', '#60a5fa', '#93c5fd', '#dbeafe'],
+                        borderWidth: 1,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } },
+                },
+            });
+        }
+
+        const messageTypesElement = document.getElementById('messageTypesChart');
+        if (messageTypesElement) {
+            const messageTypesData = {{ messageTypeChartData|json_encode|raw }};
+            new Chart(messageTypesElement, {
+                type: 'bar',
+                data: {
+                    labels: messageTypesData.map((item) => item.label),
+                    datasets: [{
+                        label: 'Messages',
+                        data: messageTypesData.map((item) => item.count),
+                        backgroundColor: '#1e4ed8',
+                        borderRadius: 8,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
+    }
+
     function openCreateUserModal() {
         userForm.action = '{{ path('app_admin_user_create') }}';
         userFormToken.value = '{{ csrf_token('admin_user_create') }}';
@@ -443,6 +1068,86 @@
         userModal.classList.remove('flex');
     }
 
+    function openCreatePlaceModal() {
+        if (!placeModal) {
+            return;
+        }
+
+        placeModal.classList.remove('hidden');
+        placeModal.classList.add('flex');
+    }
+
+    function closeCreatePlaceModal() {
+        if (!placeModal) {
+            return;
+        }
+
+        placeModal.classList.add('hidden');
+        placeModal.classList.remove('flex');
+    }
+
+    function openEditPlaceModal(button) {
+        if (!placeEditModal || !placeEditForm || !placeEditToken) {
+            return;
+        }
+
+        const data = button.dataset;
+        placeEditForm.action = data.updateUrl || '';
+        placeEditToken.value = data.updateToken || '';
+
+        document.getElementById('place-edit-title').value = data.title || '';
+        document.getElementById('place-edit-host').value = data.hostId || '';
+        document.getElementById('place-edit-status').value = data.status || 'PENDING';
+        document.getElementById('place-edit-city').value = data.city || '';
+        document.getElementById('place-edit-category').value = data.category || '';
+        document.getElementById('place-edit-price').value = data.pricePerDay || '';
+        document.getElementById('place-edit-capacity').value = data.capacity || '';
+        document.getElementById('place-edit-max-guests').value = data.maxGuests || '';
+        document.getElementById('place-edit-address').value = data.address || '';
+        document.getElementById('place-edit-latitude').value = data.latitude || '36.80650000';
+        document.getElementById('place-edit-longitude').value = data.longitude || '10.18150000';
+        document.getElementById('place-edit-description').value = data.description || '';
+
+        resetFormErrors(placeEditForm);
+        resetUploadersInContainer(placeEditModal);
+        renderExistingImagesInEditModal(data.existingImages || '[]');
+
+        placeEditModal.classList.remove('hidden');
+        placeEditModal.classList.add('flex');
+    }
+
+    function closeEditPlaceModal() {
+        if (!placeEditModal) {
+            return;
+        }
+
+        placeEditModal.classList.add('hidden');
+        placeEditModal.classList.remove('flex');
+    }
+
+    function openDeletePlaceModal(button) {
+        if (!placeDeleteModal || !placeDeleteForm || !placeDeleteToken || !placeDeleteName) {
+            return;
+        }
+
+        const data = button.dataset;
+        placeDeleteForm.action = data.deleteUrl || '';
+        placeDeleteToken.value = data.deleteToken || '';
+        placeDeleteName.textContent = data.placeTitle ? 'Place: ' + data.placeTitle : '';
+
+        placeDeleteModal.classList.remove('hidden');
+        placeDeleteModal.classList.add('flex');
+    }
+
+    function closeDeletePlaceModal() {
+        if (!placeDeleteModal) {
+            return;
+        }
+
+        placeDeleteModal.classList.add('hidden');
+        placeDeleteModal.classList.remove('flex');
+    }
+
     function setAvatarPreview(src, seed) {
         if (src) {
             userAvatarImage.src = src;
@@ -469,18 +1174,330 @@
         reader.readAsDataURL(file);
     }
 
+    function initImageUploaders() {
+        document.querySelectorAll('[data-image-uploader]').forEach((uploader) => {
+            if (uploader.dataset.initialized === '1') {
+                return;
+            }
+
+            const trigger = uploader.querySelector('.js-upload-trigger');
+            const input = uploader.querySelector('.js-image-input');
+            const grid = uploader.querySelector('.js-image-preview-grid');
+            if (!trigger || !input || !grid) {
+                return;
+            }
+
+            uploader.dataset.initialized = '1';
+            let selectedFiles = [];
+
+            const syncInputFiles = () => {
+                const dataTransfer = new DataTransfer();
+                selectedFiles.forEach((file) => dataTransfer.items.add(file));
+                input.files = dataTransfer.files;
+            };
+
+            const appendSelectedFiles = (newFiles) => {
+                const existingKeys = new Set(selectedFiles.map((file) => file.name + '|' + file.size + '|' + file.lastModified));
+                newFiles.forEach((file) => {
+                    const key = file.name + '|' + file.size + '|' + file.lastModified;
+                    if (!existingKeys.has(key)) {
+                        selectedFiles.push(file);
+                        existingKeys.add(key);
+                    }
+                });
+            };
+
+            const renderSelectedFiles = () => {
+                grid.innerHTML = '';
+
+                selectedFiles.forEach((file, index) => {
+                    const url = URL.createObjectURL(file);
+                    const card = document.createElement('div');
+                    card.className = 'relative';
+                    card.innerHTML = '<img src="' + url + '" alt="selected image" class="h-14 w-full rounded-lg object-cover"><button type="button" class="js-remove-selected-image absolute -right-1 -top-1 h-5 w-5 rounded-full bg-destructive text-[11px] font-bold text-white">x</button>';
+
+                    const removeButton = card.querySelector('.js-remove-selected-image');
+                    removeButton.addEventListener('click', () => {
+                        selectedFiles.splice(index, 1);
+                        syncInputFiles();
+                        renderSelectedFiles();
+                    });
+
+                    grid.appendChild(card);
+                });
+            };
+
+            trigger.addEventListener('click', () => input.click());
+            input.addEventListener('change', () => {
+                appendSelectedFiles(Array.from(input.files || []));
+                syncInputFiles();
+                renderSelectedFiles();
+            });
+
+            uploader.__resetUploader = () => {
+                selectedFiles = [];
+                syncInputFiles();
+                renderSelectedFiles();
+            };
+        });
+    }
+
+    function resetUploadersInContainer(container) {
+        if (!container) {
+            return;
+        }
+
+        container.querySelectorAll('[data-image-uploader]').forEach((uploader) => {
+            if (typeof uploader.__resetUploader === 'function') {
+                uploader.__resetUploader();
+            }
+        });
+    }
+
+    function getFieldLabel(field) {
+        const wrapper = field.closest('.space-y-1, .space-y-2');
+        const label = wrapper ? wrapper.querySelector('label') : null;
+        return label ? label.textContent.trim() : (field.name || 'This field');
+    }
+
+    function getOrCreateErrorElement(field) {
+        let errorElement = field.nextElementSibling;
+        if (errorElement && errorElement.classList.contains('js-input-error')) {
+            return errorElement;
+        }
+
+        errorElement = document.createElement('p');
+        errorElement.className = 'js-input-error mt-1 text-xs font-semibold text-rose-600';
+        field.insertAdjacentElement('afterend', errorElement);
+        return errorElement;
+    }
+
+    function setFieldError(field, message) {
+        const errorElement = getOrCreateErrorElement(field);
+        errorElement.textContent = message;
+        field.classList.add('border-rose-500');
+    }
+
+    function clearFieldError(field) {
+        const errorElement = field.nextElementSibling;
+        if (errorElement && errorElement.classList.contains('js-input-error')) {
+            errorElement.remove();
+        }
+        field.classList.remove('border-rose-500');
+    }
+
+    function buildFieldErrorMessage(field) {
+        const label = getFieldLabel(field);
+        if (field.classList.contains('js-image-input') && field.required && (!field.files || field.files.length === 0)) {
+            return label + ' is required.';
+        }
+
+        if (field.validity.valueMissing) {
+            return label + ' is required.';
+        }
+        if (field.validity.typeMismatch) {
+            return 'Please enter a valid ' + field.type + '.';
+        }
+        if (field.validity.rangeUnderflow) {
+            return label + ' is below the minimum value.';
+        }
+        if (field.validity.rangeOverflow) {
+            return label + ' is above the maximum value.';
+        }
+        if (field.validity.stepMismatch) {
+            return label + ' has an invalid step value.';
+        }
+        if (field.validity.patternMismatch) {
+            return label + ' format is invalid.';
+        }
+
+        return field.validationMessage || (label + ' is invalid.');
+    }
+
+    function validateField(field) {
+        if (field.disabled || field.type === 'hidden' && !field.classList.contains('js-image-input')) {
+            return true;
+        }
+
+        const isImageInput = field.classList.contains('js-image-input');
+        const isValid = isImageInput
+            ? (!field.required || (field.files && field.files.length > 0))
+            : field.checkValidity();
+
+        if (isValid) {
+            clearFieldError(field);
+            return true;
+        }
+
+        setFieldError(field, buildFieldErrorMessage(field));
+        return false;
+    }
+
+    function resetFormErrors(form) {
+        if (!form) {
+            return;
+        }
+
+        form.querySelectorAll('.js-input-error').forEach((item) => item.remove());
+        form.querySelectorAll('.border-rose-500').forEach((item) => item.classList.remove('border-rose-500'));
+    }
+
+    function initFormValidation() {
+        document.querySelectorAll('form[data-validate-form]').forEach((form) => {
+            if (form.dataset.validationInitialized === '1') {
+                return;
+            }
+
+            form.dataset.validationInitialized = '1';
+            const fields = form.querySelectorAll('input, select, textarea');
+
+            fields.forEach((field) => {
+                if (field.type === 'hidden' && !field.classList.contains('js-image-input')) {
+                    return;
+                }
+
+                const eventName = field.tagName === 'SELECT' || field.type === 'file' ? 'change' : 'input';
+                field.addEventListener(eventName, () => validateField(field));
+                field.addEventListener('blur', () => validateField(field));
+            });
+
+            form.addEventListener('submit', (event) => {
+                let firstInvalid = null;
+
+                fields.forEach((field) => {
+                    const valid = validateField(field);
+                    if (!valid && !firstInvalid) {
+                        firstInvalid = field;
+                    }
+                });
+
+                if (firstInvalid) {
+                    event.preventDefault();
+                    if (!firstInvalid.classList.contains('js-image-input')) {
+                        firstInvalid.focus();
+                    }
+                }
+            });
+        });
+    }
+
+    function initExistingImageRemoval() {
+        document.querySelectorAll('.js-existing-image-item').forEach((item) => {
+            if (item.dataset.initialized === '1') {
+                return;
+            }
+
+            const removeButton = item.querySelector('.js-remove-existing-image');
+            const checkbox = item.querySelector('.js-existing-image-checkbox');
+            if (!removeButton || !checkbox) {
+                return;
+            }
+
+            item.dataset.initialized = '1';
+            removeButton.addEventListener('click', () => {
+                checkbox.checked = true;
+                item.classList.add('hidden');
+            });
+        });
+    }
+
+    function renderExistingImagesInEditModal(existingImagesJson) {
+        if (!placeEditExistingImagesGrid || !placeEditExistingImagesEmpty) {
+            return;
+        }
+
+        let existingImages = [];
+        try {
+            existingImages = JSON.parse(existingImagesJson || '[]');
+        } catch (error) {
+            existingImages = [];
+        }
+
+        placeEditExistingImagesGrid.innerHTML = '';
+
+        if (!Array.isArray(existingImages) || existingImages.length === 0) {
+            placeEditExistingImagesEmpty.classList.remove('hidden');
+            return;
+        }
+
+        placeEditExistingImagesEmpty.classList.add('hidden');
+
+        existingImages.forEach((image) => {
+            const imageUrl = String(image.url || '');
+            const resolvedUrl = imageUrl.startsWith('http') ? imageUrl : placeUploadsBaseUrl + imageUrl;
+            const wrapper = document.createElement('div');
+            wrapper.className = 'js-existing-image-item relative overflow-hidden rounded-xl border border-border bg-background';
+            wrapper.innerHTML = `
+                <img src="${resolvedUrl}" alt="Existing place image" class="h-20 w-full object-cover">
+                <input type="checkbox" name="remove_image_ids[]" value="${image.id}" class="js-existing-image-checkbox hidden">
+                <button type="button" class="js-remove-existing-image absolute right-1 top-1 rounded-full bg-destructive px-2 py-1 text-[10px] font-bold text-white shadow">X</button>
+            `;
+            placeEditExistingImagesGrid.appendChild(wrapper);
+        });
+
+        initExistingImageRemoval();
+    }
+
     userModal.addEventListener('click', function (event) {
         if (event.target === userModal) {
             closeUserModal();
         }
     });
 
+    if (placeModal) {
+        placeModal.addEventListener('click', function (event) {
+            if (event.target === placeModal) {
+                closeCreatePlaceModal();
+            }
+        });
+    }
+
+    if (placeEditModal) {
+        placeEditModal.addEventListener('click', function (event) {
+            if (event.target === placeEditModal) {
+                closeEditPlaceModal();
+            }
+        });
+    }
+
+    if (placeDeleteModal) {
+        placeDeleteModal.addEventListener('click', function (event) {
+            if (event.target === placeDeleteModal) {
+                closeDeletePlaceModal();
+            }
+        });
+    }
+
     document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && !userModal.classList.contains('hidden')) {
+        if (event.key !== 'Escape') {
+            return;
+        }
+
+        if (!userModal.classList.contains('hidden')) {
             closeUserModal();
+        }
+
+        if (placeModal && !placeModal.classList.contains('hidden')) {
+            closeCreatePlaceModal();
+        }
+
+        if (placeEditModal && !placeEditModal.classList.contains('hidden')) {
+            closeEditPlaceModal();
+        }
+
+        if (placeDeleteModal && !placeDeleteModal.classList.contains('hidden')) {
+            closeDeletePlaceModal();
         }
     });
 
+    {% if activeSection == 'users' %}
     initUserCharts();
+    {% endif %}
+    {% if activeSection == 'messaging' %}
+    initMessagingCharts();
+    {% endif %}
+    initImageUploaders();
+    initExistingImageRemoval();
+    initFormValidation();
 </script>
 {% endblock %}

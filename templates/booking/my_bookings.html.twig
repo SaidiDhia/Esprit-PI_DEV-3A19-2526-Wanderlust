@@ -1,0 +1,121 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}My Bookings — Wanderlust{% endblock %}
+
+{% block content %}
+<section class="bg-slate-50 py-16">
+    <div class="container mx-auto px-4">
+        {% for message in app.flashes('success') %}
+            <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{{ message }}</div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{{ message }}</div>
+        {% endfor %}
+
+        <div class="mb-8 flex items-end justify-between gap-4">
+            <div>
+                <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Trips</p>
+                <h1 class="mt-3 text-4xl font-heading font-bold text-slate-950">My bookings</h1>
+                <p class="mt-2 text-sm text-slate-500">Edit dates while a booking is still pending, then review the places you've booked below.</p>
+            </div>
+            <a href="{{ path('app_booking') }}" class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white">Browse stays</a>
+        </div>
+
+        <div class="grid gap-6">
+            {% for booking in bookings %}
+                <article class="rounded-[2rem] border border-border bg-white p-6 shadow-sm">
+                    <div class="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <h2 class="text-2xl font-heading font-bold text-slate-950">{{ booking.place.title }}</h2>
+                            <p class="mt-2 text-sm text-slate-500">{{ booking.place.city }} · {{ booking.place.address }}</p>
+                            <p class="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Booked on {{ booking.createdAt|date('M d, Y') }}</p>
+                        </div>
+                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-600">{{ booking.status }}</span>
+                    </div>
+                    <div class="mt-5 grid gap-4 md:grid-cols-4">
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Start</p>
+                            <p class="mt-2 text-sm font-medium text-slate-950">{{ booking.startDate|date('M d, Y') }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">End</p>
+                            <p class="mt-2 text-sm font-medium text-slate-950">{{ booking.endDate|date('M d, Y') }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Guests</p>
+                            <p class="mt-2 text-sm font-medium text-slate-950">{{ booking.guestsCount }}</p>
+                        </div>
+                        <div>
+                            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Total</p>
+                            <p class="mt-2 text-sm font-medium text-slate-950">{{ booking.totalPrice }}</p>
+                        </div>
+                    </div>
+
+                    {% if booking.status == 'PENDING' %}
+                        <form method="post" action="{{ path('app_booking_my_booking_edit', { id: booking.id }) }}" class="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div>
+                                    <p class="text-sm font-bold text-slate-950">Edit pending dates</p>
+                                    <p class="text-xs text-slate-500">You can only change a booking while it is still pending.</p>
+                                </div>
+                                <span class="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-700">Pending editable</span>
+                            </div>
+                            <input type="hidden" name="_token" value="{{ csrf_token('booking_edit_' ~ booking.id) }}">
+                            <div class="mt-4 grid gap-4 md:grid-cols-3">
+                                <div>
+                                    <label class="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Start date</label>
+                                    <input type="date" name="start_date" value="{{ booking.startDate|date('Y-m-d') }}" min="{{ 'now'|date('Y-m-d') }}" class="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none transition focus:border-primary" required>
+                                </div>
+                                <div>
+                                    <label class="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-slate-400">End date</label>
+                                    <input type="date" name="end_date" value="{{ booking.endDate|date('Y-m-d') }}" min="{{ 'now'|date('Y-m-d') }}" class="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none transition focus:border-primary" required>
+                                </div>
+                                <div class="flex items-end">
+                                    <button type="submit" class="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save dates</button>
+                                </div>
+                            </div>
+                        </form>
+                    {% endif %}
+                </article>
+            {% else %}
+                <div class="rounded-[2rem] border border-dashed border-border bg-white p-10 text-center">
+                    <p class="text-lg font-heading font-bold text-slate-950">No bookings yet.</p>
+                    <p class="mt-2 text-sm text-slate-500">Book a stay to see your trips here.</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-12 rounded-[2rem] border border-border bg-white p-6 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-2xl font-heading font-bold text-slate-950">Places you visited</h2>
+                    <p class="mt-1 text-sm text-slate-500">The places tied to your bookings appear here underneath your trips.</p>
+                </div>
+            </div>
+
+            <div class="mt-5 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                {% for place in visitedPlaces %}
+                    {% set previewImage = place.imageUrl %}
+                    {% if place.images is not empty %}
+                        {% set previewImage = place.images|first.url %}
+                    {% endif %}
+                    <article class="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50">
+                        <div class="h-48 bg-slate-100">
+                            {% if previewImage %}
+                                <img src="{{ previewImage starts with('http') ? previewImage : asset('uploads/places/' ~ previewImage) }}" alt="{{ place.title }}" class="h-full w-full object-cover">
+                            {% endif %}
+                        </div>
+                        <div class="space-y-2 p-5">
+                            <h3 class="text-xl font-heading font-bold text-slate-950">{{ place.title }}</h3>
+                            <p class="text-sm text-slate-500">{{ place.city }} · {{ place.address }}</p>
+                            <a href="{{ path('app_booking_place', { id: place.id }) }}" class="inline-flex text-sm font-bold text-slate-950 hover:text-sky-700">View place</a>
+                        </div>
+                    </article>
+                {% else %}
+                    <p class="text-sm text-slate-500">No booked places yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

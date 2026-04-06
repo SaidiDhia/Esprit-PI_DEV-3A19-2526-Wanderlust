@@ -2,19 +2,28 @@
 
 {% block title %}Messaging - WanderLust{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'messaging/_ui_theme.html.twig' %}
+{% endblock %}
+
 {% block content %}
-<div class="page-hero">
+<div class="msg-page">
+<div class="page-hero" style="background: linear-gradient(180deg, #2144b8 0%, #1d49cf 58%, #1e4ed8 100%); color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.14); padding: 92px 40px 84px; text-align: center;">
     <div class="page-hero-content">
-        <span class="page-hero-icon">💬</span>
-        <h1 class="page-hero-title">Messaging</h1>
-        <p class="page-hero-subtitle">Connect with fellow adventurers</p>
+        <span class="page-hero-icon" style="display: inline-flex; width: 54px; height: 54px; align-items: center; justify-content: center; border-radius: 999px; margin-bottom: 18px; background: rgba(255,255,255,0.16); box-shadow: 0 10px 24px rgba(0,0,0,0.12);">💬</span>
+        <h1 class="page-hero-title msg-hero-title serif" style="color: #ffffff; margin: 0;">Messaging</h1>
+        <p class="page-hero-subtitle" style="color: rgba(255,255,255,0.78); font-size: 16px; margin-top: 12px;">Connect with fellow adventurers</p>
     </div>
 </div>
 
-<div class="page-content">
+<div class="page-content msg-fade-in">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
-        <h2 style="font-family: var(--font-display);">Your Conversations</h2>
-        <a href="{{ path('messaging_conversation_new') }}" class="btn btn-primary">➕ New Conversation</a>
+        <div>
+            <h2 class="msg-section-title">Your Conversations</h2>
+            <p class="msg-section-subtitle">Open a thread, pin it, archive it, or rename it in a click.</p>
+        </div>
+        <a href="{{ path('messaging_conversation_new') }}" class="msg-btn msg-btn-primary">➕ New Conversation</a>
     </div>
     
     {% for message in app.flashes('success') %}
@@ -25,7 +34,7 @@
     {% endfor %}
     
     <!-- Active Conversations -->
-    <h3 style="margin: 24px 0 16px 0;">Active</h3>
+    <h3 class="msg-section-title" style="margin: 24px 0 16px 0;">Active</h3>
     {% if conversations is empty %}
         <div class="mp-empty" style="padding: 40px;">
             <div style="font-size: 48px;">💬</div>
@@ -34,39 +43,39 @@
     {% else %}
         <div style="display: flex; flex-direction: column; gap: 12px;">
             {% for conv in conversations %}
-                <div style="background: white; border-radius: 12px; border: 1px solid var(--gray-200); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; {% if conv.is_pinned %}border-left: 4px solid #F59E0B;{% endif %}">
+                <div class="msg-card msg-card-hover msg-pop-in" style="padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; {% if conv.is_pinned %}border-left: 4px solid #F59E0B;{% endif %}">
                     <div>
-                        <h3 style="margin-bottom: 4px;">
+                        <h3 class="msg-section-title" style="margin-bottom: 4px; font-size: 1.05rem;">
                             {{ conv.name ?: 'Conversation #' ~ conv.id }}
                             {% if conv.is_pinned %} 📌{% endif %}
                         </h3>
                         <span style="font-size: 12px; color: var(--gray-400);">{{ conv.type }}</span>
                     </div>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="btn btn-primary" style="padding: 6px 16px;">Open</a>
+                        <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="msg-btn msg-btn-primary msg-btn-sm">Open</a>
                         
                         <!-- Pin/Unpin Button -->
                         <form method="POST" action="{{ path('messaging_conversation_pin', {id: conv.id}) }}" style="display: inline;">
-                            <button type="submit" class="btn btn-outline" style="padding: 6px 16px;" title="{{ conv.is_pinned ? 'Unpin' : 'Pin' }}">
+                            <button type="submit" class="msg-btn msg-btn-secondary msg-btn-sm" title="{{ conv.is_pinned ? 'Unpin' : 'Pin' }}">
                                 {{ conv.is_pinned ? '📌 Unpin' : '📍 Pin' }}
                             </button>
                         </form>
                         
                         <!-- Archive Button -->
                         <form method="POST" action="{{ path('messaging_conversation_archive', {id: conv.id}) }}" style="display: inline;">
-                            <button type="submit" class="btn btn-outline" style="padding: 6px 16px;" title="Archive">
+                            <button type="submit" class="msg-btn msg-btn-secondary msg-btn-sm" title="Archive">
                                 📦 Archive
                             </button>
                         </form>
                         
                         <!-- Rename Button -->
-                        <button onclick="renameConversation({{ conv.id }}, '{{ conv.name|e('js') }}')" class="btn btn-outline" style="padding: 6px 16px;">✏️ Rename</button>
+                        <button onclick="renameConversation({{ conv.id }}, '{{ conv.name|e('js') }}')" class="msg-btn msg-btn-secondary msg-btn-sm">✏️ Rename</button>
                         
                         <!-- Delete Button (only for creator) -->
                         {% if conv.user_role == 'CREATOR' %}
                             <form method="POST" id="deleteForm_{{ conv.id }}" action="{{ path('messaging_conversation_delete', {id: conv.id}) }}" style="display: none;">
                             </form>
-                            <button type="button" class="btn" style="padding: 6px 16px; background: #EF4444; color: white; border: none; border-radius: 8px; cursor: pointer;" onclick="prepareDeleteConversation({{ conv.id }})">🗑️ Delete</button>
+                            <button type="button" class="msg-btn msg-btn-danger msg-btn-sm" onclick="prepareDeleteConversation({{ conv.id }})">🗑️ Delete</button>
                         {% endif %}
                     </div>
                 </div>
@@ -76,20 +85,23 @@
     
     <!-- Archived Conversations Section -->
     {% if archivedConversations is not empty %}
-        <h3 style="margin: 32px 0 16px 0;">Archived 📦</h3>
-        <div style="display: flex; flex-direction: column; gap: 12px; opacity: 0.7;">
+        <div style="margin: 32px 0 16px 0;">
+            <h3 class="msg-section-title">Archived Conversations</h3>
+            <p class="msg-section-subtitle">Closed threads stay available here for quick reference.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 12px; opacity: 0.78;">
             {% for conv in archivedConversations %}
-                <div style="background: #f5f5f5; border-radius: 12px; border: 1px solid var(--gray-200); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
+                <div class="msg-card msg-card-hover msg-fade-in" style="background: #f8fafc; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #d9e3f8;">
                     <div>
-                        <h3 style="margin-bottom: 4px;">{{ conv.name ?: 'Conversation #' ~ conv.id }}</h3>
+                        <h3 class="msg-section-title" style="margin-bottom: 4px; font-size: 1.05rem;">{{ conv.name ?: 'Conversation #' ~ conv.id }}</h3>
                         <span style="font-size: 12px; color: var(--gray-400);">{{ conv.type }}</span>
                     </div>
                     <div style="display: flex; gap: 8px;">
-                        <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="btn btn-primary" style="padding: 6px 16px;">View</a>
+                        <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="msg-btn msg-btn-primary msg-btn-sm">View</a>
                         
                         <!-- Unarchive Button -->
                         <form method="POST" action="{{ path('messaging_conversation_archive', {id: conv.id}) }}" style="display: inline;">
-                            <button type="submit" class="btn btn-outline" style="padding: 6px 16px;">📤 Unarchive</button>
+                            <button type="submit" class="msg-btn msg-btn-secondary msg-btn-sm">📤 Unarchive</button>
                         </form>
                     </div>
                 </div>
@@ -98,13 +110,17 @@
     {% endif %}
 
     <!-- Rename Modal -->
-    <div id="renameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-        <div style="background: white; border-radius: 16px; padding: 24px; width: 400px; max-width: 90%;">
-            <h3 style="margin-bottom: 16px;">Rename Conversation</h3>
-            <input type="text" id="renameInput" style="width: 100%; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; margin-bottom: 16px;">
-            <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                <button onclick="closeRenameModal()" style="padding: 8px 16px; border: 1px solid var(--gray-200); background: white; border-radius: 8px; cursor: pointer;">Cancel</button>
-                <button onclick="submitRename()" style="padding: 8px 16px; background: var(--blue-primary); color: white; border: none; border-radius: 8px; cursor: pointer;">Save</button>
+    <div id="renameModal" class="msg-modal-backdrop">
+        <div class="msg-modal msg-pop-in">
+            <div class="msg-modal-head">
+                <h3 class="msg-modal-title">Rename Conversation</h3>
+            </div>
+            <div class="msg-modal-body">
+                <input type="text" id="renameInput" class="msg-input">
+            </div>
+            <div class="msg-modal-actions">
+                <button onclick="closeRenameModal()" class="msg-btn msg-btn-secondary">Cancel</button>
+                <button onclick="submitRename()" class="msg-btn msg-btn-primary">Save</button>
             </div>
             <form id="renameForm" method="POST" style="display: none;">
                 <input type="hidden" name="name" id="renameFormName">
@@ -113,13 +129,17 @@
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center;">
-        <div style="background: white; border-radius: 16px; padding: 32px; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
-            <h2 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2937;">Delete Conversation</h2>
-            <p style="color: #6b7280; margin: 0 0 24px 0;">Are you sure you want to delete this conversation and all messages? This cannot be undone.</p>
-            <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                <button type="button" onclick="closeDeleteModal()" class="btn" style="padding: 8px 16px; background: #e5e7eb; color: #1f2937; border: none; border-radius: 8px; cursor: pointer;">Cancel</button>
-                <button type="button" onclick="submitDelete()" class="btn" style="padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer;">Delete</button>
+    <div id="deleteModal" class="msg-modal-backdrop" style="z-index: 999;">
+        <div class="msg-modal msg-pop-in">
+            <div class="msg-modal-head">
+                <h2 class="msg-modal-title">Delete Conversation</h2>
+            </div>
+            <div class="msg-modal-body">
+                Are you sure you want to delete this conversation and all messages? This cannot be undone.
+            </div>
+            <div class="msg-modal-actions">
+                <button type="button" onclick="closeDeleteModal()" class="msg-btn msg-btn-secondary">Cancel</button>
+                <button type="button" onclick="submitDelete()" class="msg-btn msg-btn-danger">Delete</button>
             </div>
         </div>
     </div>
@@ -182,5 +202,6 @@
             }
         });
     </script>
+</div>
 </div>
 {% endblock %}
