@@ -1,0 +1,23 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">🔐 Connexion simplifiée</div>
+                <div class="card-body">
+                    <p>Choisissez un utilisateur :</p>
+                    <div class="list-group">
+                        {% for id, data in users %}
+                            <a href="{{ path('login_switch', {'user_id': id}) }}" class="list-group-item list-group-item-action">
+                                {{ data.email }} – <strong>{{ data.role }}</strong>
+                            </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

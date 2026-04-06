@@ -1,0 +1,43 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">✏ Modifier la publication</div>
+            <div class="card-body">
+
+                {# ✅ Show existing media so user knows what's currently saved #}
+                {% if post.media %}
+                    <div class="mb-3">
+                        <label class="form-label text-muted">Média actuel :</label><br>
+                        {% if post.media matches '/\\.(mp4|avi|mov|mkv)$/i' %}
+                            <video controls class="img-fluid rounded" style="max-height:200px">
+                                <source src="{{ asset('uploads/' ~ post.media) }}">
+                            </video>
+                        {% else %}
+                            <img src="{{ asset('uploads/' ~ post.media) }}"
+                                 class="img-fluid rounded"
+                                 style="max-height:200px"
+                                 alt="Média actuel">
+                        {% endif %}
+                        <p class="small text-muted mt-1">Laissez le champ fichier vide pour conserver ce média.</p>
+                    </div>
+                {% endif %}
+
+                {{ form_start(form, {'attr': {'enctype': 'multipart/form-data'}}) }}
+                    {{ form_row(form.contenu) }}
+                    {{ form_row(form.media) }}
+                    {{ form_row(form.statut) }}
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-primary-custom">💾 Enregistrer</button>
+                        <a href="{{ path('blog_post_show', {'id': post.idPost}) }}"
+                           class="btn btn-outline-secondary">Annuler</a>
+                    </div>
+                {{ form_end(form) }}
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

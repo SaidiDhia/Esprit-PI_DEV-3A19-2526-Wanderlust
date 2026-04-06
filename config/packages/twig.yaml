@@ -1,6 +1,4 @@
 twig:
-    file_name_pattern: '*.twig'
-
-when@test:
-    twig:
-        strict_variables: true
+  default_path: "%kernel.project_dir%/templates"
+  globals:
+    userResolver: '@App\Service\UserResolver'

@@ -1,0 +1,194 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+
+        {# ── Flash messages ── #}
+        {% for type, messages in app.flashes %}
+            {% for message in messages %}
+                <div class="alert alert-{{ type == 'error' ? 'danger' : 'success' }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endfor %}
+
+        {# ── Post card ── #}
+        <div class="card-post p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <small class="text-muted">
+                        Publié par <strong>{{ post.user.email }}</strong>
+                        le {{ post.dateCreation|date('d M Y H:i') }}
+                    </small>
+                    <p class="mt-2 mb-0">{{ post.contenu }}</p>
+                </div>
+                <span class="badge bg-secondary ms-2">
+                    {{ post.statut == 'private' ? '🔒 Privé' : '🌐 Public' }}
+                </span>
+            </div>
+
+            {# ── Media ── #}
+            {% if post.media %}
+                <div class="mt-3">
+                    {% if post.media matches '/\\.(mp4|avi|mov|mkv)$/i' %}
+                        <video controls class="img-fluid rounded">
+                            <source src="{{ asset('uploads/' ~ post.media) }}">
+                        </video>
+                    {% else %}
+                        <img src="{{ asset('uploads/' ~ post.media) }}"
+                             class="img-fluid rounded" alt="Media">
+                    {% endif %}
+                </div>
+            {% endif %}
+
+            <hr>
+
+            {# ── Actions bar ── #}
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+
+                {# ✅ type="button" prevents form submit trigger #}
+                <button
+                    type="button"
+                    class="react-btn btn btn-sm {{ userReaction ? 'btn-danger' : 'btn-outline-danger' }}"
+                    data-url="{{ path('blog_react', {'id': post.idPost, 'type': 'LIKE'}) }}">
+                    ♥ <span class="reaction-count">{{ reactionsCount }}</span>
+                </button>
+
+                <span>💬 {{ post.commentaires|length }} commentaire{{ post.commentaires|length != 1 ? 's' }}</span>
+
+                {# ── Owner actions ── #}
+                {% if currentUser and currentUser.id == post.user.id %}
+                    <a href="{{ path('blog_post_edit', {'id': post.idPost}) }}"
+                       class="btn btn-sm btn-outline-secondary">✏ Modifier</a>
+                    <form method="post"
+                          action="{{ path('blog_post_delete', {'id': post.idPost}) }}"
+                          onsubmit="return confirm('Supprimer définitivement ?')"
+                          style="display:inline">
+                        <input type="hidden" name="_token"
+                               value="{{ csrf_token('delete' ~ post.idPost) }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">🗑 Supprimer</button>
+                    </form>
+                {% endif %}
+
+            </div>
+        </div>
+
+        {# ── New comment form ── #}
+        <div class="mt-4">
+            <h4>💬 Commentaires</h4>
+            {{ form_start(commentForm) }}
+                {{ form_row(commentForm.contenu, {
+                    'attr': {'placeholder': 'Votre commentaire...', 'class': 'form-control'}
+                }) }}
+                <button type="submit" class="btn btn-primary-custom mt-2">Envoyer</button>
+            {{ form_end(commentForm) }}
+        </div>
+
+        {# ── Comments list ── #}
+        <div class="mt-4">
+            {% for comment in comments %}
+                <div class="comment-bubble mb-3" id="comment-{{ comment.idCommentaire }}">
+
+                    <strong>{{ comment.user.email }}</strong>
+                    <small class="text-muted ms-2">{{ comment.date|date('d M Y H:i') }}</small>
+                    <p class="mb-1 mt-1">{{ comment.contenu }}</p>
+
+                    <div class="d-flex gap-2 align-items-center">
+                        {# ✅ type="button" #}
+                        <button
+                            type="button"
+                            class="react-comment-btn btn btn-sm btn-link p-0"
+                            data-url="{{ path('blog_comment_react', {'id': comment.idCommentaire, 'type': 'LIKE'}) }}">
+                            ♥ <span class="comment-reaction-count">{{ comment.reactions|length }}</span>
+                        </button>
+
+                        <a href="#reply-{{ comment.idCommentaire }}"
+                           class="small text-decoration-none"
+                           data-bs-toggle="collapse">↩ Répondre</a>
+                    </div>
+
+                    {# Reply form #}
+                    <div class="collapse mt-2" id="reply-{{ comment.idCommentaire }}">
+                        <form method="post"
+                              action="{{ path('blog_comment_reply', {'id': comment.idCommentaire}) }}">
+                            <textarea name="contenu" rows="2"
+                                      class="form-control form-control-sm"
+                                      placeholder="Votre réponse..."></textarea>
+                            <button type="submit" class="btn btn-sm btn-primary-custom mt-1">Répondre</button>
+                        </form>
+                    </div>
+
+                    {# Nested replies #}
+                    {% for reply in comment.replies %}
+                        <div class="mt-2 ms-4 comment-bubble">
+                            <strong>{{ reply.user.email }}</strong>
+                            <small class="text-muted ms-2">{{ reply.date|date('d M Y H:i') }}</small>
+                            <p class="mb-1 mt-1">{{ reply.contenu }}</p>
+                            {# ✅ type="button" #}
+                            <button
+                                type="button"
+                                class="react-comment-btn btn btn-sm btn-link p-0"
+                                data-url="{{ path('blog_comment_react', {'id': reply.idCommentaire, 'type': 'LIKE'}) }}">
+                                ♥ <span class="comment-reaction-count">{{ reply.reactions|length }}</span>
+                            </button>
+                        </div>
+                    {% endfor %}
+
+                </div>
+            {% else %}
+                <p class="text-muted">Aucun commentaire. Soyez le premier !</p>
+            {% endfor %}
+        </div>
+
+    </div>
+</div>
+
+{# ── Reaction JS ── #}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.body.addEventListener('click', function (e) {
+        // Find the closest reaction button (either post or comment)
+        const btn = e.target.closest('.react-btn, .react-comment-btn');
+        if (!btn) return;
+
+        e.preventDefault();
+        if (btn.disabled) return;
+        btn.disabled = true; // Prevent double-clicks
+
+        const url = btn.dataset.url;
+
+        fetch(url, { 
+            method: 'POST', 
+            headers: { 'X-Requested-With': 'XMLHttpRequest' } 
+        })
+        .then(response => {
+            if (response.status === 401) throw new Error('Connectez-vous pour réagir');
+            return response.json();
+        })
+        .then(data => {
+            // 1. Update the number displayed
+            const countSpan = btn.querySelector('.reaction-count, .comment-reaction-count');
+            if (countSpan) countSpan.textContent = data.count;
+
+            // 2. Change the visual style based on "added" status
+            if (btn.classList.contains('react-btn')) {
+                // For Post Buttons
+                btn.classList.toggle('btn-danger', data.added);
+                btn.classList.toggle('btn-outline-danger', !data.added);
+            } else {
+                // For Comment Icons
+                btn.style.color = data.added ? '#e0245e' : '';
+                btn.style.fontWeight = data.added ? 'bold' : '';
+            }
+        })
+        .catch(err => alert(err.message))
+        .finally(() => { 
+            btn.disabled = false; 
+        });
+    });
+});
+</script>
+{% endblock %}

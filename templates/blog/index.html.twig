@@ -1,111 +1,25 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Blog — WanderLust{% endblock %}
-
-{% block content %}
-
-<div class="page-hero">
-    <div class="page-hero-content">
-        <span class="page-hero-icon">📝</span>
-        <h1 class="page-hero-title">Travel Blog</h1>
-        <p class="page-hero-subtitle">Stories, tips, and guides from travelers who've been there and done that.</p>
+{% block body %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <h2 class="mb-4">📄 Publications récentes</h2>
+        {% for post in posts %}
+            <div class="card-post mb-4 p-3">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <small class="text-muted">Par {{ post.user.email }} • {{ post.dateCreation|date('d M Y H:i') }}</small>
+                        <h5 class="mt-2">{{ post.contenu|slice(0, 100) }}{% if post.contenu|length > 100 %}...{% endif %}</h5>
+                    </div>
+                    <span class="badge bg-secondary">{{ post.statut == 'private' ? '🔒 Privé' : '🌐 Public' }}</span>
+                </div>
+                <div class="mt-2">
+                    <a href="{{ path('blog_post_show', {'id': post.idPost}) }}" class="btn btn-sm btn-primary-custom">Lire la suite</a>
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center py-5"><p class="text-muted">Aucune publication pour le moment.</p></div>
+        {% endfor %}
     </div>
 </div>
-
-<div class="page-content">
-
-    <div class="blog-grid">
-
-        <a href="#" class="blog-card">
-            <div class="blog-card-cover" style="background: linear-gradient(135deg,#1D4ED8,#7C3AED);">🏛️</div>
-            <div class="blog-card-body">
-                <span class="blog-tag">Culture</span>
-                <h2 class="blog-title">7 Days in Carthage: A Journey Through Time</h2>
-                <p class="blog-excerpt">From the ancient ruins to the vibrant Medina, Carthage offers a layered experience that no history lover should miss. Here's my full itinerary...</p>
-                <div class="blog-meta">
-                    <span>👤 Amira Khelifi</span>
-                    <span>🗓️ March 28, 2025</span>
-                    <span>⏱️ 8 min read</span>
-                </div>
-            </div>
-        </a>
-
-        <a href="#" class="blog-card">
-            <div class="blog-card-cover" style="background: linear-gradient(135deg,#F59E0B,#EF4444);">🌅</div>
-            <div class="blog-card-body">
-                <span class="blog-tag">Adventure</span>
-                <h2 class="blog-title">Sleeping Under the Sahara Stars: A Desert Night to Remember</h2>
-                <p class="blog-excerpt">No phone signal, no city lights — just you, the dunes, and a million stars. My unforgettable overnight desert camping experience in Douz.</p>
-                <div class="blog-meta">
-                    <span>👤 Rami Gharbi</span>
-                    <span>🗓️ March 15, 2025</span>
-                    <span>⏱️ 6 min read</span>
-                </div>
-            </div>
-        </a>
-
-        <a href="#" class="blog-card">
-            <div class="blog-card-cover" style="background: linear-gradient(135deg,#059669,#10B981);">🍜</div>
-            <div class="blog-card-body">
-                <span class="blog-tag">Food & Drink</span>
-                <h2 class="blog-title">The Ultimate Guide to Tunisian Street Food</h2>
-                <p class="blog-excerpt">Brik, lablabi, fricassée — discover the must-eat street foods of Tunisia and where to find the best versions in every city.</p>
-                <div class="blog-meta">
-                    <span>👤 Nadia Smaoui</span>
-                    <span>🗓️ February 20, 2025</span>
-                    <span>⏱️ 10 min read</span>
-                </div>
-            </div>
-        </a>
-
-        <a href="#" class="blog-card">
-            <div class="blog-card-cover" style="background: linear-gradient(135deg,#8B5CF6,#EC4899);">🎨</div>
-            <div class="blog-card-body">
-                <span class="blog-tag">Art & Crafts</span>
-                <h2 class="blog-title">Sidi Bou Said: The Blue-and-White Village That Will Steal Your Heart</h2>
-                <p class="blog-excerpt">Perched above the Mediterranean, this iconic Tunisian village is a feast for the eyes. A photographer's paradise and an artist's muse.</p>
-                <div class="blog-meta">
-                    <span>👤 Leila Ferchichi</span>
-                    <span>🗓️ February 5, 2025</span>
-                    <span>⏱️ 5 min read</span>
-                </div>
-            </div>
-        </a>
-
-        <a href="#" class="blog-card">
-            <div class="blog-card-cover" style="background: linear-gradient(135deg,#0EA5E9,#1D4ED8);">🏄</div>
-            <div class="blog-card-body">
-                <span class="blog-tag">Sports</span>
-                <h2 class="blog-title">Tunisia's Best Kept Secret: A Surfer's Guide to the Mediterranean</h2>
-                <p class="blog-excerpt">Think you need to go to Portugal to surf? Think again. Tunisia's coastline has waves, warm water, and almost zero crowds.</p>
-                <div class="blog-meta">
-                    <span>👤 Yassine Trabelsi</span>
-                    <span>🗓️ January 22, 2025</span>
-                    <span>⏱️ 7 min read</span>
-                </div>
-            </div>
-        </a>
-
-        <a href="#" class="blog-card">
-            <div class="blog-card-cover" style="background: linear-gradient(135deg,#EF4444,#F59E0B);">💒</div>
-            <div class="blog-card-body">
-                <span class="blog-tag">Lifestyle</span>
-                <h2 class="blog-title">Planning Your Dream Honeymoon in Tunisia: A Complete Guide</h2>
-                <p class="blog-excerpt">Romantic riads, private beach dinners, and desert sunsets — here's how to plan a honeymoon in Tunisia that will last a lifetime.</p>
-                <div class="blog-meta">
-                    <span>👤 Ines Ben Salah</span>
-                    <span>🗓️ January 10, 2025</span>
-                    <span>⏱️ 12 min read</span>
-                </div>
-            </div>
-        </a>
-
-    </div>
-
-    <div style="text-align:center; margin-top:48px;">
-        <a href="#" class="btn btn-outline" style="padding:14px 36px;">Load More Stories →</a>
-    </div>
-
-</div>
-
 {% endblock %}
