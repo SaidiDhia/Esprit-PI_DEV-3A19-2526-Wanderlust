@@ -2,22 +2,16 @@
 
 {% block title %}Conversation Participants - WanderLust{% endblock %}
 
-{% block stylesheets %}
-    {{ parent() }}
-    {% include 'messaging/_ui_theme.html.twig' %}
-{% endblock %}
-
 {% block content %}
-<div class="msg-page">
-<div class="page-hero" style="background: linear-gradient(180deg, #2144b8 0%, #1d49cf 58%, #1e4ed8 100%); color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.14); padding: 92px 40px 84px; text-align: center;">
+<div class="page-hero" style="padding: 30px 40px;">
     <div class="page-hero-content">
-        <span class="page-hero-icon" style="display: inline-flex; width: 54px; height: 54px; align-items: center; justify-content: center; border-radius: 999px; margin-bottom: 18px; background: rgba(255,255,255,0.16); box-shadow: 0 10px 24px rgba(0,0,0,0.12);">👥</span>
-        <h1 class="page-hero-title msg-hero-title serif" style="color: #ffffff; margin: 0;">Conversation Participants</h1>
-        <p class="page-hero-subtitle" style="color: rgba(255,255,255,0.78); font-size: 16px; margin-top: 12px;">Manage members in this group</p>
+        <a href="{{ path('app_messaging') }}" style="color: white; text-decoration: none; display: inline-block; margin-bottom: 16px;">← Back to conversations</a>
+        <h1 class="page-hero-title">Conversation Participants</h1>
+        <p class="page-hero-subtitle">Manage members in this group</p>
     </div>
 </div>
 
-<div class="page-content msg-fade-in" style="max-width: 800px;">
+<div class="page-content" style="max-width: 800px;">
     {% for message in app.flashes('success') %}
         <div class="flash flash-success">{{ message }}</div>
     {% endfor %}
@@ -28,34 +22,33 @@
     <!-- Leave Button (for non-creator members) - Top Position -->
     {% if userRole != 'CREATOR' %}
         <div style="margin-bottom: 24px;">
-            <button type="button" class="msg-btn msg-btn-warning" onclick="openConfirmModal('leave')">🚪 Leave Conversation</button>
+            <button type="button" class="btn" style="padding: 8px 16px; background: #F59E0B; color: white; border: none; border-radius: 8px; cursor: pointer;" onclick="openConfirmModal('leave')">🚪 Leave Conversation</button>
         </div>
     {% endif %}
     
     <!-- Add Participant (only for CREATOR/ADMIN) -->
     {% if userRole == 'CREATOR' or userRole == 'ADMIN' %}
-        <div class="msg-card msg-card-hover" style="padding: 24px; margin-bottom: 24px;">
-            <h3 class="msg-admin-title" style="margin-bottom: 6px; font-size: 1.5rem;">Add New Participant</h3>
-            <p class="msg-section-subtitle" style="margin-bottom: 16px;">Invite someone by email and manage the conversation together.</p>
+        <div style="background: white; border-radius: 16px; border: 1px solid var(--gray-200); padding: 24px; margin-bottom: 24px;">
+            <h3 style="margin-bottom: 16px;">Add New Participant</h3>
             <form method="POST" action="{{ path('messaging_conversation_add_participant', {id: conversationId}) }}" style="display: flex; gap: 12px;">
-                <input type="email" name="email" placeholder="user@example.com" class="msg-input" style="flex: 1;" required>
-                <button type="submit" class="msg-btn msg-btn-primary">➕ Add</button>
+                <input type="email" name="email" placeholder="user@example.com" class="form-input" style="flex: 1;" required>
+                <button type="submit" class="btn btn-primary">➕ Add</button>
             </form>
         </div>
     {% endif %}
     
     <!-- Participants List -->
-    <div class="msg-card msg-card-hover" style="overflow: hidden;">
-        <div style="padding: 16px 20px; background: #eff4ff; border-bottom: 1px solid var(--gray-200);">
+    <div style="background: white; border-radius: 16px; border: 1px solid var(--gray-200); overflow: hidden;">
+        <div style="padding: 16px 20px; background: var(--gray-50); border-bottom: 1px solid var(--gray-200);">
             <strong>Members ({{ participants|length }})</strong>
         </div>
         
         {% for participant in participants %}
-            <div class="msg-fade-in" style="padding: 16px 20px; border-bottom: 1px solid var(--gray-100); display: flex; justify-content: space-between; align-items: center;">
+            <div style="padding: 16px 20px; border-bottom: 1px solid var(--gray-100); display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <div style="font-weight: 700; color: var(--msg-text);">
+                    <div style="font-weight: 600;">
                         {{ participant.full_name ?: 'User ' ~ participant.user_id|slice(0,8) }}
-                        {% if participant.user_id == currentUserId %}
+                        {% if participant.user_id == '123e4567-e89b-12d3-a456-426614174000' %}
                             <span style="font-size: 11px; background: var(--gray-100); padding: 2px 8px; border-radius: 12px; margin-left: 8px;">(You)</span>
                         {% endif %}
                     </div>
@@ -72,16 +65,16 @@
                 </div>
                 
                 <div style="display: flex; gap: 8px;">
-                    {% if participant.user_id != currentUserId %}
+                    {% if participant.user_id != '123e4567-e89b-12d3-a456-426614174000' %}
                         <!-- Promote/Demote (only CREATOR) -->
                         {% if userRole == 'CREATOR' and participant.role != 'CREATOR' %}
                             {% if participant.role == 'ADMIN' %}
                                 <form method="POST" action="{{ path('messaging_conversation_demote', {id: conversationId, userId: participant.user_id}) }}">
-                                    <button type="submit" class="msg-btn msg-btn-secondary msg-btn-sm">⬇ Demote</button>
+                                    <button type="submit" class="btn btn-outline" style="padding: 4px 12px; font-size: 12px;">⬇ Demote</button>
                                 </form>
                             {% else %}
                                 <form method="POST" action="{{ path('messaging_conversation_promote', {id: conversationId, userId: participant.user_id}) }}">
-                                    <button type="submit" class="msg-btn msg-btn-secondary msg-btn-sm">⬆ Promote to Admin</button>
+                                    <button type="submit" class="btn btn-outline" style="padding: 4px 12px; font-size: 12px;">⬆ Promote to Admin</button>
                                 </form>
                             {% endif %}
                         {% endif %}
@@ -90,7 +83,7 @@
                         {% if (userRole == 'CREATOR' or userRole == 'ADMIN') and participant.role != 'CREATOR' %}
                             <form method="POST" id="removeForm_{{ participant.user_id }}" action="{{ path('messaging_conversation_remove_participant', {id: conversationId, userId: participant.user_id}) }}" style="display: none;">
                             </form>
-                            <button type="button" class="msg-btn msg-btn-danger msg-btn-sm" onclick="prepareRemoveParticipant('{{ participant.user_id }}')">❌ Remove</button>
+                            <button type="button" class="btn" style="padding: 4px 12px; font-size: 12px; background: #EF4444; color: white; border: none; border-radius: 8px; cursor: pointer;" onclick="prepareRemoveParticipant('{{ participant.user_id }}')">❌ Remove</button>
                         {% endif %}
                     {% endif %}
                 </div>
@@ -99,20 +92,18 @@
     </div>
     
     <div style="margin-top: 24px; text-align: center;">
-        <a href="{{ path('messaging_conversation_show', {id: conversationId}) }}" class="msg-btn msg-btn-primary">← Back to Chat</a>
+        <a href="{{ path('messaging_conversation_show', {id: conversationId}) }}" class="btn btn-primary">← Back to Chat</a>
     </div>
 </div>
 
 <!-- Confirmation Modal -->
-<div id="confirmModal" class="msg-modal-backdrop">
-    <div class="msg-modal msg-pop-in">
-        <div class="msg-modal-head">
-            <h2 id="modalTitle" class="msg-modal-title">Confirm Action</h2>
-        </div>
-        <div id="modalMessage" class="msg-modal-body">Are you sure?</div>
-        <div class="msg-modal-actions">
-            <button type="button" onclick="closeConfirmModal()" class="msg-btn msg-btn-secondary">Cancel</button>
-            <button type="button" id="confirmButton" onclick="submitConfirmAction()" class="msg-btn msg-btn-danger">Confirm</button>
+<div id="confirmModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: white; border-radius: 16px; padding: 32px; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
+        <h2 id="modalTitle" style="margin: 0 0 16px 0; font-size: 18px; color: #1f2937;">Confirm Action</h2>
+        <p id="modalMessage" style="color: #6b7280; margin: 0 0 24px 0;">Are you sure?</p>
+        <div style="display: flex; gap: 12px; justify-content: flex-end;">
+            <button type="button" onclick="closeConfirmModal()" class="btn" style="padding: 8px 16px; background: #e5e7eb; color: #1f2937; border: none; border-radius: 8px; cursor: pointer;">Cancel</button>
+            <button type="button" id="confirmButton" onclick="submitConfirmAction()" class="btn" style="padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer;">Confirm</button>
         </div>
     </div>
 </div>
@@ -180,5 +171,4 @@
         }
     });
 </script>
-</div>
 {% endblock %}
