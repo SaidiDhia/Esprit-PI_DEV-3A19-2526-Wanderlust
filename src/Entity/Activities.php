@@ -5,6 +5,8 @@ namespace App\Entity;
 use App\Enum\CategorieActiviteEnum;
 use App\Enum\TypeActiviteEnum;
 use App\Repository\ActivitiesRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -18,6 +20,9 @@ class Activities
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
+
+    #[ORM\ManyToMany(targetEntity: Events::class, mappedBy: 'activities')]
+    private Collection $events;
 
     #[ORM\Column(length: 150)]
     #[Assert\NotBlank(message: "Le titre est obligatoire")]
@@ -48,6 +53,7 @@ class Activities
 
     public function __construct()
     {
+        $this->events = new ArrayCollection();
         $this->date_creation = new \DateTime();
     }
 
@@ -60,6 +66,33 @@ class Activities
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    /**
+     * @return Collection<int, Events>
+     */
+    public function getEvents(): Collection
+    {
+        return $this->events;
+    }
+
+    public function addEvent(Events $event): static
+    {
+        if (!$this->events->contains($event)) {
+            $this->events->add($event);
+            $event->addActivity($this);
+        }
+
+        return $this;
+    }
+
+    public function removeEvent(Events $event): static
+    {
+        if ($this->events->removeElement($event)) {
+            $event->removeActivity($this);
+        }
+
+        return $this;
     }
 
     public function getTitre(): ?string

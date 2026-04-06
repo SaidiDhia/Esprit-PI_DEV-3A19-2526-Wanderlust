@@ -1,0 +1,851 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier Événement{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        --hover-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        --border-radius: 20px;
+    }
+
+    /* Hero Section */
+    .form-hero {
+        background: var(--success-gradient);
+        border-radius: 0 0 60px 60px;
+        padding: 3rem 0;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .form-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+        background-size: cover;
+        opacity: 0.1;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        color: white;
+    }
+
+    .hero-content h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .hero-content p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+
+    /* Form Section */
+    .form-section {
+        padding: 4rem 0;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+    }
+
+    .form-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: none;
+        width: 100%;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .form-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--hover-shadow);
+    }
+
+    .form-header {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 2rem 3rem;
+        text-align: center;
+    }
+
+    .form-header h2 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .form-header p {
+        margin: 0.5rem 0 0 0;
+        opacity: 0.9;
+    }
+
+    .form-body {
+        padding: 3rem;
+    }
+
+    /* Form Groups */
+    .form-group {
+        margin-bottom: 2rem;
+        position: relative;
+    }
+
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .form-control-modern {
+        width: 100%;
+        padding: 1rem 1.5rem;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .form-control-modern:focus {
+        outline: none;
+        border-color: #667eea;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1), inset 0 2px 4px rgba(0,0,0,0.05);
+        transform: translateY(-2px);
+    }
+
+    .form-select-modern {
+        width: 100%;
+        padding: 1rem 1.5rem;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+        cursor: pointer;
+    }
+
+    .form-select-modern:focus {
+        outline: none;
+        border-color: #667eea;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+
+    /* Buttons */
+    .btn-modern {
+        background: var(--primary-gradient);
+        border: none;
+        border-radius: 50px;
+        padding: 1rem 3rem;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        position: relative;
+        overflow: hidden;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+
+    .btn-modern:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .btn-modern:hover::before {
+        left: 100%;
+    }
+
+    .btn-secondary-modern {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        box-shadow: 0 10px 25px rgba(108, 117, 125, 0.3);
+    }
+
+    .btn-secondary-modern:hover {
+        box-shadow: 0 15px 35px rgba(108, 117, 125, 0.4);
+    }
+
+    /* Current Info */
+    .current-info {
+        background: rgba(102, 126, 234, 0.05);
+        border: 2px solid rgba(102, 126, 234, 0.1);
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .current-info h5 {
+        color: #667eea;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .current-info p {
+        margin: 0.5rem 0;
+        color: #495057;
+    }
+
+    .current-image {
+        max-width: 200px;
+        max-height: 150px;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        margin-top: 1rem;
+    }
+
+    /* Image Upload */
+    .image-upload {
+        position: relative;
+        border: 3px dashed #667eea;
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: rgba(102, 126, 234, 0.02);
+    }
+
+    .image-upload:hover {
+        border-color: #764ba2;
+        background: rgba(102, 126, 234, 0.05);
+        transform: scale(1.02);
+    }
+
+    .image-upload i {
+        font-size: 3rem;
+        color: #667eea;
+        margin-bottom: 1rem;
+    }
+
+    .image-upload p {
+        margin: 0;
+        color: #495057;
+        font-weight: 500;
+    }
+
+    .image-upload small {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .d-grid {
+        display: grid;
+    }
+
+    .gap-3 {
+        gap: 1rem;
+    }
+
+    .mt-4 {
+        margin-top: 1.5rem;
+    }
+
+    .activities-section {
+        margin-top: 2rem;
+    }
+
+    /* Confirmation Box */
+    .confirmation-box {
+        background: rgba(102, 126, 234, 0.05);
+        border: 2px solid rgba(102, 126, 234, 0.1);
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 1.5rem 0;
+        transition: all 0.3s ease;
+    }
+
+    .confirmation-box:hover {
+        background: rgba(102, 126, 234, 0.08);
+        border-color: rgba(102, 126, 234, 0.2);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-check {
+        padding: 1rem 0;
+        margin: 0;
+    }
+
+    .form-check-input {
+        width: 1.5rem;
+        height: 1.5rem;
+        margin-right: 1rem;
+        border: 2px solid #667eea;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+
+    .form-check-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+    }
+
+    .form-check-label {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #495057;
+        cursor: pointer;
+        user-select: none;
+        line-height: 1.5;
+    }
+
+    .form-check-label:hover {
+        color: #667eea;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .form-hero h1 {
+            font-size: 2rem;
+        }
+        
+        .form-section {
+            padding: 2rem 0;
+        }
+        
+        .form-body {
+            padding: 2rem;
+        }
+        
+        .btn-modern {
+            padding: 0.8rem 2rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Form Section -->
+<section class="form-section">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10 col-xl-8">
+                <div class="form-card">
+                    <div class="form-header">
+                        <h2><i class="fas fa-edit me-2"></i>Modifier l'événement</h2>
+                        <p>Modifiez les détails de votre événement</p>
+                    </div>
+                    
+                    <div class="form-body">
+                        {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'eventForm'}}) }}
+                        
+                        <!-- Activités associées -->
+                        <div class="form-group">
+                            {{ form_label(form.activities, 'Activités associées', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.activities, {'attr': {'class': 'form-select-modern'}}) }}
+                            {{ form_errors(form.activities) }}
+                        </div>
+
+                        <!-- Organisateur -->
+                        <div class="form-group">
+                            {{ form_label(form.organisateur, 'Organisateur *', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.organisateur, {'attr': {'class': 'form-control-modern'}}) }}
+                            {{ form_errors(form.organisateur) }}
+                        </div>
+
+                        <!-- Lieu -->
+                        <div class="form-group">
+                            {{ form_label(form.lieu, 'Lieu *', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.lieu, {'attr': {'class': 'form-control-modern'}}) }}
+                            {{ form_errors(form.lieu) }}
+                        </div>
+
+                        <!-- Dates -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form_label(form.date_debut, 'Date de début *', {'label_attr': {'class': 'form-label'}}) }}
+                                    {{ form_widget(form.date_debut, {'attr': {'class': 'form-control-modern'}}) }}
+                                    {{ form_errors(form.date_debut) }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form_label(form.date_fin, 'Date de fin *', {'label_attr': {'class': 'form-label'}}) }}
+                                    {{ form_widget(form.date_fin, {'attr': {'class': 'form-control-modern'}}) }}
+                                    {{ form_errors(form.date_fin) }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Prix et Capacité -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form_label(form.prix, 'Prix (€) *', {'label_attr': {'class': 'form-label'}}) }}
+                                    {{ form_widget(form.prix, {'attr': {'class': 'form-control-modern'}}) }}
+                                    {{ form_errors(form.prix) }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form_label(form.capacite_max, 'Capacité maximale *', {'label_attr': {'class': 'form-label'}}) }}
+                                    {{ form_widget(form.capacite_max, {'attr': {'class': 'form-control-modern'}}) }}
+                                    {{ form_errors(form.capacite_max) }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Places disponibles -->
+                        <div class="form-group">
+                            {{ form_label(form.places_disponibles, 'Places disponibles', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.places_disponibles, {'attr': {
+                                'class': 'form-control-modern',
+                                'readonly': true,
+                                'style': 'background: #e9ecef; cursor: not-allowed;'
+                            }}) }}
+                            <small class="text-muted">Synchronisé automatiquement avec la capacité maximale</small>
+                            {{ form_errors(form.places_disponibles) }}
+                        </div>
+
+                        <!-- Contact -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form_label(form.telephone, 'Téléphone *', {'label_attr': {'class': 'form-label'}}) }}
+                                    {{ form_widget(form.telephone, {'attr': {'class': 'form-control-modern'}}) }}
+                                    {{ form_errors(form.telephone) }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    {{ form_label(form.email, 'Email *', {'label_attr': {'class': 'form-label'}}) }}
+                                    {{ form_widget(form.email, {'attr': {'class': 'form-control-modern'}}) }}
+                                    {{ form_errors(form.email) }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Image -->
+                        <div class="form-group">
+                            {{ form_label(form.image, 'Image', {'label_attr': {'class': 'form-label'}}) }}
+                            
+                            {% if event.image %}
+                                <div class="mb-3">
+                                    <p class="text-muted"><strong>Image actuelle:</strong></p>
+                                    <img src="{{ asset('uploads/events/' ~ event.image) }}" class="current-image" alt="{{ event.lieu }}" style="max-width: 200px; max-height: 150px; border-radius: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); border: 2px solid #ddd;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                    <div style="display: none; padding: 20px; border: 2px dashed #dc3545; border-radius: 10px; text-align: center; background: #f8d7da;">
+                                        <i class="fas fa-exclamation-triangle text-danger"></i>
+                                        <p class="text-danger mb-0">Image non trouvée</p>
+                                        <small class="text-muted">{{ event.image }}</small>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="image-upload" onclick="document.getElementById('event_image').click()">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Cliquez pour sélectionner une image</p>
+                                <small>Laissez vide pour conserver l'image actuelle</small>
+                            </div>
+                            {{ form_widget(form.image, {'attr': {'class': 'd-none'}}) }}
+                            {{ form_errors(form.image) }}
+                        </div>
+
+                        <!-- Vidéo YouTube -->
+                        <div class="form-group">
+                            {{ form_label(form.video_youtube, 'Vidéo YouTube (URL)', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.video_youtube, {'attr': {'class': 'form-control-modern'}}) }}
+                            {{ form_errors(form.video_youtube) }}
+                        </div>
+
+                        <!-- Matériels nécessaires -->
+                        <div class="form-group">
+                            {{ form_label(form.materiels_necessaires, 'Matériels nécessaires', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.materiels_necessaires, {'attr': {'class': 'form-control-modern', 'rows': 4}}) }}
+                            {{ form_errors(form.materiels_necessaires) }}
+                        </div>
+
+                        <!-- Confirmation Organisateur -->
+                        <div class="form-group">
+                            <div class="confirmation-box">
+                                <div class="form-check">
+                                    {{ form_widget(form.confirmation_organisateur, {'attr': {
+                                        'class': 'form-check-input',
+                                        'id': 'confirmation_organisateur'
+                                    }}) }}
+                                    {{ form_label(form.confirmation_organisateur, 'Je confirme être l\'organisateur de cet événement et m\'engage à respecter les conditions générales', {'label_attr': {
+                                        'class': 'form-check-label',
+                                        'for': 'confirmation_organisateur'
+                                    }}) }}
+                                </div>
+                                <small class="text-muted mt-2 d-block">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Cette confirmation est obligatoire pour soumettre l'événement
+                                </small>
+                                {{ form_errors(form.confirmation_organisateur) }}
+                            </div>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="d-grid gap-3 mt-4">
+                            <button type="submit" class="btn-modern">
+                                <i class="fas fa-save me-2"></i>Enregistrer les modifications
+                            </button>
+                            <a href="{{ path('app_events_show', {'id': event.id}) }}" class="btn-modern">
+                                <i class="fas fa-eye me-2"></i>Voir l'événement
+                            </a>
+                            <a href="{{ path('app_events_index') }}" class="btn-modern btn-secondary-modern">
+                                <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                            </a>
+                        </div>
+                        
+                        {{ form_end(form) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const capaciteMaxField = document.querySelector('#event_capacite_max');
+    const placesDisponiblesField = document.querySelector('#event_places_disponibles');
+    const imageInput = document.getElementById('event_image');
+    const imageUpload = document.querySelector('.image-upload');
+    
+    // Sync places disponibles with capacite maximale
+    if (capaciteMaxField && placesDisponiblesField) {
+        capaciteMaxField.addEventListener('input', function() {
+            const capaciteMax = parseInt(this.value) || 0;
+            placesDisponiblesField.value = capaciteMax;
+        });
+        
+        // Initial sync
+        const capaciteMax = parseInt(capaciteMaxField.value) || 0;
+        placesDisponiblesField.value = capaciteMax;
+    }
+    
+    // Validation en temps réel des dates
+    const dateDebutField = document.querySelector('#event_date_debut');
+    const dateFinField = document.querySelector('#event_date_fin');
+    
+    function validateDates() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Validation date de début
+        if (dateDebutField && dateDebutField.value) {
+            const startDate = new Date(dateDebutField.value);
+            if (startDate < today) {
+                showFieldError(dateDebutField, 'La date de début ne peut pas être antérieure à aujourd\'hui');
+            } else {
+                clearFieldError(dateDebutField);
+            }
+            
+            // Validation date de fin si elle existe
+            if (dateFinField && dateFinField.value) {
+                const endDate = new Date(dateFinField.value);
+                if (endDate <= startDate) {
+                    showFieldError(dateFinField, 'La date de fin doit être postérieure à la date de début');
+                } else {
+                    clearFieldError(dateFinField);
+                }
+            }
+        }
+        
+        // Validation date de fin
+        if (dateFinField && dateFinField.value && (!dateDebutField || !dateDebutField.value)) {
+            const endDate = new Date(dateFinField.value);
+            if (endDate < today) {
+                showFieldError(dateFinField, 'La date de fin ne peut pas être antérieure à aujourd\'hui');
+            } else {
+                clearFieldError(dateFinField);
+            }
+        }
+    }
+    
+    if (dateDebutField) {
+        dateDebutField.addEventListener('change', validateDates);
+        dateDebutField.addEventListener('blur', validateDates);
+    }
+    
+    if (dateFinField) {
+        dateFinField.addEventListener('change', validateDates);
+        dateFinField.addEventListener('blur', validateDates);
+    }
+    
+    function showFieldError(field, message) {
+        field.classList.add('is-invalid');
+        field.classList.remove('is-valid');
+        
+        // Supprimer l'ancien message d'erreur
+        const existingError = field.parentNode.querySelector('.invalid-feedback');
+        if (existingError) {
+            existingError.remove();
+        }
+        
+        // Ajouter le nouveau message d'erreur
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'invalid-feedback';
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = message;
+        field.parentNode.appendChild(errorDiv);
+    }
+    
+    function clearFieldError(field) {
+        field.classList.remove('is-invalid');
+        field.classList.add('is-valid');
+        
+        const errorDiv = field.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+    
+    // Image upload preview
+    if (imageInput && imageUpload) {
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Check if file is an image
+                if (!file.type.startsWith('image/')) {
+                    alert('Veuillez sélectionner un fichier image (JPG, PNG, GIF).');
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Check file size (5MB max)
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('L\'image ne doit pas dépasser 5MB.');
+                    e.target.value = '';
+                    return;
+                }
+                
+                // Update upload area text
+                const fileName = file.name;
+                imageUpload.innerHTML = `
+                    <i class="fas fa-check-circle text-success"></i>
+                    <p><strong>${fileName}</strong></p>
+                    <small class="text-success">Image sélectionnée avec succès</small>
+                `;
+            }
+        });
+    }
+    
+    // Form validation
+    const form = document.getElementById('eventForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            
+            // Validation des champs obligatoires
+            const requiredFields = ['event_organisateur', 'event_lieu', 'event_date_debut', 'event_date_fin', 'event_prix', 'event_capacite_max'];
+            
+            requiredFields.forEach(fieldId => {
+                const field = document.getElementById(fieldId);
+                if (field && !field.value.trim()) {
+                    isValid = false;
+                    field.style.borderColor = '#dc3545';
+                    showFieldError(field, 'Ce champ est obligatoire');
+                } else if (field) {
+                    field.style.borderColor = '#e9ecef';
+                    clearFieldError(field);
+                }
+            });
+            
+            // Validation des dates
+            const dateDebutField = document.getElementById('event_date_debut');
+            const dateFinField = document.getElementById('event_date_fin');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Validation date de début
+            if (dateDebutField && dateDebutField.value) {
+                const startDate = new Date(dateDebutField.value);
+                if (startDate < today) {
+                    isValid = false;
+                    dateDebutField.style.borderColor = '#dc3545';
+                    showFieldError(dateDebutField, 'La date de début ne peut pas être antérieure à aujourd\'hui');
+                } else {
+                    dateDebutField.style.borderColor = '#e9ecef';
+                    clearFieldError(dateDebutField);
+                }
+            }
+            
+            // Validation date de fin
+            if (dateFinField && dateFinField.value) {
+                const endDate = new Date(dateFinField.value);
+                if (dateDebutField && dateDebutField.value) {
+                    const startDate = new Date(dateDebutField.value);
+                    if (endDate <= startDate) {
+                        isValid = false;
+                        dateFinField.style.borderColor = '#dc3545';
+                        showFieldError(dateFinField, 'La date de fin doit être postérieure à la date de début');
+                    } else {
+                        dateFinField.style.borderColor = '#e9ecef';
+                        clearFieldError(dateFinField);
+                    }
+                } else if (endDate < today) {
+                    isValid = false;
+                    dateFinField.style.borderColor = '#dc3545';
+                    showFieldError(dateFinField, 'La date de fin ne peut pas être antérieure à aujourd\'hui');
+                } else {
+                    dateFinField.style.borderColor = '#e9ecef';
+                    clearFieldError(dateFinField);
+                }
+            }
+            
+            // Validation du téléphone
+            const telephoneField = document.querySelector('input[name="events[telephone]"]');
+            if (telephoneField) {
+                const value = telephoneField.value.trim();
+                if (value) {
+                    const phoneRegex = /^(?:(?:\+33|0)[1-9]|\d{1,4})[-.\s]?\d{1,4}[-.\s]?\d{1,9}\d{3,4}|\d{1,3}[-.\s]?\d{1,3}\d{3,4})$/;
+                    if (!phoneRegex.test(value)) {
+                        isValid = false;
+                        telephoneField.style.borderColor = '#dc3545';
+                        showFieldError(telephoneField, 'Veuillez entrer un numéro de téléphone valide (format international ou français)');
+                    } else {
+                        telephoneField.style.borderColor = '#e9ecef';
+                        clearFieldError(telephoneField);
+                    }
+                }
+            }
+            
+            // Validation de l'email
+            const emailField = document.querySelector('input[name="events[email]"]');
+            if (emailField) {
+                const value = emailField.value.trim();
+                if (value) {
+                    const emailRegex = /^[^\s]*([^\s@]+@[^\s@]+\.[^\s@]+)\s*$/;
+                    if (!emailRegex.test(value)) {
+                        isValid = false;
+                        emailField.style.borderColor = '#dc3545';
+                        showFieldError(emailField, 'Veuillez entrer une adresse email valide');
+                    } else {
+                        emailField.style.borderColor = '#e9ecef';
+                        clearFieldError(emailField);
+                    }
+                }
+            }
+            
+            // Validation des matériels
+            const materielsField = document.querySelector('textarea[name="events[materiels_necessaires]"]');
+            if (materielsField) {
+                const value = materielsField.value.trim();
+                if (value) {
+                    if (value.length < 10) {
+                        isValid = false;
+                        materielsField.style.borderColor = '#dc3545';
+                        showFieldError(materielsField, 'La description des matériels doit contenir au moins 10 caractères');
+                    } else {
+                        materielsField.style.borderColor = '#e9ecef';
+                        clearFieldError(materielsField);
+                    }
+                }
+            }
+            
+            // Validation de la vidéo YouTube
+            const videoField = document.querySelector('input[name="events[video_youtube]"]');
+            if (videoField) {
+                const value = videoField.value.trim();
+                if (value) {
+                    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=[\w-]{11}|youtu\.be\/[\w-]{11}|youtube\.com\/embed\/[\w-]{11})(?:\S*)?$/;
+                    if (!youtubeRegex.test(value)) {
+                        isValid = false;
+                        videoField.style.borderColor = '#dc3545';
+                        showFieldError(videoField, 'Veuillez entrer une URL YouTube valide (format: https://www.youtube.com/watch?v=... ou https://youtu.be/...)');
+                    } else {
+                        videoField.style.borderColor = '#e9ecef';
+                        clearFieldError(videoField);
+                    }
+                }
+            }
+            
+            // Validation de l'image
+            const imageField = document.querySelector('input[name="events[image]"]');
+            if (imageField) {
+                if (imageField.files.length > 0) {
+                    const file = imageField.files[0];
+                    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+                    const maxSize = 5 * 1024 * 1024; // 5MB
+                    
+                    if (!allowedTypes.includes(file.type)) {
+                        isValid = false;
+                        imageField.style.borderColor = '#dc3545';
+                        showFieldError(imageField, 'Format d\'image non valide (JPG, PNG, GIF, WebP uniquement)');
+                    } else if (file.size > maxSize) {
+                        isValid = false;
+                        imageField.style.borderColor = '#dc3545';
+                        showFieldError(imageField, 'L\'image ne peut pas dépasser 5MB');
+                    } else {
+                        imageField.style.borderColor = '#e9ecef';
+                        clearFieldError(imageField);
+                    }
+                } else {
+                    // Si le champ image est vide pour l'édition, vérifier si l'événement a déjà une image
+                    const currentImage = '{{ event.image }}';
+                    if (!currentImage || currentImage === 'null' || currentImage === '') {
+                        isValid = false;
+                        imageField.style.borderColor = '#dc3545';
+                        showFieldError(imageField, 'Une image est obligatoire pour cet événement');
+                    } else {
+                        imageField.style.borderColor = '#e9ecef';
+                        clearFieldError(imageField);
+                    }
+                }
+            }
+            
+            if (!isValid) {
+                e.preventDefault();
+                alert('Veuillez remplir tous les champs obligatoires et corriger les erreurs.');
+                // Faire défiler vers le premier champ invalide
+                const firstInvalid = form.querySelector('.is-invalid');
+                if (firstInvalid) {
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstInvalid.focus();
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}
