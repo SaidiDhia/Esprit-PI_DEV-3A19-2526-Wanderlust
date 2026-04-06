@@ -87,9 +87,16 @@ class AdminController extends AbstractController
 
     // ─── ADMIN: EDIT POST ─────────────────────────────────────────────────────
     #[Route('/post/{id}/edit', name: 'admin_post_edit')]
-    public function editPost(Posts $post, Request $request, EntityManagerInterface $em): Response
+    public function editPost(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $this->requireAdmin();
+
+        // FIX: manual lookup because PK is idPost not id
+        $post = $em->getRepository(Posts::class)->find($id);
+        if (!$post) {
+            $this->addFlash('error', 'Publication introuvable.');
+            return $this->redirectToRoute('admin_dashboard');
+        }
 
         $form = $this->createForm(PostType::class, $post);
         $form->handleRequest($request);
@@ -126,9 +133,17 @@ class AdminController extends AbstractController
 
     // ─── ADMIN: DELETE POST ───────────────────────────────────────────────────
     #[Route('/post/{id}/delete', name: 'admin_post_delete', methods: ['POST'])]
-    public function deletePost(Posts $post, Request $request, EntityManagerInterface $em): Response
+    public function deletePost(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $this->requireAdmin();
+
+        // FIX: manual lookup because PK is idPost not id
+        $post = $em->getRepository(Posts::class)->find($id);
+        if (!$post) {
+            $this->addFlash('error', 'Publication introuvable.');
+            return $this->redirectToRoute('admin_dashboard');
+        }
+
         if ($this->isCsrfTokenValid('admin_delete' . $post->getIdPost(), $request->request->get('_token'))) {
             $em->remove($post);
             $em->flush();
@@ -139,9 +154,17 @@ class AdminController extends AbstractController
 
     // ─── ADMIN: DELETE COMMENT ────────────────────────────────────────────────
     #[Route('/comment/{id}/delete', name: 'admin_comment_delete', methods: ['POST'])]
-    public function deleteComment(Commentaires $comment, Request $request, EntityManagerInterface $em): Response
+    public function deleteComment(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $this->requireAdmin();
+
+        // FIX: manual lookup because PK is idCommentaire not id
+        $comment = $em->getRepository(Commentaires::class)->find($id);
+        if (!$comment) {
+            $this->addFlash('error', 'Commentaire introuvable.');
+            return $this->redirectToRoute('admin_dashboard');
+        }
+
         if ($this->isCsrfTokenValid('admin_delete_comment' . $comment->getIdCommentaire(), $request->request->get('_token'))) {
             $em->remove($comment);
             $em->flush();
@@ -152,9 +175,17 @@ class AdminController extends AbstractController
 
     // ─── ADMIN: DELETE REACTION ───────────────────────────────────────────────
     #[Route('/reaction/{id}/delete', name: 'admin_reaction_delete', methods: ['POST'])]
-    public function deleteReaction(Reactions $reaction, Request $request, EntityManagerInterface $em): Response
+    public function deleteReaction(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $this->requireAdmin();
+
+        // FIX: manual lookup because PK is idReaction not id
+        $reaction = $em->getRepository(Reactions::class)->find($id);
+        if (!$reaction) {
+            $this->addFlash('error', 'Réaction introuvable.');
+            return $this->redirectToRoute('admin_dashboard');
+        }
+
         if ($this->isCsrfTokenValid('admin_delete_reaction' . $reaction->getIdReaction(), $request->request->get('_token'))) {
             $em->remove($reaction);
             $em->flush();
