@@ -19,8 +19,8 @@
         </h1>
         <p class="hero-subtitle">Plan, book, and experience unforgettable adventures with WanderLust — all your travel needs in one place.</p>
         <div class="hero-cta-group">
-            <a href="{{ path('app_activities') }}" class="btn-hero-primary">🗺️ Explore Activities</a>
-            <a href="{{ path('app_booking') }}" class="btn-hero-outline">🏨 Book Now</a>
+            <a href="{{ path('app_activities_index') }}" class="btn-hero-primary">🗺️ Explore Activities</a>
+            <a href="{{ path('app_events_index') }}" class="btn-hero-outline">� Browse Events</a>
         </div>
     </div>
 </section>
@@ -57,14 +57,26 @@
     <div class="modules-grid">
 
         <!-- Activities -->
-        <a href="{{ path('app_activities') }}" class="module-card card-activities">
+        <a href="{{ path('app_activities_index') }}" class="module-card card-activities">
             <div class="module-card-visual">
                 <span class="card-emoji">📅</span>
             </div>
             <div class="module-card-body">
-                <div class="module-card-title">Activités & Events</div>
+                <div class="module-card-title">Activities</div>
                 <p class="module-card-desc">Browse hundreds of curated activities, tours, and local experiences. Filter by date, location, and interest.</p>
                 <span class="module-card-arrow">Explore activities →</span>
+            </div>
+        </a>
+
+        <!-- Events -->
+        <a href="{{ path('app_events_index') }}" class="module-card card-events">
+            <div class="module-card-visual">
+                <span class="card-emoji">🎉</span>
+            </div>
+            <div class="module-card-body">
+                <div class="module-card-title">Events</div>
+                <p class="module-card-desc">Browse and manage events, activities, and experiences. Create new events and track registrations.</p>
+                <span class="module-card-arrow">Explore events →</span>
             </div>
         </a>
 
@@ -75,7 +87,7 @@
             </div>
             <div class="module-card-body">
                 <div class="module-card-title">Hotel Booking</div>
-                <p class="module-card-desc">Find and book hotels, resorts, and unique stays at the best prices. Compare reviews and amenities instantly.</p>
+                <p class="module-card-desc">Find and book hotels, resorts, and unique stays at best prices. Compare reviews and amenities instantly.</p>
                 <span class="module-card-arrow">Book your stay →</span>
             </div>
         </a>

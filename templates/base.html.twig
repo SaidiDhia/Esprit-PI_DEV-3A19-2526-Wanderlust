@@ -39,11 +39,14 @@
         <div class="logo-wrap">
         <!-- Nav Bar -->
     <nav class="nav-bar">
-        <a href="{{ path('app_activities') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_activities' %}active{% endif %}">
+        <a href="{{ path('app_activities_index') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_activities' %}active{% endif %}">
             <span class="nav-icon">📅</span> ACTIVITÉS
         </a>
+        <a href="{{ path('app_events_index') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_events' %}active{% endif %}">
+            <span class="nav-icon">🎉</span> ÉVÉNEMENTS
+        </a>
         <a href="{{ path('app_booking') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_booking' %}active{% endif %}">
-            <span class="nav-icon">🏨</span> BOOKING
+            <span class="nav-icon">🏨</span> HÔTELS
         </a>
         <a href="{{ path('app_messaging') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_messaging' %}active{% endif %}">
             <span class="nav-icon">💬</span> MESSAGING
@@ -53,6 +56,9 @@
         </a>
         <a href="{{ path('app_marketplace') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_marketplace' %}active{% endif %}">
             <span class="nav-icon">🛒</span> MARKETPLACE
+        </a>
+        <a href="{{ path('app_reservations_index') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_reservations' %}active{% endif %}">
+            <span class="nav-icon">🎫</span> RÉSERVATIONS
         </a>
     </nav>
             
@@ -87,5 +93,6 @@
 
 <script src="{{ asset('js/main.js') }}"></script>
 {% block javascripts %}{% endblock %}
+            {% block importmap %}{{ importmap('app') }}{% endblock %}
 </body>
 </html>

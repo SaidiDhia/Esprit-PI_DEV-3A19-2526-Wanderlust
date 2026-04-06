@@ -1,0 +1,1036 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Créer un nouvel événement{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        --hover-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        --border-radius: 20px;
+    }
+
+    /* Hero Section */
+    .form-hero {
+        background: var(--success-gradient);
+        border-radius: 0 0 60px 60px;
+        padding: 3rem 0;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .form-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+        background-size: cover;
+        opacity: 0.1;
+    }
+
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: fadeInUp 0.8s ease;
+    }
+
+    .hero-subtitle {
+        color: rgba(255,255,255,0.95);
+        font-size: 1.2rem;
+        font-weight: 300;
+        animation: fadeInUp 0.8s ease 0.2s both;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Form Card */
+    .form-card {
+        border: none;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        background: white;
+        position: relative;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .form-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--success-gradient);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .form-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .form-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--hover-shadow);
+    }
+
+    .form-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 2rem;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        position: relative;
+    }
+
+    .form-body {
+        padding: 3rem;
+    }
+
+    /* Form Controls Modernes */
+    .form-group-modern {
+        margin-bottom: 2rem;
+        position: relative;
+    }
+
+    .form-control-modern {
+        width: 100%;
+        padding: 15px 20px;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .form-control-modern:focus {
+        border-color: #4facfe;
+        box-shadow: 0 0 0 5px rgba(79, 172, 254, 0.15);
+        outline: none;
+        transform: translateY(-2px);
+    }
+
+    .form-control-modern.is-valid {
+        border-color: #28a745;
+        background-image: none;
+    }
+
+    .form-control-modern.is-invalid {
+        border-color: #dc3545;
+        background-image: none;
+    }
+
+    textarea.form-control-modern {
+        resize: vertical;
+        min-height: 120px;
+    }
+
+    .form-select-modern {
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 20px center;
+        background-size: 16px;
+        padding-right: 50px !important;
+    }
+
+    /* Image Upload Modern */
+    .image-upload-modern {
+        border: 3px dashed #dee2e6;
+        border-radius: 20px;
+        padding: 3rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        background: #f8f9fa;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .image-upload-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--success-gradient);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .image-upload-modern:hover {
+        border-color: #4facfe;
+        background: rgba(79, 172, 254, 0.05);
+        transform: translateY(-2px);
+    }
+
+    .image-upload-modern:hover::before {
+        opacity: 0.05;
+    }
+
+    .upload-icon-modern {
+        font-size: 4rem;
+        color: #adb5bd;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .image-upload-modern:hover .upload-icon-modern {
+        color: #4facfe;
+        transform: translateY(-5px) scale(1.1);
+    }
+
+    /* Boutons Modernes */
+    .btn-modern {
+        border-radius: 25px;
+        font-weight: 600;
+        padding: 12px 30px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        border: 2px solid transparent;
+    }
+
+    .btn-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .btn-modern:hover::before {
+        left: 100%;
+    }
+
+    .btn-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .btn-primary-modern {
+        background: var(--success-gradient);
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+    }
+
+    .btn-primary-modern:hover {
+        box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+    }
+
+    .btn-secondary-modern {
+        background: white;
+        border: 2px solid #dee2e6;
+        color: #6c757d;
+    }
+
+    .btn-secondary-modern:hover {
+        border-color: #4facfe;
+        color: #4facfe;
+    }
+
+    /* Alertes Modernes */
+    .alert-modern {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        animation: slideInRight 0.5s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .alert-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--success-gradient);
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .form-body {
+            padding: 2rem;
+        }
+        
+        .hero-title {
+            font-size: 2.5rem;
+        }
+
+        .form-hero {
+            padding: 2rem 0;
+            border-radius: 0 0 40px 40px;
+        }
+    }
+
+    /* Confirmation Box */
+    .confirmation-box {
+        background: rgba(102, 126, 234, 0.05);
+        border: 2px solid rgba(102, 126, 234, 0.1);
+        border-radius: 15px;
+        padding: 2rem;
+        margin: 1.5rem 0;
+        transition: all 0.3s ease;
+    }
+
+    .confirmation-box:hover {
+        background: rgba(102, 126, 234, 0.08);
+        border-color: rgba(102, 126, 234, 0.2);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-check {
+        padding: 1rem 0;
+        margin: 0;
+    }
+
+    .form-check-input {
+        width: 1.5rem;
+        height: 1.5rem;
+        margin-right: 1rem;
+        border: 2px solid #667eea;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+
+    .form-check-input:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+    }
+
+    .form-check-label {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #495057;
+        cursor: pointer;
+        user-select: none;
+        line-height: 1.5;
+    }
+
+    .form-check-label:hover {
+        color: #667eea;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-hero">
+    <div class="container text-center">
+        <h1 class="hero-title mb-4">
+            🎉 Créer un nouvel événement
+        </h1>
+        <p class="hero-subtitle mb-0">
+            Organisez un événement mémorable et partagez des moments inoubliables
+        </p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-8">
+            <!-- Messages Flash -->
+            {% for message in app.flashes('success') %}
+                <div class="alert alert-success alert-modern alert-dismissible fade show mb-4" role="alert">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-check-circle fa-lg"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            {{ message }}
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                </div>
+            {% endfor %}
+
+            {% for message in app.flashes('error') %}
+                <div class="alert alert-danger alert-modern alert-dismissible fade show mb-4" role="alert">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-exclamation-circle fa-lg"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            {{ message }}
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                </div>
+            {% endfor %}
+
+            <!-- Formulaire -->
+            <div class="form-card">
+                <div class="form-header">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-calendar-alt fa-3x text-success"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-0 fw-bold">Formulaire d'événement</h4>
+                            <p class="text-muted mb-0">Remplissez le formulaire ci-dessous pour ajouter un événement</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-body">
+                    {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'eventForm'}}) }}
+                        
+                        <!-- Activités associées -->
+                        <div class="form-group-modern">
+                            <div class="form-floating-modern">
+                                {{ form_widget(form.activities, {'attr': {
+                                    'class': 'form-control-modern form-select-modern',
+                                    'placeholder': ' ',
+                                    'id': 'activities'
+                                }}) }}
+                                {{ form_label(form.activities, 'Activités associées', {'label_attr': {'for': 'activities'}}) }}
+                            </div>
+                            <small class="text-muted">Sélectionnez une ou plusieurs activités pour cet événement</small>
+                            {{ form_errors(form.activities) }}
+                        </div>
+
+                        <!-- Organisateur -->
+                        <div class="form-group-modern">
+                            <div class="form-floating-modern">
+                                {{ form_widget(form.organisateur, {'attr': {
+                                    'class': 'form-control-modern',
+                                    'placeholder': ' ',
+                                    'id': 'organisateur'
+                                }}) }}
+                                {{ form_label(form.organisateur, 'Organisateur *', {'label_attr': {'for': 'organisateur'}}) }}
+                            </div>
+                            {{ form_errors(form.organisateur) }}
+                        </div>
+
+                        <!-- Lieu -->
+                        <div class="form-group-modern">
+                            <div class="form-floating-modern">
+                                {{ form_widget(form.lieu, {'attr': {
+                                    'class': 'form-control-modern',
+                                    'placeholder': ' ',
+                                    'id': 'lieu'
+                                }}) }}
+                                {{ form_label(form.lieu, 'Lieu de l\'événement *', {'label_attr': {'for': 'lieu'}}) }}
+                            </div>
+                            {{ form_errors(form.lieu) }}
+                        </div>
+
+                        <!-- Dates -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group-modern">
+                                    <div class="form-floating-modern">
+                                        {{ form_widget(form.date_debut, {'attr': {
+                                            'class': 'form-control-modern',
+                                            'placeholder': ' ',
+                                            'id': 'date_debut'
+                                        }}) }}
+                                        {{ form_label(form.date_debut, 'Date de début *', {'label_attr': {'for': 'date_debut'}}) }}
+                                    </div>
+                                    {{ form_errors(form.date_debut) }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group-modern">
+                                    <div class="form-floating-modern">
+                                        {{ form_widget(form.date_fin, {'attr': {
+                                            'class': 'form-control-modern',
+                                            'placeholder': ' ',
+                                            'id': 'date_fin'
+                                        }}) }}
+                                        {{ form_label(form.date_fin, 'Date de fin *', {'label_attr': {'for': 'date_fin'}}) }}
+                                    </div>
+                                    {{ form_errors(form.date_fin) }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Prix et Capacité -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group-modern">
+                                    <div class="form-floating-modern">
+                                        {{ form_widget(form.prix, {'attr': {
+                                            'class': 'form-control-modern',
+                                            'placeholder': ' ',
+                                            'id': 'prix'
+                                        }}) }}
+                                        {{ form_label(form.prix, 'Prix (€) *', {'label_attr': {'for': 'prix'}}) }}
+                                    </div>
+                                    {{ form_errors(form.prix) }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group-modern">
+                                    <div class="form-floating-modern">
+                                        {{ form_widget(form.capacite_max, {'attr': {
+                                            'class': 'form-control-modern',
+                                            'placeholder': ' ',
+                                            'id': 'capacite_max'
+                                        }}) }}
+                                        {{ form_label(form.capacite_max, 'Capacité maximale *', {'label_attr': {'for': 'capacite_max'}}) }}
+                                    </div>
+                                    {{ form_errors(form.capacite_max) }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group-modern">
+                                    <div class="form-floating-modern">
+                                        {{ form_widget(form.places_disponibles, {'attr': {
+                                            'class': 'form-control-modern',
+                                            'placeholder': ' ',
+                                            'id': 'places_disponibles',
+                                            'readonly': 'readonly'
+                                        }}) }}
+                                        {{ form_label(form.places_disponibles, 'Places disponibles *', {'label_attr': {'for': 'places_disponibles'}}) }}
+                                    </div>
+                                    <small class="text-muted">Les places disponibles seront automatiquement égales à la capacité maximale</small>
+                                    {{ form_errors(form.places_disponibles) }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Contact -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group-modern">
+                                    <div class="form-floating-modern">
+                                        {{ form_widget(form.telephone, {'attr': {
+                                            'class': 'form-control-modern',
+                                            'placeholder': ' ',
+                                            'id': 'telephone'
+                                        }}) }}
+                                        {{ form_label(form.telephone, 'Téléphone', {'label_attr': {'for': 'telephone'}}) }}
+                                    </div>
+                                    {{ form_errors(form.telephone) }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group-modern">
+                                    <div class="form-floating-modern">
+                                        {{ form_widget(form.email, {'attr': {
+                                            'class': 'form-control-modern',
+                                            'placeholder': ' ',
+                                            'id': 'email'
+                                        }}) }}
+                                        {{ form_label(form.email, 'Email', {'label_attr': {'for': 'email'}}) }}
+                                    </div>
+                                    {{ form_errors(form.email) }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Image -->
+                        <div class="form-group-modern">
+                            <label class="form-label fw-bold mb-2">
+                                <i class="fas fa-image me-1"></i>
+                                Image de l'événement
+                            </label>
+                            <div class="image-upload-modern" id="imageUploadArea">
+                                <i class="fas fa-cloud-upload-alt upload-icon-modern"></i>
+                                <h6 class="mb-2">Cliquez ou glissez-déposez une image</h6>
+                                <p class="text-muted small mb-0">JPG, PNG ou GIF (Max 5MB)</p>
+                                {{ form_widget(form.image, {'attr': {
+                                    'class': 'd-none',
+                                    'id': 'imageInput',
+                                    'accept': 'image/jpeg,image/png,image/gif'
+                                }}) }}
+                            </div>
+                            <div id="imagePreview" class="mt-3" style="display: none;">
+                                <div class="position-relative d-inline-block">
+                                    <img id="previewImg" src="" alt="Preview" class="rounded-3" style="max-width: 200px; max-height: 150px; object-fit: cover;">
+                                    <button type="button" id="removeImage" class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 translate-middle">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            {{ form_errors(form.image) }}
+                        </div>
+
+                        <!-- Vidéo YouTube -->
+                        <div class="form-group-modern">
+                            <div class="form-floating-modern">
+                                {{ form_widget(form.video_youtube, {'attr': {
+                                    'class': 'form-control-modern',
+                                    'placeholder': ' ',
+                                    'id': 'video_youtube'
+                                }}) }}
+                                {{ form_label(form.video_youtube, 'Vidéo YouTube (URL)', {'label_attr': {'for': 'video_youtube'}}) }}
+                            </div>
+                            <small class="text-muted">Optionnel - URL YouTube uniquement</small>
+                            {{ form_errors(form.video_youtube) }}
+                        </div>
+
+                        <!-- Matériels -->
+                        <div class="form-group-modern">
+                            <div class="form-floating-modern">
+                                {{ form_widget(form.materiels_necessaires, {'attr': {
+                                    'class': 'form-control-modern',
+                                    'rows': 4,
+                                    'placeholder': ' ',
+                                    'id': 'materiels_necessaires',
+                                    'style': 'height: 100px;'
+                                }}) }}
+                                {{ form_label(form.materiels_necessaires, 'Matériels nécessaires', {'label_attr': {'for': 'materiels_necessaires'}}) }}
+                            </div>
+                            <small class="text-muted">Optionnel - Décrivez les matériels nécessaires</small>
+                            {{ form_errors(form.materiels_necessaires) }}
+                        </div>
+
+                        <!-- Confirmation Organisateur -->
+                        <div class="form-group-modern">
+                            <div class="confirmation-box">
+                                <div class="form-check">
+                                    {{ form_widget(form.confirmation_organisateur, {'attr': {
+                                        'class': 'form-check-input',
+                                        'id': 'confirmation_organisateur'
+                                    }}) }}
+                                    {{ form_label(form.confirmation_organisateur, 'Je confirme être l\'organisateur de cet événement et m\'engage à respecter les conditions générales', {'label_attr': {
+                                        'class': 'form-check-label',
+                                        'for': 'confirmation_organisateur'
+                                    }}) }}
+                                </div>
+                                <small class="text-muted mt-2 d-block">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Cette confirmation est obligatoire pour soumettre l'événement
+                                </small>
+                                {{ form_errors(form.confirmation_organisateur) }}
+                            </div>
+                        </div>
+
+                        <!-- Boutons -->
+                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+                            <a href="{{ path('app_events_index') }}" class="btn btn-secondary-modern btn-modern">
+                                <i class="fas fa-times me-2"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary-modern btn-modern">
+                                <i class="fas fa-check-circle me-2"></i>Créer l'événement
+                            </button>
+                        </div>
+
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('eventForm');
+    const capaciteMaxField = document.querySelector('#event_capacite_max');
+    const placesDisponiblesField = document.querySelector('#event_places_disponibles');
+    
+    // Logique pour synchroniser les places disponibles avec la capacité maximale
+    if (capaciteMaxField && placesDisponiblesField) {
+        capaciteMaxField.addEventListener('input', function() {
+            const capaciteMax = parseInt(this.value) || 0;
+            placesDisponiblesField.value = capaciteMax;
+        });
+        
+        // Synchronisation initiale
+        const capaciteMax = parseInt(capaciteMaxField.value) || 0;
+        placesDisponiblesField.value = capaciteMax;
+    }
+    
+    // Validation en temps réel des dates
+    const dateDebutField = document.querySelector('#event_date_debut');
+    const dateFinField = document.querySelector('#event_date_fin');
+    
+    function validateDates() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Validation date de début
+        if (dateDebutField && dateDebutField.value) {
+            const startDate = new Date(dateDebutField.value);
+            if (startDate < today) {
+                showFieldError(dateDebutField, 'La date de début ne peut pas être antérieure à aujourd\'hui');
+            } else {
+                clearFieldError(dateDebutField);
+            }
+            
+            // Validation date de fin si elle existe
+            if (dateFinField && dateFinField.value) {
+                const endDate = new Date(dateFinField.value);
+                if (endDate <= startDate) {
+                    showFieldError(dateFinField, 'La date de fin doit être postérieure à la date de début');
+                } else {
+                    clearFieldError(dateFinField);
+                }
+            }
+        }
+        
+        // Validation date de fin
+        if (dateFinField && dateFinField.value && (!dateDebutField || !dateDebutField.value)) {
+            const endDate = new Date(dateFinField.value);
+            if (endDate < today) {
+                showFieldError(dateFinField, 'La date de fin ne peut pas être antérieure à aujourd\'hui');
+            } else {
+                clearFieldError(dateFinField);
+            }
+        }
+    }
+    
+    if (dateDebutField) {
+        dateDebutField.addEventListener('change', validateDates);
+        dateDebutField.addEventListener('blur', validateDates);
+    }
+    
+    if (dateFinField) {
+        dateFinField.addEventListener('change', validateDates);
+        dateFinField.addEventListener('blur', validateDates);
+    }
+    
+    function showFieldError(field, message) {
+        field.classList.add('is-invalid');
+        field.classList.remove('is-valid');
+        
+        // Supprimer l'ancien message d'erreur
+        const existingError = field.parentNode.querySelector('.invalid-feedback');
+        if (existingError) {
+            existingError.remove();
+        }
+        
+        // Ajouter le nouveau message d'erreur
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'invalid-feedback';
+        errorDiv.style.display = 'block';
+        errorDiv.textContent = message;
+        field.parentNode.appendChild(errorDiv);
+    }
+    
+    function clearFieldError(field) {
+        field.classList.remove('is-invalid');
+        field.classList.add('is-valid');
+        
+        const errorDiv = field.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+    }
+    
+    // Image upload preview
+    const imageUploadArea = document.getElementById('imageUploadArea');
+    const imageInput = document.getElementById('events_image'); // ID correct de Symfony
+    const imagePreview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const removeImageBtn = document.getElementById('removeImage');
+    
+    if (imageUploadArea && imageInput) {
+        imageUploadArea.addEventListener('click', () => imageInput.click());
+        
+        imageUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            imageUploadArea.style.borderColor = '#4facfe';
+            imageUploadArea.style.background = 'rgba(79, 172, 254, 0.05)';
+        });
+        
+        imageUploadArea.addEventListener('dragleave', () => {
+            imageUploadArea.style.borderColor = '#dee2e6';
+            imageUploadArea.style.background = '#f8f9fa';
+        });
+        
+        imageUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            imageUploadArea.style.borderColor = '#dee2e6';
+            imageUploadArea.style.background = '#f8f9fa';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                imageInput.files = files;
+                previewImage(files[0]);
+            }
+        });
+        
+        imageInput.addEventListener('change', function() {
+            if (this.files.length > 0) {
+                previewImage(this.files[0]);
+            } else {
+                if (imagePreview) imagePreview.style.display = 'none';
+                if (imageUploadArea) imageUploadArea.style.display = 'block';
+            }
+        });
+        
+        function previewImage(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                if (previewImg) {
+                    previewImg.src = e.target.result;
+                    if (imagePreview) imagePreview.style.display = 'block';
+                    if (imageUploadArea) imageUploadArea.style.display = 'none';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        if (removeImageBtn) {
+            removeImageBtn.addEventListener('click', function() {
+                imageInput.value = '';
+                if (imagePreview) imagePreview.style.display = 'none';
+                if (imageUploadArea) imageUploadArea.style.display = 'block';
+            });
+        }
+    }
+    
+    // Validation en temps réel
+    if (form) {
+        form.addEventListener('input', function(e) {
+            if (e.target.classList.contains('form-control-modern')) {
+                validateField(e.target);
+            }
+        });
+        
+        form.addEventListener('change', function(e) {
+            if (e.target.classList.contains('form-control-modern')) {
+                validateField(e.target);
+            }
+        });
+    }
+    
+    function validateField(field) {
+        const value = field.value.trim();
+        let isValid = true;
+        let errorMessage = '';
+        
+        // Validation des champs obligatoires
+        if (field.name === 'events[organisateur]' || 
+            field.name === 'events[lieu]' || field.name === 'events[date_debut]' || 
+            field.name === 'events[date_fin]' || field.name === 'events[prix]' || 
+            field.name === 'events[capacite_max]') {
+            if (!value) {
+                isValid = false;
+                errorMessage = 'Ce champ est obligatoire';
+            }
+        }
+        
+        // Validation de l'email
+        if (field.name === 'events[email]' && value) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(value)) {
+                isValid = false;
+                errorMessage = 'Veuillez entrer une adresse email valide';
+            }
+        }
+        
+        // Validation des matériels
+        if (field.name === 'events[materiels_necessaires]' && value) {
+            if (value.trim().length < 10) {
+                isValid = false;
+                errorMessage = 'La description des matériels doit contenir au moins 10 caractères';
+            }
+        }
+        
+        // Validation de la vidéo YouTube
+        if (field.name === 'events[video_youtube]' && value) {
+            const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=[\w-]{11}|youtu\.be\/[\w-]{11}|youtube\.com\/embed\/[\w-]{11})(?:\S*)?$/;
+            if (!youtubeRegex.test(value)) {
+                isValid = false;
+                errorMessage = 'Veuillez entrer une URL YouTube valide (format: https://www.youtube.com/watch?v=... ou https://youtu.be/...)';
+            }
+        }
+        
+        // Validation des nombres
+        if (field.name === 'events[prix]' && value) {
+            const price = parseFloat(value);
+            if (isNaN(price) || price < 0) {
+                isValid = false;
+                errorMessage = 'Le prix doit être un nombre positif';
+            }
+        }
+        
+        // Validation des dates
+        if (field.name === 'events[date_debut]' && value) {
+            const selectedDate = new Date(value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Ignorer l'heure actuelle
+            
+            if (selectedDate < today) {
+                isValid = false;
+                errorMessage = 'La date de début ne peut pas être antérieure à aujourd\'hui';
+            }
+        }
+        
+        if (field.name === 'events[date_fin]' && value) {
+            const selectedDate = new Date(value);
+            const startDateField = form.querySelector('#event_date_debut');
+            
+            if (startDateField && startDateField.value) {
+                const startDate = new Date(startDateField.value);
+                if (selectedDate <= startDate) {
+                    isValid = false;
+                    errorMessage = 'La date de fin doit être postérieure à la date de début';
+                }
+            }
+        }
+        
+        // Validation de la capacité
+        if (field.name === 'events[capacite_max]' && value) {
+            const capacity = parseInt(value);
+            if (isNaN(capacity) || capacity < 1 || capacity > 10000) {
+                isValid = false;
+                errorMessage = 'La capacité doit être entre 1 et 10000';
+            }
+        }
+        
+        // Validation des dates
+        if (field.name === 'events[date_debut]' && value) {
+            const selectedDate = new Date(value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0); // Ignorer l'heure actuelle
+            
+            if (selectedDate < today) {
+                isValid = false;
+                errorMessage = 'La date de début ne peut pas être antérieure à aujourd\'hui';
+            }
+        }
+        
+        if (field.name === 'events[date_fin]' && value) {
+            const selectedDate = new Date(value);
+            const startDateField = form.querySelector('#event_date_debut');
+            
+            if (startDateField && startDateField.value) {
+                const startDate = new Date(startDateField.value);
+                if (selectedDate <= startDate) {
+                    isValid = false;
+                    errorMessage = 'La date de fin doit être postérieure à la date de début';
+                }
+            }
+        }
+        
+        // Validation de la capacité
+        if (field.name === 'events[capacite_max]' && value) {
+            const capacity = parseInt(value);
+            if (isNaN(capacity) || capacity < 1 || capacity > 10000) {
+                isValid = false;
+                errorMessage = 'La capacité doit être entre 1 et 10000';
+            }
+        }
+        
+        // Validation de l'image
+        if (field.name === 'events[image]') {
+            if (field.files.length > 0) {
+                const file = field.files[0];
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                const maxSize = 5 * 1024 * 1024; // 5MB
+                
+                if (!allowedTypes.includes(file.type)) {
+                    isValid = false;
+                    errorMessage = 'Format d\'image non valide (JPG, PNG, GIF uniquement)';
+                } else if (file.size > maxSize) {
+                    isValid = false;
+                    errorMessage = 'L\'image ne peut pas dépasser 5MB';
+                }
+            }
+        }
+        
+        // Affichage des erreurs
+        const errorDiv = field.parentNode.querySelector('.invalid-feedback');
+        if (errorDiv) {
+            errorDiv.remove();
+        }
+        
+        if (!isValid && errorMessage) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+            
+            const errorElement = document.createElement('div');
+            errorElement.className = 'invalid-feedback';
+            errorElement.textContent = errorMessage;
+            field.parentNode.appendChild(errorElement);
+        } else if (value || (field.name === 'events[image]' && field.files.length > 0) || (field.name === 'events[activities]' && field.selectedOptions.length > 0)) {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+        } else {
+            field.classList.remove('is-valid', 'is-invalid');
+        }
+        
+        return isValid;
+    }
+    
+    // Validation à la soumission
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const fields = form.querySelectorAll('.form-control-modern');
+            let isFormValid = true;
+            
+            // Synchroniser les places disponibles avec la capacité maximale avant validation
+            if (capaciteMaxField && placesDisponiblesField) {
+                const capaciteMax = parseInt(capaciteMaxField.value) || 0;
+                placesDisponiblesField.value = capaciteMax;
+            }
+            
+            fields.forEach(field => {
+                if (!validateField(field)) {
+                    isFormValid = false;
+                }
+            });
+            
+            if (!isFormValid) {
+                e.preventDefault();
+                // Faire défiler vers le premier champ invalide
+                const firstInvalid = form.querySelector('.is-invalid');
+                if (firstInvalid) {
+                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    firstInvalid.focus();
+                }
+            } else {
+                // Désactiver le bouton pour éviter les doubles soumissions
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (submitBtn) {
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Création en cours...';
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

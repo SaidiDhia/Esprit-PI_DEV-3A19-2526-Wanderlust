@@ -28,8 +28,6 @@ class ActivitiesController extends AbstractController
     #[Route('/new', name: 'app_activities_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager, SluggerInterface $slugger): Response
     {
-        $this->addFlash('info', 'Controller Activities::new appelé');
-        
         $activity = new Activities();
         $form = $this->createForm(ActivitiesType::class, $activity);
         $form->handleRequest($request);
@@ -133,14 +131,12 @@ class ActivitiesController extends AbstractController
     public function delete(Request $request, Activities $activity, EntityManagerInterface $entityManager): Response
     {
         if ($this->isCsrfTokenValid('delete'.$activity->getId(), $request->request->get('_token'))) {
-            // Supprimer physiquement les images
-            $images = $activity->getImages();
-            if ($images) {
-                foreach ($images as $image) {
-                    $imagePath = $this->getParameter('kernel.project_dir') . '/public/uploads/activities/' . $image;
-                    if (file_exists($imagePath)) {
-                        unlink($imagePath);
-                    }
+            // Supprimer physiquement l'image
+            $image = $activity->getImage();
+            if ($image) {
+                $imagePath = $this->getParameter('kernel.project_dir') . '/public/uploads/activities/' . $image;
+                if (file_exists($imagePath)) {
+                    unlink($imagePath);
                 }
             }
 
