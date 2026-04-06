@@ -1,0 +1,232 @@
+<style>
+    .msg-page {
+        --msg-primary: #2554d9;
+        --msg-primary-dark: #1e40af;
+        --msg-secondary: #f8fafc;
+        --msg-border: #dbe5ef;
+        --msg-text: #0f172a;
+        --msg-muted: #64748b;
+        --msg-danger: #dc2626;
+        --msg-danger-dark: #b91c1c;
+        --msg-warning: #d97706;
+        --msg-warning-dark: #b45309;
+    }
+
+    .msg-page h1,
+    .msg-page h2,
+    .msg-page h3,
+    .msg-page h4 {
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: var(--msg-text);
+        letter-spacing: -0.03em;
+    }
+
+    .msg-page .msg-hero-title {
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 1.05;
+    }
+
+    .msg-page .msg-hero-title.serif {
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: clamp(2.6rem, 5vw, 4rem);
+        letter-spacing: -0.04em;
+    }
+
+    .msg-page .msg-section-title {
+        font-size: clamp(1.25rem, 2vw, 1.55rem);
+        line-height: 1.15;
+        margin: 0;
+    }
+
+    .msg-page .msg-section-subtitle {
+        color: var(--msg-muted);
+        margin-top: 6px;
+        font-size: 14px;
+    }
+
+    .msg-fade-in {
+        animation: msgFadeIn 0.45s ease both;
+    }
+
+    .msg-pop-in {
+        animation: msgPopIn 0.35s ease both;
+    }
+
+    .msg-bubble {
+        position: relative;
+        overflow: hidden;
+        animation: msgBubbleIn 0.24s ease both;
+    }
+
+    .msg-bubble::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 38%);
+        pointer-events: none;
+    }
+
+    .msg-card-hover {
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .msg-card-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 14px 32px rgba(15, 23, 42, 0.08);
+        border-color: rgba(14, 165, 233, 0.22);
+    }
+
+    .msg-card {
+        background: #ffffff;
+        border: 1px solid var(--msg-border);
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+    }
+
+    .msg-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border-radius: 10px;
+        font-weight: 600;
+        line-height: 1;
+        border: 1px solid transparent;
+        padding: 10px 14px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .msg-btn:hover {
+        transform: translateY(-1px);
+    }
+
+    .msg-btn-sm {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+
+    .msg-btn-primary {
+        background: var(--msg-primary);
+        color: #ffffff;
+        border-color: var(--msg-primary);
+    }
+
+    .msg-btn-primary:hover {
+        background: var(--msg-primary-dark);
+        border-color: var(--msg-primary-dark);
+    }
+
+    .msg-btn-secondary {
+        background: var(--msg-secondary);
+        color: var(--msg-text);
+        border-color: var(--msg-border);
+    }
+
+    .msg-btn-secondary:hover {
+        background: #eef4fb;
+    }
+
+    .msg-btn-danger {
+        background: var(--msg-danger);
+        color: #ffffff;
+        border-color: var(--msg-danger);
+    }
+
+    .msg-btn-danger:hover {
+        background: var(--msg-danger-dark);
+        border-color: var(--msg-danger-dark);
+    }
+
+    .msg-btn-warning {
+        background: var(--msg-warning);
+        color: #ffffff;
+        border-color: var(--msg-warning);
+    }
+
+    .msg-btn-warning:hover {
+        background: var(--msg-warning-dark);
+        border-color: var(--msg-warning-dark);
+    }
+
+    .msg-input,
+    .msg-select,
+    .msg-textarea {
+        width: 100%;
+        border: 1px solid var(--msg-border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: #ffffff;
+        color: var(--msg-text);
+        outline: none;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .msg-input:focus,
+    .msg-select:focus,
+    .msg-textarea:focus {
+        border-color: var(--msg-primary);
+        box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.15);
+    }
+
+    .msg-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        backdrop-filter: blur(2px);
+        z-index: 1000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
+    }
+
+    .msg-modal {
+        width: min(460px, 100%);
+        background: #ffffff;
+        border: 1px solid var(--msg-border);
+        border-radius: 16px;
+        box-shadow: 0 18px 46px rgba(15, 23, 42, 0.24);
+        overflow: hidden;
+    }
+
+    .msg-modal-head {
+        padding: 18px 20px;
+        border-bottom: 1px solid var(--msg-border);
+    }
+
+    .msg-modal-title {
+        margin: 0;
+        font-size: 18px;
+        color: var(--msg-text);
+    }
+
+    .msg-modal-body {
+        padding: 18px 20px;
+        color: var(--msg-muted);
+    }
+
+    .msg-modal-actions {
+        padding: 14px 20px 18px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        border-top: 1px solid var(--msg-border);
+    }
+
+    @keyframes msgFadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes msgPopIn {
+        from { opacity: 0; transform: scale(0.98); }
+        to { opacity: 1; transform: scale(1); }
+    }
+
+    @keyframes msgBubbleIn {
+        from { opacity: 0; transform: translateY(10px) scale(0.99); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+</style>

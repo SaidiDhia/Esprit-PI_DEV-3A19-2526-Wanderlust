@@ -46,7 +46,7 @@
                 </div>
             {% endfor %}
 
-            <form method="post" enctype="multipart/form-data" class="space-y-6">
+            <form id="signup-form" method="post" enctype="multipart/form-data" novalidate class="space-y-6">
                 <!-- Role Selection -->
                 <div class="grid grid-cols-2 gap-4">
                     <label class="relative group cursor-pointer">
@@ -101,7 +101,7 @@
                             <div class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
                                 <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                             </div>
-                            <input type="tel" name="phoneNumber" id="phoneNumber" value="{{ old.phoneNumber|default('') }}" class="w-full bg-secondary/30 border {{ errors.phoneNumber is defined ? 'border-destructive' : 'border-border' }} rounded-xl pl-10 pr-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="+216 22 333 444">
+                            <input type="tel" name="phoneNumber" id="phoneNumber" value="{{ old.phoneNumber|default('') }}" pattern="\+?[0-9\s\-]{8,20}" class="w-full bg-secondary/30 border {{ errors.phoneNumber is defined ? 'border-destructive' : 'border-border' }} rounded-xl pl-10 pr-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="+216 22 333 444">
                         </div>
                         {% if errors.phoneNumber is defined %}
                             <p class="text-xs font-bold text-destructive">{{ errors.phoneNumber }}</p>
@@ -153,7 +153,7 @@
                         <div class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
                             <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
                         </div>
-                        <input type="password" name="confirmPassword" id="confirmPassword" class="w-full bg-secondary/30 border {{ errors.confirmPassword is defined ? 'border-destructive' : 'border-border' }} rounded-xl pl-10 pr-12 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="••••••••" required>
+                        <input type="password" name="confirmPassword" id="confirmPassword" data-match="#password" class="w-full bg-secondary/30 border {{ errors.confirmPassword is defined ? 'border-destructive' : 'border-border' }} rounded-xl pl-10 pr-12 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="••••••••" required>
                         <button type="button" onclick="togglePassword('confirmPassword', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors focus:outline-none">
                             <svg class="w-4 h-4 eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
                             <svg class="w-4 h-4 eye-off-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
@@ -249,5 +249,137 @@
             label.innerText = 'Strength: None';
         }
     }
+
+    function getSignupErrorElement(field) {
+        const wrapper = field.closest('.space-y-2') || field.parentElement;
+        if (!wrapper) {
+            return null;
+        }
+
+        let errorElement = wrapper.querySelector('.js-input-error');
+        if (!errorElement) {
+            errorElement = document.createElement('p');
+            errorElement.className = 'js-input-error text-xs font-bold text-destructive';
+            wrapper.appendChild(errorElement);
+        }
+
+        return errorElement;
+    }
+
+    function showSignupError(field, message) {
+        const errorElement = getSignupErrorElement(field);
+        if (!errorElement) {
+            return;
+        }
+
+        errorElement.textContent = message;
+        field.classList.add('border-destructive');
+    }
+
+    function clearSignupError(field) {
+        const wrapper = field.closest('.space-y-2') || field.parentElement;
+        if (wrapper) {
+            const errorElement = wrapper.querySelector('.js-input-error');
+            if (errorElement) {
+                errorElement.remove();
+            }
+        }
+
+        field.classList.remove('border-destructive');
+    }
+
+    function signupFieldLabel(field) {
+        const wrapper = field.closest('.space-y-2');
+        const label = wrapper ? wrapper.querySelector('label') : null;
+        return label ? label.textContent.trim() : (field.name || 'This field');
+    }
+
+    function validateSignupField(field) {
+        if (field.disabled || field.type === 'hidden' || field.type === 'radio' || field.type === 'file') {
+            return true;
+        }
+
+        const label = signupFieldLabel(field);
+
+        if (!field.checkValidity()) {
+            let message = label + ' is invalid.';
+            if (field.validity.valueMissing) {
+                message = label + ' is required.';
+            } else if (field.validity.typeMismatch) {
+                message = 'Please enter a valid ' + field.type + '.';
+            } else if (field.validity.patternMismatch) {
+                message = label + ' format is invalid.';
+            } else if (field.validity.tooShort) {
+                message = label + ' is too short.';
+            }
+
+            showSignupError(field, message);
+            return false;
+        }
+
+        const matchSelector = field.getAttribute('data-match');
+        if (matchSelector) {
+            const source = document.querySelector(matchSelector);
+            if (source && field.value !== source.value) {
+                showSignupError(field, 'Passwords do not match.');
+                return false;
+            }
+        }
+
+        clearSignupError(field);
+        return true;
+    }
+
+    function initSignupValidation() {
+        const form = document.getElementById('signup-form');
+        if (!form) {
+            return;
+        }
+
+        const fields = form.querySelectorAll('input, textarea, select');
+        fields.forEach((field) => {
+            if (field.type === 'hidden' || field.type === 'radio' || field.type === 'file') {
+                return;
+            }
+
+            const eventName = field.tagName === 'SELECT' ? 'change' : 'input';
+            field.addEventListener(eventName, () => validateSignupField(field));
+            field.addEventListener('blur', () => validateSignupField(field));
+        });
+
+        const passwordField = document.getElementById('password');
+        const confirmField = document.getElementById('confirmPassword');
+        if (passwordField && confirmField) {
+            passwordField.addEventListener('input', () => {
+                if (confirmField.value !== '') {
+                    validateSignupField(confirmField);
+                }
+            });
+        }
+
+        form.addEventListener('submit', (event) => {
+            let valid = true;
+            let firstInvalid = null;
+
+            fields.forEach((field) => {
+                const isValid = validateSignupField(field);
+                if (!isValid) {
+                    valid = false;
+                    if (!firstInvalid) {
+                        firstInvalid = field;
+                    }
+                }
+            });
+
+            if (!valid) {
+                event.preventDefault();
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                }
+            }
+        });
+    }
+
+    initSignupValidation();
 </script>
 {% endblock %}
