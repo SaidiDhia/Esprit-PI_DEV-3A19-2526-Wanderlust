@@ -10,8 +10,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\File\Exception\FileException;
 
 #[Route('/messaging')]
 class MessagingController extends AbstractController
@@ -49,6 +52,120 @@ class MessagingController extends AbstractController
         }
 
         throw $this->createAccessDeniedException('Authenticated user ID is unavailable.');
+    }
+
+    private function getPostString(Request $request, string $key, string $default = ''): string
+    {
+        $payload = $request->request->all();
+        $value = $payload[$key] ?? $default;
+
+        if (is_scalar($value) || $value instanceof \Stringable) {
+            return trim((string) $value);
+        }
+
+        return $default;
+    }
+
+    /**
+     * @return string[]
+     */
+    private function getPostStringArray(Request $request, string $key): array
+    {
+        $payload = $request->request->all();
+        $value = $payload[$key] ?? [];
+
+        if (!is_array($value)) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($value as $entry) {
+            if (is_scalar($entry) || $entry instanceof \Stringable) {
+                $stringValue = trim((string) $entry);
+                if ($stringValue !== '') {
+                    $items[] = $stringValue;
+                }
+            }
+        }
+
+        return $items;
+    }
+
+    private function parseIniSizeToBytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '') {
+            return 0;
+        }
+
+        $unit = strtolower(substr($value, -1));
+        $number = (float) $value;
+
+        return match ($unit) {
+            'g' => (int) ($number * 1024 * 1024 * 1024),
+            'm' => (int) ($number * 1024 * 1024),
+            'k' => (int) ($number * 1024),
+            default => (int) $number,
+        };
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        if ($bytes <= 0) {
+            return 'unknown';
+        }
+
+        $units = ['B', 'KB', 'MB', 'GB'];
+        $power = (int) floor(log($bytes, 1024));
+        $power = min($power, count($units) - 1);
+        $value = $bytes / (1024 ** $power);
+
+        return sprintf('%.1f %s', $value, $units[$power]);
+    }
+
+    private function uploadErrorMessage(int $errorCode): string
+    {
+        $maxUpload = $this->formatBytes($this->parseIniSizeToBytes((string) ini_get('upload_max_filesize')));
+
+        return match ($errorCode) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => 'File is too large. Maximum allowed size is ' . $maxUpload . '.',
+            UPLOAD_ERR_PARTIAL => 'Upload was interrupted. Please try again.',
+            UPLOAD_ERR_NO_FILE => 'Please choose a file before uploading.',
+            UPLOAD_ERR_NO_TMP_DIR => 'Upload failed: temporary folder is missing on server.',
+            UPLOAD_ERR_CANT_WRITE => 'Upload failed: server cannot write file to disk.',
+            UPLOAD_ERR_EXTENSION => 'Upload blocked by a PHP extension.',
+            default => 'Upload failed with code: ' . $errorCode,
+        };
+    }
+
+    private function getMimeTypeFromExtension(string $filename): string
+    {
+        $extension = strtolower((string) pathinfo($filename, PATHINFO_EXTENSION));
+
+        return match ($extension) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'bmp' => 'image/bmp',
+            'svg' => 'image/svg+xml',
+            'mp4' => 'video/mp4',
+            'mov' => 'video/quicktime',
+            'avi' => 'video/x-msvideo',
+            'mkv' => 'video/x-matroska',
+            'wmv' => 'video/x-ms-wmv',
+            'mp3' => 'audio/mpeg',
+            'wav' => 'audio/wav',
+            'ogg' => 'audio/ogg',
+            'aac' => 'audio/aac',
+            'm4a' => 'audio/mp4',
+            'pdf' => 'application/pdf',
+            'txt' => 'text/plain',
+            'csv' => 'text/csv',
+            'json' => 'application/json',
+            'zip' => 'application/zip',
+            default => 'application/octet-stream',
+        };
     }
 
 #[Route('/', name: 'app_messaging')]
@@ -96,6 +213,8 @@ public function index(EntityManagerInterface $em): Response
     #[Route('/conversation/{id}', name: 'messaging_conversation_show', requirements: ['id' => '\d+'])]
     public function showConversation(int $id, EntityManagerInterface $em): Response
     {
+        $currentUserId = $this->getCurrentUserId();
+
         // Get conversation details
         $conn = $em->getConnection();
         
@@ -113,7 +232,7 @@ public function index(EntityManagerInterface $em): Response
         $sql = "
             SELECT m.*, u.full_name as sender_name
             FROM message m
-            LEFT JOIN users u ON m.sender_id = u.user_id
+            LEFT JOIN users u ON m.sender_id = u.id
             WHERE m.conversation_id = :conversationId
             ORDER BY m.created_at ASC
         ";
@@ -125,6 +244,7 @@ public function index(EntityManagerInterface $em): Response
         return $this->render('messaging/show.html.twig', [
             'conversation' => $conversation,
             'messages' => $messages,
+            'currentUserId' => $currentUserId,
         ]);
     }
 
@@ -132,9 +252,9 @@ public function index(EntityManagerInterface $em): Response
     public function newConversation(Request $request, EntityManagerInterface $em): Response
     {
         if ($request->isMethod('POST')) {
-            $name = trim($request->request->get('name'));
-            $type = $request->request->get('type');
-            $participantEmails = $request->request->get('participant_emails', []);
+            $name = $this->getPostString($request, 'name');
+            $type = strtoupper($this->getPostString($request, 'type'));
+            $participantEmails = $this->getPostStringArray($request, 'participant_emails');
             
             // Validate: name cannot be empty
             if (empty($name)) {
@@ -162,7 +282,7 @@ public function index(EntityManagerInterface $em): Response
                 $email = trim($email);
                 if (empty($email)) continue;
                 
-                $sql = "SELECT user_id FROM users WHERE email = :email";
+                $sql = "SELECT id FROM users WHERE email = :email";
                 $stmt = $conn->prepare($sql);
                 $stmt->bindValue('email', $email);
                 $result = $stmt->executeQuery();
@@ -172,7 +292,7 @@ public function index(EntityManagerInterface $em): Response
                     $this->addFlash('error', 'User not found with email: ' . $email);
                     return $this->redirectToRoute('app_messaging');
                 }
-                $participantIds[] = $participant['user_id'];
+                $participantIds[] = $participant['id'];
             }
             
             // Create conversation
@@ -212,7 +332,7 @@ public function index(EntityManagerInterface $em): Response
     #[Route('/conversation/{id}/rename', name: 'messaging_conversation_rename', methods: ['POST'])]
     public function renameConversation(int $id, Request $request, EntityManagerInterface $em): Response
     {
-        $newName = trim($request->request->get('name'));
+        $newName = $this->getPostString($request, 'name');
         
         // Validate: name cannot be empty
         if (empty($newName)) {
@@ -271,8 +391,13 @@ public function index(EntityManagerInterface $em): Response
     #[Route('/message/send', name: 'messaging_message_send', methods: ['POST'])]
     public function sendMessage(Request $request, EntityManagerInterface $em): Response
     {
-        $conversationId = $request->request->get('conversation_id');
-        $content = $request->request->get('content');
+        $conversationId = (int) $this->getPostString($request, 'conversation_id', '0');
+        $content = $this->getPostString($request, 'content');
+
+        if ($conversationId <= 0 || $content === '') {
+            $this->addFlash('error', 'Conversation and message content are required.');
+            return $this->redirectToRoute('app_messaging');
+        }
         
         $message = new Message();
         $message->setConversationId($conversationId);
@@ -297,7 +422,7 @@ public function index(EntityManagerInterface $em): Response
     #[Route('/message/{id}/edit', name: 'messaging_message_edit', methods: ['POST'])]
 public function editMessage(int $id, Request $request, EntityManagerInterface $em): Response
 {
-    $newContent = trim($request->request->get('content'));
+    $newContent = $this->getPostString($request, 'content');
     
     // Validate: content cannot be empty
     if (empty($newContent)) {
@@ -363,32 +488,41 @@ public function editMessage(int $id, Request $request, EntityManagerInterface $e
 #[Route('/message/upload', name: 'messaging_message_upload', methods: ['POST'])]
 public function uploadFile(Request $request, EntityManagerInterface $em): Response
 {
-    $conversationId = $request->request->get('conversation_id');
-    
-    // Check if file was uploaded
-    if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
-        $errorCode = $_FILES['file']['error'] ?? 'unknown';
-        $this->addFlash('error', 'Upload failed. Error code: ' . $errorCode);
-        return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
+    $conversationId = (int) $this->getPostString($request, 'conversation_id', '0');
+
+    if ($conversationId <= 0) {
+        $this->addFlash('error', 'Conversation is required.');
+        return $this->redirectToRoute('app_messaging');
     }
     
-    $tmpFile = $_FILES['file']['tmp_name'];
-    $originalName = $_FILES['file']['name'];
-    
-    // Debug: Check if temp file exists
-    if (!file_exists($tmpFile)) {
-        $this->addFlash('error', 'Temp file does not exist: ' . $tmpFile);
+    $fileInput = $request->files->get('file');
+    if (!$fileInput instanceof UploadedFile) {
+        if (is_array($fileInput)) {
+            $this->addFlash('error', 'Please upload exactly one file at a time.');
+            return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
+        }
+
+        // No file sent or post body exceeded limits before PHP could build UploadedFile.
+        $this->addFlash('error', 'Please choose a file before uploading.');
         return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
     }
+
+    if (!$fileInput->isValid()) {
+        $this->addFlash('error', $this->uploadErrorMessage($fileInput->getError()));
+        return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
+    }
+
+    $originalName = $fileInput->getClientOriginalName();
+    $fileSize = (int) ($fileInput->getSize() ?? 0);
     
     // Generate unique filename
     $extension = pathinfo($originalName, PATHINFO_EXTENSION);
     $newName = time() . '_' . uniqid() . '.' . $extension;
-    $destination = $this->uploadDir . $newName;
-    
-    // Use copy() instead of move_uploaded_file()
-    if (!copy($tmpFile, $destination)) {
-        $this->addFlash('error', 'Failed to copy file to destination');
+
+    try {
+        $fileInput->move($this->uploadDir, $newName);
+    } catch (FileException) {
+        $this->addFlash('error', 'Failed to store uploaded file on server.');
         return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
     }
     
@@ -414,7 +548,7 @@ public function uploadFile(Request $request, EntityManagerInterface $em): Respon
     $message->setMessageType($messageType);
     $message->setFileUrl('/uploads/' . $newName);
     $message->setFileName($originalName);
-    $message->setFileSize($_FILES['file']['size']);
+    $message->setFileSize($fileSize);
     $message->setCreatedAt(new \DateTime());
     
     $em->persist($message);
@@ -439,8 +573,12 @@ public function serveUpload(string $filename): Response
         }
     }
     
-    // Return the file as a response
-    return $this->file($filePath, $filename);
+    // Avoid MIME guesser dependency (php_fileinfo) by setting Content-Type from extension.
+    $response = new BinaryFileResponse($filePath);
+    $response->headers->set('Content-Type', $this->getMimeTypeFromExtension($filename));
+    $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, $filename);
+
+    return $response;
 }
 #[Route('/conversation/{id}/pin', name: 'messaging_conversation_pin', methods: ['POST'])]
 public function pinConversation(int $id, EntityManagerInterface $em): Response
@@ -471,6 +609,7 @@ public function archiveConversation(int $id, EntityManagerInterface $em): Respon
 #[Route('/conversation/{id}/participants', name: 'messaging_conversation_participants', methods: ['GET'])]
 public function getParticipants(int $id, EntityManagerInterface $em): Response
 {
+    $currentUserId = $this->getCurrentUserId();
     $conn = $em->getConnection();
     
     // Check if user is in conversation
@@ -489,7 +628,7 @@ public function getParticipants(int $id, EntityManagerInterface $em): Response
     // Get all participants
     $sql = "SELECT cu.user_id, cu.role, cu.joined_at, cu.added_by, u.email, u.full_name 
             FROM conversation_user cu
-            JOIN users u ON cu.user_id = u.user_id
+            JOIN users u ON cu.user_id = u.id
             WHERE cu.conversation_id = :convId AND cu.is_active = 1
             ORDER BY 
                 CASE cu.role 
@@ -506,13 +645,19 @@ public function getParticipants(int $id, EntityManagerInterface $em): Response
         'conversationId' => $id,
         'participants' => $participants,
         'userRole' => $userRole,
+        'currentUserId' => $currentUserId,
     ]);
 }
 
 #[Route('/conversation/{id}/participant/add', name: 'messaging_conversation_add_participant', methods: ['POST'])]
 public function addParticipant(int $id, Request $request, EntityManagerInterface $em): Response
 {
-    $email = trim($request->request->get('email'));
+    $email = $this->getPostString($request, 'email');
+
+    if ($email === '') {
+        $this->addFlash('error', 'Participant email is required.');
+        return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
+    }
     $conn = $em->getConnection();
     
     // Check if current user is CREATOR or ADMIN
@@ -529,7 +674,7 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
     }
     
     // Find user by email
-    $sql = "SELECT user_id FROM users WHERE email = :email";
+    $sql = "SELECT id FROM users WHERE email = :email";
     $stmt = $conn->prepare($sql);
     $stmt->bindValue('email', $email);
     $result = $stmt->executeQuery();
@@ -544,7 +689,7 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
         $sql = "SELECT id, is_active FROM conversation_user WHERE conversation_id = :convId AND user_id = :userId";
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('convId', $id);
-        $stmt->bindValue('userId', $newUser['user_id']);
+        $stmt->bindValue('userId', $newUser['id']);
         $result = $stmt->executeQuery();
         $existing = $result->fetchAssociative();
         
@@ -579,7 +724,7 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
                 VALUES (:convId, :userId, 'MEMBER', :addedBy, NOW(), 1)";
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('convId', $id);
-        $stmt->bindValue('userId', $newUser['user_id']);
+        $stmt->bindValue('userId', $newUser['id']);
         $stmt->bindValue('addedBy', $this->getCurrentUserId());
         $stmt->executeStatement();
         
@@ -739,92 +884,6 @@ public function adminMenu(EntityManagerInterface $em): Response
         'totalMessages' => $totalMessages,
         'totalUsers' => $totalUsers,
         'totalConversations' => $totalConversations,
-    ]);
-}
-
-#[Route('/admin/dashboard', name: 'messaging_admin_dashboard')]
-public function adminDashboard(EntityManagerInterface $em): Response
-{
-    $conn = $em->getConnection();
-    
-    // Total users
-    $sql = "SELECT COUNT(*) as total FROM users";
-    $totalUsers = $conn->executeQuery($sql)->fetchOne();
-    
-    // Total conversations
-    $sql = "SELECT COUNT(*) as total FROM conversation";
-    $totalConversations = $conn->executeQuery($sql)->fetchOne();
-    
-    // Total messages
-    $sql = "SELECT COUNT(*) as total FROM message";
-    $totalMessages = $conn->executeQuery($sql)->fetchOne();
-    
-    // Total media messages (images, videos, audio, files)
-    $sql = "SELECT COUNT(*) as total FROM message WHERE message_type != 'TEXT'";
-    $totalMedia = $conn->executeQuery($sql)->fetchOne();
-    
-    // Messages per day (last 7 days)
-    $sql = "
-        SELECT DATE(created_at) as date, COUNT(*) as count 
-        FROM message 
-        WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        GROUP BY DATE(created_at)
-        ORDER BY date DESC
-    ";
-    $messagesPerDay = $conn->executeQuery($sql)->fetchAllAssociative();
-    
-    // Most active conversations (top 5)
-    $sql = "
-        SELECT c.id, c.name, COUNT(m.id) as message_count
-        FROM conversation c
-        JOIN message m ON c.id = m.conversation_id
-        GROUP BY c.id
-        ORDER BY message_count DESC
-        LIMIT 5
-    ";
-    $topConversations = $conn->executeQuery($sql)->fetchAllAssociative();
-    
-    // Top message senders
-    $sql = "
-        SELECT u.full_name, u.email, COUNT(m.id) as message_count
-        FROM users u
-        JOIN message m ON u.user_id = m.sender_id
-        GROUP BY u.user_id
-        ORDER BY message_count DESC
-        LIMIT 5
-    ";
-    $topSenders = $conn->executeQuery($sql)->fetchAllAssociative();
-    
-    // Recent activity (last 10 messages)
-    $sql = "
-        SELECT m.*, u.full_name as sender_name, c.name as conversation_name
-        FROM message m
-        JOIN users u ON m.sender_id = u.user_id
-        JOIN conversation c ON m.conversation_id = c.id
-        ORDER BY m.created_at DESC
-        LIMIT 10
-    ";
-    $recentActivity = $conn->executeQuery($sql)->fetchAllAssociative();
-    
-    // Group vs Personal stats
-    $sql = "SELECT type, COUNT(*) as count FROM conversation GROUP BY type";
-    $conversationTypes = $conn->executeQuery($sql)->fetchAllAssociative();
-    
-    // Message types distribution
-    $sql = "SELECT message_type, COUNT(*) as count FROM message GROUP BY message_type";
-    $messageTypes = $conn->executeQuery($sql)->fetchAllAssociative();
-    
-    return $this->render('messaging/admin_dashboard.html.twig', [
-        'totalUsers' => $totalUsers,
-        'totalConversations' => $totalConversations,
-        'totalMessages' => $totalMessages,
-        'totalMedia' => $totalMedia,
-        'messagesPerDay' => $messagesPerDay,
-        'topConversations' => $topConversations,
-        'topSenders' => $topSenders,
-        'recentActivity' => $recentActivity,
-        'conversationTypes' => $conversationTypes,
-        'messageTypes' => $messageTypes,
     ]);
 }
 

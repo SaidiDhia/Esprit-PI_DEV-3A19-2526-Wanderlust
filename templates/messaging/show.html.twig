@@ -2,16 +2,22 @@
 
 {% block title %}{{ conversation.name }} - WanderLust{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'messaging/_ui_theme.html.twig' %}
+{% endblock %}
+
 {% block content %}
-<div class="page-hero" style="padding: 30px 40px;">
+<div class="msg-page">
+<div class="page-hero" style="background:  linear-gradient(180deg, #2144b8 0%, #1d49cf 58%, #1e4ed8 100%); color: #ffffff; border-bottom: 1px solid rgba(255,255,255,0.14); padding: 92px 40px 84px; text-align: center;">
     <div class="page-hero-content">
-        <a href="{{ path('app_messaging') }}" style="color: white; text-decoration: none; display: inline-block; margin-bottom: 16px;">← Back to conversations</a>
-        <h1 class="page-hero-title">{{ conversation.name ?: 'Conversation #' ~ conversation.id }}</h1>
+        <a href="{{ path('app_messaging') }}" style="color: var(--gray-700); text-decoration: none; display: inline-block; margin-bottom: 16px;">← Back to conversations</a>
+        <h1 class="page-hero-title msg-hero-title">{{ conversation.name ?: 'Conversation #' ~ conversation.id }}</h1>
         <p class="page-hero-subtitle">{{ conversation.type }} chat</p>
     </div>
 </div>
 
-<div class="page-content">
+<div class="page-content msg-fade-in">
     {% for message in app.flashes('success') %}
         <div class="flash flash-success">{{ message }}</div>
     {% endfor %}
@@ -22,12 +28,12 @@
     <!-- Manage Members Button (for GROUP conversations) -->
     {% if conversation.type == 'GROUP' %}
         <div style="margin-bottom: 20px;">
-            <a href="{{ path('messaging_conversation_participants', {id: conversation.id}) }}" class="btn btn-outline" style="padding: 8px 16px;">👥 Manage Members</a>
+            <a href="{{ path('messaging_conversation_participants', {id: conversation.id}) }}" class="msg-btn msg-btn-secondary">👥 Manage Members</a>
         </div>
     {% endif %}
     
     <!-- Messages Area -->
-<div style="background: white; border-radius: 16px; border: 1px solid var(--gray-200); min-height: 400px; max-height: 500px; overflow-y: auto; padding: 20px; margin-bottom: 20px;">
+<div class="msg-card msg-card-hover" style="min-height: 400px; max-height: 500px; overflow-y: auto; padding: 20px; margin-bottom: 20px;">
     {% if messages is empty %}
         <div style="text-align: center; padding: 60px; color: var(--gray-400);">
             <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
@@ -35,12 +41,12 @@
         </div>
     {% else %}
         {% for msg in messages %}
-            <div style="margin-bottom: 16px; display: flex; justify-content: {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}flex-end{% else %}flex-start{% endif %};">
-                <div style="max-width: 70%; background: {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}var(--blue-primary){% else %}var(--gray-100){% endif %}; color: {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}white{% else %}var(--gray-900){% endif %}; border-radius: 16px; padding: 10px 16px;">
-                    <div style="font-size: 11px; opacity: 0.7; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
+            <div class="msg-fade-in" style="margin-bottom: 16px; display: flex; justify-content: {% if msg.sender_id == currentUserId %}flex-end{% else %}flex-start{% endif %};">
+                <div class="msg-bubble" style="max-width: 70%; background: {% if msg.sender_id == currentUserId %}var(--msg-primary){% else %}var(--gray-100){% endif %}; color: {% if msg.sender_id == currentUserId %}white{% else %}var(--gray-900){% endif %}; border-radius: 16px; padding: 10px 16px; box-shadow: {% if msg.sender_id == currentUserId %}0 14px 24px rgba(14, 165, 233, 0.16){% else %}0 8px 16px rgba(15, 23, 42, 0.04){% endif %};">
+                    <div style="font-size: 11px; opacity: 0.85; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center; font-family: 'Plus Jakarta Sans', sans-serif;">
                         <span>{{ msg.sender_name ?: 'User ' ~ msg.sender_id|slice(0,8) }} • {{ msg.created_at|date('H:i') }}</span>
                         
-                        {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}
+                        {% if msg.sender_id == currentUserId %}
                             <div style="display: flex; gap: 8px; margin-left: 12px;">
                                 <!-- Edit Button -->
                                 <button onclick="editMessage({{ msg.id }}, '{{ msg.content|e('js') }}')" 
@@ -78,13 +84,17 @@
 </div>
 
 <!-- Edit Message Modal (hidden by default) -->
-<div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-    <div style="background: white; border-radius: 16px; padding: 24px; width: 400px; max-width: 90%;">
-        <h3 style="margin-bottom: 16px;">Edit Message</h3>
-        <textarea id="editContent" style="width: 100%; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; margin-bottom: 16px; font-family: inherit;" rows="3"></textarea>
-        <div style="display: flex; gap: 12px; justify-content: flex-end;">
-            <button onclick="closeEditModal()" style="padding: 8px 16px; border: 1px solid var(--gray-200); background: white; border-radius: 8px; cursor: pointer;">Cancel</button>
-            <button onclick="submitEdit()" style="padding: 8px 16px; background: var(--blue-primary); color: white; border: none; border-radius: 8px; cursor: pointer;">Save</button>
+<div id="editModal" class="msg-modal-backdrop">
+    <div class="msg-modal msg-pop-in">
+        <div class="msg-modal-head">
+            <h3 class="msg-modal-title">Edit Message</h3>
+        </div>
+        <div class="msg-modal-body">
+            <textarea id="editContent" class="msg-textarea" rows="3" style="font-family: inherit;"></textarea>
+        </div>
+        <div class="msg-modal-actions">
+            <button onclick="closeEditModal()" class="msg-btn msg-btn-secondary">Cancel</button>
+            <button onclick="submitEdit()" class="msg-btn msg-btn-primary">Save</button>
         </div>
         <form id="editForm" method="POST" style="display: none;">
             <input type="hidden" name="content" id="editFormContent">
@@ -125,17 +135,29 @@
 </script>
     
     <!-- Message Input -->
-    <form method="POST" action="{{ path('messaging_message_send') }}" style="display: flex; gap: 12px; margin-bottom: 12px;">
+    <form id="messageComposer" method="POST" action="{{ path('messaging_message_send') }}" class="msg-card msg-card-hover" style="display: flex; gap: 12px; margin-bottom: 12px; padding: 14px; align-items: center;">
         <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
-        <input type="text" name="content" placeholder="Type your message..." style="flex: 1; padding: 12px; border: 1px solid var(--gray-200); border-radius: 24px; outline: none;" required>
-        <button type="submit" class="btn btn-primary" style="border-radius: 24px;">Send</button>
+        <input type="text" name="content" class="msg-input" placeholder="Type your message..." style="flex: 1; border-radius: 24px;" required>
+        <button type="submit" class="msg-btn msg-btn-primary" style="border-radius: 24px; min-width: 110px;">Send</button>
     </form>
     
     <!-- File Upload -->
-    <form method="POST" action="{{ path('messaging_message_upload') }}" enctype="multipart/form-data" style="display: flex; gap: 12px;">
+    <form method="POST" action="{{ path('messaging_message_upload') }}" enctype="multipart/form-data" class="msg-card msg-card-hover msg-fade-in" style="display: flex; gap: 12px; padding: 14px; align-items: center;">
         <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
-        <input type="file" name="file" style="flex: 1; padding: 8px;">
-        <button type="submit" class="btn btn-outline">📎 Upload</button>
+        <input type="file" name="file" required class="msg-input" style="flex: 1; padding: 8px;">
+        <button type="submit" class="msg-btn msg-btn-secondary">📎 Upload</button>
     </form>
+    <p style="margin-top: 8px; font-size: 12px; color: var(--gray-500);">Max upload size: 2 MB (server limit).</p>
 </div>
+</div>
+<script>
+    const messageComposer = document.getElementById('messageComposer');
+    messageComposer?.addEventListener('submit', function() {
+        const submitButton = this.querySelector('button[type="submit"]');
+        if (submitButton) {
+            submitButton.textContent = 'Sending...';
+            submitButton.disabled = true;
+        }
+    });
+</script>
 {% endblock %}

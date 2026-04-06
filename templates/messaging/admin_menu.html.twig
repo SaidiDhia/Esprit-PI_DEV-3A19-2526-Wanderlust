@@ -2,114 +2,254 @@
 
 {% block title %}Admin Panel - WanderLust{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    {% include 'messaging/_ui_theme.html.twig' %}
+    <style>
+        .msg-admin-shell {
+            background: #f6f8fd;
+        }
+
+        .msg-admin-hero {
+            background: linear-gradient(180deg, #2144b8 0%, #1d49cf 58%, #1e4ed8 100%);
+            color: #ffffff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+            padding: 92px 40px 84px;
+            text-align: center;
+        }
+
+        .msg-admin-hero .page-hero-content {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        .msg-admin-hero .page-hero-icon {
+            display: inline-flex;
+            width: 54px;
+            height: 54px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            margin-bottom: 18px;
+            background: rgba(255, 255, 255, 0.16);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .msg-admin-hero .page-hero-title {
+            color: #fff;
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(2.8rem, 5vw, 4.4rem);
+            line-height: 1;
+            margin: 0;
+            letter-spacing: -0.04em;
+        }
+
+        .msg-admin-hero .page-hero-subtitle {
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 16px;
+            margin-top: 12px;
+        }
+
+        .msg-admin-section {
+            max-width: 1360px;
+            margin: 0 auto;
+            padding-top: 42px;
+        }
+
+        .msg-admin-headline {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+
+        .msg-admin-headline h2,
+        .msg-admin-headline h3 {
+            margin: 0;
+        }
+
+        .msg-admin-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+            gap: 22px;
+        }
+
+        .msg-admin-card {
+            background: #fff;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: 22px;
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.06);
+        }
+
+        .msg-admin-card-muted {
+            background: #f8fafc;
+            border: 1px solid rgba(148, 163, 184, 0.16);
+            opacity: 0.72;
+        }
+
+        .msg-admin-title {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-size: clamp(1.5rem, 2vw, 2rem);
+            line-height: 1.1;
+            letter-spacing: -0.03em;
+            color: var(--msg-text);
+        }
+
+        .msg-admin-note {
+            color: var(--msg-muted);
+            max-width: 760px;
+            line-height: 1.6;
+        }
+
+        .msg-admin-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            padding: 10px 18px;
+            min-height: 36px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        .msg-admin-pill-muted {
+            background: #dbe4f0;
+            color: #6b7280;
+        }
+
+        .msg-admin-kpi {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .msg-admin-kpi-item {
+            padding: 14px 10px;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            border: 1px solid rgba(148, 163, 184, 0.16);
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<div class="page-hero" style="background: linear-gradient(135deg, #1e3a8a, #1D4ED8); padding: 40px;">
+<div class="msg-page msg-admin-shell">
+<div class="page-hero msg-admin-hero">
     <div class="page-hero-content">
         <span class="page-hero-icon">👑</span>
-        <h1 class="page-hero-title">Admin Panel</h1>
+        <h1 class="page-hero-title">Messaging</h1>
         <p class="page-hero-subtitle">Manage your WanderLust platform</p>
     </div>
 </div>
 
-<div class="page-content" style="max-width: 1000px;">
+<div class="page-content msg-fade-in msg-admin-section">
+    <div class="msg-admin-headline">
+        <div>
+            <h2 class="msg-admin-title">Your Conversations</h2>
+            <p class="msg-admin-note">Open active threads, review archived discussions, and keep the workspace clean from one dashboard.</p>
+        </div>
+        <a href="{{ path('messaging_conversation_new') }}" class="msg-btn msg-btn-primary msg-btn-sm">+ New Conversation</a>
+    </div>
     
     <!-- Admin Modules Grid -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px;">
+    <div class="msg-admin-grid">
         
         <!-- Messaging Admin Card -->
-        <a href="{{ path('messaging_admin_dashboard') }}" style="text-decoration: none;">
-            <div style="background: white; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; transition: all 0.3s; cursor: pointer;">
-                <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
-                <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-900);">Messaging Dashboard</h3>
-                <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+        <a href="{{ path('app_admin_dashboard') ~ '#messaging-analytics' }}" style="text-decoration: none;">
+            <div class="msg-admin-card msg-card-hover msg-pop-in" style="padding: 30px; text-align: center; cursor: pointer;">
+                <div style="font-size: 48px; margin-bottom: 18px;">💬</div>
+                <h3 class="msg-admin-title" style="margin-bottom: 8px;">Messaging Dashboard</h3>
+                <p class="msg-admin-note" style="font-size: 14px; margin: 0 auto;">
                     View conversation stats, message analytics, user activity, and media usage reports.
                 </p>
                 <div style="margin-top: 16px;">
-                    <span style="display: inline-block; padding: 6px 16px; background: var(--blue-primary); color: white; border-radius: 20px; font-size: 12px;">Access →</span>
+                    <span class="msg-btn msg-btn-primary msg-btn-sm" style="border-radius: 999px; padding-inline: 18px;">Access →</span>
                 </div>
             </div>
         </a>
         
         <!-- Placeholder for User Management (to be added by friend) -->
-        <div style="background: #f5f5f5; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; opacity: 0.6;">
+        <div class="msg-admin-card msg-admin-card-muted" style="padding: 30px; text-align: center;">
             <div style="font-size: 48px; margin-bottom: 16px;">👥</div>
-            <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-500);">User Management</h3>
-            <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+            <h3 class="msg-admin-title" style="margin-bottom: 8px; color: var(--gray-500); font-size: 1.55rem;">User Management</h3>
+            <p class="msg-admin-note" style="font-size: 14px; margin: 0 auto;">
                 Manage users, roles, permissions, and authentication settings.
             </p>
             <div style="margin-top: 16px;">
-                <span style="display: inline-block; padding: 6px 16px; background: #ccc; color: #666; border-radius: 20px; font-size: 12px;">Coming Soon</span>
+                <span class="msg-admin-pill msg-admin-pill-muted">Coming Soon</span>
             </div>
         </div>
         
         <!-- Placeholder for Activity Logs (to be added by friend) -->
-        <div style="background: #f5f5f5; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; opacity: 0.6;">
+        <div class="msg-admin-card msg-admin-card-muted" style="padding: 30px; text-align: center;">
             <div style="font-size: 48px; margin-bottom: 16px;">📋</div>
-            <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-500);">Activity Logs</h3>
-            <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+            <h3 class="msg-admin-title" style="margin-bottom: 8px; color: var(--gray-500); font-size: 1.55rem;">Activity Logs</h3>
+            <p class="msg-admin-note" style="font-size: 14px; margin: 0 auto;">
                 Track user actions, system events, and security audits.
             </p>
             <div style="margin-top: 16px;">
-                <span style="display: inline-block; padding: 6px 16px; background: #ccc; color: #666; border-radius: 20px; font-size: 12px;">Coming Soon</span>
+                <span class="msg-admin-pill msg-admin-pill-muted">Coming Soon</span>
             </div>
         </div>
         
         <!-- Placeholder for System Settings (to be added by friend) -->
-        <div style="background: #f5f5f5; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; opacity: 0.6;">
+        <div class="msg-admin-card msg-admin-card-muted" style="padding: 30px; text-align: center;">
             <div style="font-size: 48px; margin-bottom: 16px;">⚙️</div>
-            <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-500);">System Settings</h3>
-            <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+            <h3 class="msg-admin-title" style="margin-bottom: 8px; color: var(--gray-500); font-size: 1.55rem;">System Settings</h3>
+            <p class="msg-admin-note" style="font-size: 14px; margin: 0 auto;">
                 Configure platform settings, features, and integrations.
             </p>
             <div style="margin-top: 16px;">
-                <span style="display: inline-block; padding: 6px 16px; background: #ccc; color: #666; border-radius: 20px; font-size: 12px;">Coming Soon</span>
+                <span class="msg-admin-pill msg-admin-pill-muted">Coming Soon</span>
             </div>
         </div>
         
         <!-- Placeholder for Reports (to be added by friend) -->
-        <div style="background: #f5f5f5; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; opacity: 0.6;">
+        <div class="msg-admin-card msg-admin-card-muted" style="padding: 30px; text-align: center;">
             <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
-            <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-500);">Advanced Reports</h3>
-            <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+            <h3 class="msg-admin-title" style="margin-bottom: 8px; color: var(--gray-500); font-size: 1.55rem;">Advanced Reports</h3>
+            <p class="msg-admin-note" style="font-size: 14px; margin: 0 auto;">
                 Generate custom reports, export data, and analyze trends.
             </p>
             <div style="margin-top: 16px;">
-                <span style="display: inline-block; padding: 6px 16px; background: #ccc; color: #666; border-radius: 20px; font-size: 12px;">Coming Soon</span>
+                <span class="msg-admin-pill msg-admin-pill-muted">Coming Soon</span>
             </div>
         </div>
         
         <!-- Placeholder for Notifications (to be added by friend) -->
-        <div style="background: #f5f5f5; border-radius: 16px; border: 1px solid var(--gray-200); padding: 28px; text-align: center; opacity: 0.6;">
+        <div class="msg-admin-card msg-admin-card-muted" style="padding: 30px; text-align: center;">
             <div style="font-size: 48px; margin-bottom: 16px;">🔔</div>
-            <h3 style="font-family: var(--font-display); margin-bottom: 8px; color: var(--gray-500);">Broadcast Messages</h3>
-            <p style="font-size: 13px; color: var(--gray-400); line-height: 1.6;">
+            <h3 class="msg-admin-title" style="margin-bottom: 8px; color: var(--gray-500); font-size: 1.55rem;">Broadcast Messages</h3>
+            <p class="msg-admin-note" style="font-size: 14px; margin: 0 auto;">
                 Send announcements to all users or specific groups.
             </p>
             <div style="margin-top: 16px;">
-                <span style="display: inline-block; padding: 6px 16px; background: #ccc; color: #666; border-radius: 20px; font-size: 12px;">Coming Soon</span>
+                <span class="msg-admin-pill msg-admin-pill-muted">Coming Soon</span>
             </div>
         </div>
         
     </div>
     
     <!-- Quick Stats Summary -->
-    <div style="margin-top: 40px; background: white; border-radius: 16px; border: 1px solid var(--gray-200); padding: 24px;">
-        <h3 style="margin-bottom: 16px;">📈 Quick Stats</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px;">
-            <div style="text-align: center;">
-                <div style="font-size: 28px; font-weight: 700; color: var(--blue-primary);">{{ totalMessages }}</div>
-                <div style="font-size: 12px; color: var(--gray-400);">Total Messages</div>
+    <div class="msg-admin-card msg-card-hover" style="margin-top: 40px; padding: 28px;">
+        <h3 class="msg-admin-title" style="margin-bottom: 12px; font-size: 1.8rem;">Quick Stats</h3>
+        <div class="msg-admin-kpi">
+            <div class="msg-admin-kpi-item" style="text-align: center;">
+                <div style="font-size: 28px; font-weight: 800; color: var(--blue-primary);">{{ totalMessages }}</div>
+                <div style="font-size: 12px; color: var(--gray-400); letter-spacing: 0.04em; text-transform: uppercase;">Total Messages</div>
             </div>
-            <div style="text-align: center;">
-                <div style="font-size: 28px; font-weight: 700; color: var(--blue-primary);">{{ totalUsers }}</div>
-                <div style="font-size: 12px; color: var(--gray-400);">Total Users</div>
+            <div class="msg-admin-kpi-item" style="text-align: center;">
+                <div style="font-size: 28px; font-weight: 800; color: var(--blue-primary);">{{ totalUsers }}</div>
+                <div style="font-size: 12px; color: var(--gray-400); letter-spacing: 0.04em; text-transform: uppercase;">Total Users</div>
             </div>
-            <div style="text-align: center;">
-                <div style="font-size: 28px; font-weight: 700; color: var(--blue-primary);">{{ totalConversations }}</div>
-                <div style="font-size: 12px; color: var(--gray-400);">Conversations</div>
+            <div class="msg-admin-kpi-item" style="text-align: center;">
+                <div style="font-size: 28px; font-weight: 800; color: var(--blue-primary);">{{ totalConversations }}</div>
+                <div style="font-size: 12px; color: var(--gray-400); letter-spacing: 0.04em; text-transform: uppercase;">Conversations</div>
             </div>
         </div>
     </div>
     
+</div>
 </div>
 {% endblock %}
