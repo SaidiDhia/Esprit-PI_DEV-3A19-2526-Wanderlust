@@ -1,134 +1,121 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Booking — WanderLust{% endblock %}
+{% block title %}Stay Explorer — Wanderlust{% endblock %}
 
 {% block content %}
+<section class="relative overflow-hidden text-white">
+    <div class="absolute inset-0 bg-cover bg-center" style="background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.38)), url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1920&q=80');"></div>
+    <div class="relative container mx-auto px-4 py-20 md:py-28">
+        <div class="max-w-4xl">
+            <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-sky-100/90">
+                Curated stays
+            </span>
+            <h1 class="mt-6 text-4xl font-heading font-bold tracking-tight md:text-6xl">Find a stay that feels designed, not listed.</h1>
+            <p class="mt-5 max-w-2xl text-base leading-7 text-slate-200 md:text-lg">Browse approved places, send booking requests, and switch into host or admin review flows from the same booking module.</p>
+            <div class="mt-8 flex flex-wrap gap-3">
+                <a href="#explore" class="rounded-xl bg-sky-400 px-5 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-sky-300">Explore stays</a>
+                <a href="{{ path('app_booking_host') }}" class="rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">Become a host</a>
+            </div>
+        </div>
 
-<div class="bg-primary/5 border-b border-border py-12 px-4">
-    <div class="container mx-auto text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4 text-primary text-3xl">🏨</div>
-        <h1 class="text-3xl md:text-5xl font-heading font-bold text-foreground mb-4">Hotel Booking</h1>
-        <p class="text-muted-foreground max-w-2xl mx-auto">Find and reserve the perfect stay — from cozy guesthouses to luxury resorts.</p>
-    </div>
-</div>
-
-<div class="container mx-auto px-4 py-12">
-    <!-- Search Filters -->
-    <div class="glass-strong rounded-2xl p-6 mb-12 shadow-sm">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-6">
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Destination</label>
-                <input type="text" class="bg-secondary/50 border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="City or Hotel name...">
+        <div class="mt-10 grid gap-4 md:grid-cols-4">
+            <div class="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+                <p class="text-sm text-slate-200">Places</p>
+                <p class="mt-2 text-3xl font-heading font-bold">{{ stats.places ?? 0 }}</p>
             </div>
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Check-in</label>
-                <input type="date" class="bg-secondary/50 border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+            <div class="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+                <p class="text-sm text-slate-200">Bookings</p>
+                <p class="mt-2 text-3xl font-heading font-bold">{{ stats.bookings ?? 0 }}</p>
             </div>
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Check-out</label>
-                <input type="date" class="bg-secondary/50 border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
+            <div class="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+                <p class="text-sm text-slate-200">Hosts</p>
+                <p class="mt-2 text-3xl font-heading font-bold">{{ stats.hosts ?? 0 }}</p>
             </div>
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Guests</label>
-                <select class="bg-secondary/50 border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    <option>1 Guest</option>
-                    <option>2 Guests</option>
-                    <option>3 Guests</option>
-                    <option>4+ Guests</option>
-                </select>
-            </div>
-            <div class="flex items-end">
-                <button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    Search
-                </button>
+            <div class="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+                <p class="text-sm text-slate-200">Reviews</p>
+                <p class="mt-2 text-3xl font-heading font-bold">{{ stats.reviews ?? 0 }}</p>
             </div>
         </div>
     </div>
+</section>
 
-    <!-- Hotel Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <!-- Hotel 1 -->
-        <div class="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all">
-            <div class="relative h-56 overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center text-6xl">🏝️</div>
-                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground">Resort</div>
-            </div>
-            <div class="p-6">
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-heading font-bold text-xl group-hover:text-primary transition-colors">Hammamet Beach Resort</h3>
-                    <div class="flex items-center gap-1 text-sm font-bold">
-                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <span>5.0</span>
-                    </div>
-                </div>
-                <p class="text-muted-foreground text-sm mb-4">Stunning beachfront resort with private beach, infinity pool, and world-class spa.</p>
-                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-6">
-                    <span>📍 Hammamet, Tunisia</span>
-                    <span>•</span>
-                    <span>🛏 Superior Room</span>
-                </div>
-                <div class="flex items-center justify-between border-t border-border pt-4">
-                    <p class="text-foreground font-bold text-xl">320 TND <span class="text-muted-foreground text-xs font-normal">/ night</span></p>
-                    <a href="#" class="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-6 py-2 rounded-lg transition-all">Reserve</a>
+<section id="explore" class="bg-slate-50 py-14 md:py-20">
+    <div class="container mx-auto px-4">
+        {% if myPendingPlaces is not empty %}
+            <div class="mb-8 rounded-[2rem] border border-amber-200 bg-amber-50 p-6">
+                <h2 class="text-xl font-heading font-bold text-amber-900">Your places waiting review</h2>
+                <p class="mt-1 text-sm text-amber-700">These are not bookable yet. Admin approval is required first.</p>
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                    {% for place in myPendingPlaces %}
+                        <div class="rounded-2xl border border-amber-200 bg-white p-4">
+                            <p class="font-semibold text-slate-900">{{ place.title }}</p>
+                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-amber-700">{{ place.status }}</p>
+                        </div>
+                    {% endfor %}
                 </div>
             </div>
-        </div>
+        {% endif %}
 
-        <!-- Hotel 2 -->
-        <div class="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all">
-            <div class="relative h-56 overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-br from-purple-500/20 to-pink-500/20 flex items-center justify-center text-6xl">🏛️</div>
-                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground">Riad</div>
-            </div>
-            <div class="p-6">
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-heading font-bold text-xl group-hover:text-primary transition-colors">Medina Heritage Riad</h3>
-                    <div class="flex items-center gap-1 text-sm font-bold">
-                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <span>4.7</span>
-                    </div>
+        <form method="get" class="glass-strong rounded-[2rem] border border-border/60 p-5 shadow-sm md:p-6">
+            <div class="grid gap-4 md:grid-cols-[2fr_1fr_1fr_auto]">
+                <div>
+                    <label class="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Search</label>
+                    <input name="q" value="{{ filters.q ?? '' }}" type="text" placeholder="Hotel, riad, camp, villa..." class="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none ring-0 transition focus:border-primary" />
                 </div>
-                <p class="text-muted-foreground text-sm mb-4">An authentic boutique riad in the heart of the Medina. Traditional Tunisian architecture.</p>
-                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-6">
-                    <span>📍 Tunis Medina</span>
-                    <span>•</span>
-                    <span>🛏 Deluxe Suite</span>
+                <div>
+                    <label class="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">City</label>
+                    <input name="city" value="{{ filters.city ?? '' }}" type="text" placeholder="Tunis" class="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary" />
                 </div>
-                <div class="flex items-center justify-between border-t border-border pt-4">
-                    <p class="text-foreground font-bold text-xl">180 TND <span class="text-muted-foreground text-xs font-normal">/ night</span></p>
-                    <a href="#" class="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-6 py-2 rounded-lg transition-all">Reserve</a>
+                <div>
+                    <label class="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Category</label>
+                    <input name="category" value="{{ filters.category ?? '' }}" type="text" placeholder="Resort" class="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary" />
+                </div>
+                <div class="flex items-end">
+                    <button class="w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Search</button>
                 </div>
             </div>
-        </div>
+        </form>
 
-        <!-- Hotel 3 -->
-        <div class="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all">
-            <div class="relative h-56 overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-br from-orange-500/20 to-emerald-500/20 flex items-center justify-center text-6xl">🌴</div>
-                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground">Desert Camp</div>
-            </div>
-            <div class="p-6">
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-heading font-bold text-xl group-hover:text-primary transition-colors">Sahara Luxury Camp</h3>
-                    <div class="flex items-center gap-1 text-sm font-bold">
-                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <span>4.9</span>
+        <div class="mt-10 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
+            {% for place in places %}
+                <article class="group overflow-hidden rounded-[2rem] bg-white transition duration-300 hover:-translate-y-1">
+                    <div class="relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-slate-100 shadow-sm">
+                        {% set previewImage = placePreviewImages[place.id]|default(place.imageUrl) %}
+                        {% if previewImage %}
+                            <img src="{{ previewImage starts with('http') ? previewImage : asset('uploads/places/' ~ previewImage) }}" alt="{{ place.title }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
+                        {% else %}
+                            <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-sky-100 via-white to-amber-100 text-6xl">✦</div>
+                        {% endif %}
+                        <div class="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-900 shadow-sm">{{ place.category ?? 'Stay' }}</div>
                     </div>
+                    <div class="space-y-3 px-2 pt-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <h2 class="text-[1.35rem] font-heading font-bold text-slate-950 transition group-hover:text-sky-700">{{ place.title }}</h2>
+                                <p class="mt-1 text-sm text-slate-500">{{ place.city }}</p>
+                            </div>
+                            {% if place.avgRating %}
+                                <div class="flex items-center gap-1 pt-1 text-sm font-bold text-slate-950">
+                                    <svg class="h-4 w-4 fill-amber-500 text-amber-500" viewBox="0 0 24 24" aria-hidden="true">
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                                    </svg>
+                                    <span>{{ place.avgRating }}</span>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-end justify-between gap-4 border-t border-slate-100 pt-4">
+                            <p class="text-2xl font-heading font-bold text-slate-950">${{ place.pricePerDay }} <span class="text-sm font-medium text-slate-500">/ night</span></p>
+                            <a href="{{ path('app_booking_place', { id: place.id }) }}" class="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800">View</a>
+                        </div>
+                    </div>
+                </article>
+            {% else %}
+                <div class="col-span-full rounded-[2rem] border border-dashed border-border bg-white p-10 text-center">
+                    <p class="text-lg font-heading font-bold text-slate-950">No approved places yet.</p>
+                    <p class="mt-2 text-sm text-slate-500">Use the host flow to submit a place, then approve it from the admin dashboard.</p>
                 </div>
-                <p class="text-muted-foreground text-sm mb-4">Sleep under the stars in glamorous desert tents with gourmet dining. An unforgettable experience.</p>
-                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-6">
-                    <span>📍 Douz, Tunisia</span>
-                    <span>•</span>
-                    <span>🛏 Royal Tent</span>
-                </div>
-                <div class="flex items-center justify-between border-t border-border pt-4">
-                    <p class="text-foreground font-bold text-xl">450 TND <span class="text-muted-foreground text-xs font-normal">/ night</span></p>
-                    <a href="#" class="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-6 py-2 rounded-lg transition-all">Reserve</a>
-                </div>
-            </div>
+            {% endfor %}
         </div>
     </div>
-</div>
-
+</section>
 {% endblock %}

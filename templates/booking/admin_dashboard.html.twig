@@ -1,0 +1,85 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Booking Admin — Wanderlust{% endblock %}
+
+{% block content %}
+<section class="relative overflow-hidden text-white py-16">
+    <div class="absolute inset-0 bg-cover bg-center" style="background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.46)), url('https://images.unsplash.com/photo-1496417263034-38ec4f0b665a?auto=format&fit=crop&w=1920&q=80');"></div>
+    <div class="container mx-auto px-4">
+        <div class="relative z-10">
+            <p class="text-xs font-bold uppercase tracking-[0.3em] text-sky-200/80">Admin review</p>
+            <h1 class="mt-3 text-4xl font-heading font-bold md:text-6xl">Approve places and track reservation flow.</h1>
+        </div>
+        <div class="relative z-10 mt-8 grid gap-4 md:grid-cols-5">
+            <div class="rounded-3xl border border-white/10 bg-white/8 p-5 backdrop-blur"><p class="text-sm text-slate-300">Total places</p><p class="mt-2 text-3xl font-bold">{{ stats.totalPlaces }}</p></div>
+            <div class="rounded-3xl border border-white/10 bg-white/8 p-5 backdrop-blur"><p class="text-sm text-slate-300">Pending places</p><p class="mt-2 text-3xl font-bold">{{ stats.pendingPlaces }}</p></div>
+            <div class="rounded-3xl border border-white/10 bg-white/8 p-5 backdrop-blur"><p class="text-sm text-slate-300">Approved places</p><p class="mt-2 text-3xl font-bold">{{ stats.approvedPlaces }}</p></div>
+            <div class="rounded-3xl border border-white/10 bg-white/8 p-5 backdrop-blur"><p class="text-sm text-slate-300">Bookings</p><p class="mt-2 text-3xl font-bold">{{ stats.totalBookings }}</p></div>
+            <div class="rounded-3xl border border-white/10 bg-white/8 p-5 backdrop-blur"><p class="text-sm text-slate-300">Pending bookings</p><p class="mt-2 text-3xl font-bold">{{ stats.pendingBookings }}</p></div>
+        </div>
+    </div>
+</section>
+
+<section class="bg-slate-50 py-14">
+    <div class="container mx-auto px-4">
+        <div class="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div class="space-y-4">
+                <h2 class="text-2xl font-heading font-bold text-slate-950">Pending place requests</h2>
+                {% for place in pendingPlaces %}
+                    <article class="rounded-[2rem] border border-border bg-white p-6 shadow-sm">
+                        {% set previewImage = placePreviewImages[place.id]|default(place.imageUrl) %}
+                        {% if previewImage %}
+                            <img src="{{ previewImage starts with('http') ? previewImage : asset('uploads/places/' ~ previewImage) }}" alt="{{ place.title }}" class="mb-4 h-40 w-full rounded-2xl object-cover">
+                        {% endif %}
+                        <div class="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                                <h3 class="text-xl font-heading font-bold text-slate-950">{{ place.title }}</h3>
+                                <p class="mt-2 text-sm text-slate-500">{{ place.city }} · {{ place.address }}</p>
+                                <p class="mt-3 text-sm text-slate-600">Host: {{ place.host.fullName ?? place.host.email }}</p>
+                            </div>
+                            <span class="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-amber-700">{{ place.status }}</span>
+                        </div>
+                        <div class="mt-5 flex flex-wrap gap-3">
+                            <form method="post" action="{{ path('app_booking_admin_place_approve', { id: place.id }) }}">
+                                <button class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white">Approve</button>
+                            </form>
+                            <form method="post" action="{{ path('app_booking_admin_place_deny', { id: place.id }) }}" class="flex flex-1 gap-3">
+                                <input name="reason" type="text" placeholder="Denial reason" class="min-w-0 flex-1 rounded-xl border border-border px-4 py-2.5 text-sm">
+                                <button class="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white">Deny</button>
+                            </form>
+                        </div>
+                    </article>
+                {% else %}
+                    <div class="rounded-[2rem] border border-dashed border-border bg-white p-10 text-center">
+                        <p class="text-lg font-heading font-bold text-slate-950">No pending place requests.</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+            <div class="space-y-4">
+                <h2 class="text-2xl font-heading font-bold text-slate-950">Recent bookings</h2>
+                {% for booking in recentBookings %}
+                    <article class="rounded-[2rem] border border-border bg-white p-6 shadow-sm">
+                        {% set bookingPreview = placePreviewImages[booking.place.id]|default(booking.place.imageUrl) %}
+                        {% if bookingPreview %}
+                            <img src="{{ bookingPreview starts with('http') ? bookingPreview : asset('uploads/places/' ~ bookingPreview) }}" alt="{{ booking.place.title }}" class="mb-4 h-36 w-full rounded-2xl object-cover">
+                        {% endif %}
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <h3 class="font-heading text-xl font-bold text-slate-950">{{ booking.place.title }}</h3>
+                                <p class="mt-2 text-sm text-slate-500">{{ booking.guest.fullName ?? booking.guest.email }}</p>
+                            </div>
+                            <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-600">{{ booking.status }}</span>
+                        </div>
+                        <p class="mt-4 text-sm text-slate-600">{{ booking.startDate|date('M d, Y') }} - {{ booking.endDate|date('M d, Y') }} · {{ booking.totalPrice }}</p>
+                    </article>
+                {% else %}
+                    <div class="rounded-[2rem] border border-dashed border-border bg-white p-10 text-center">
+                        <p class="text-lg font-heading font-bold text-slate-950">No bookings yet.</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
