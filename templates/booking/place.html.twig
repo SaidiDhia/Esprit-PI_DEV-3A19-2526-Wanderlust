@@ -164,7 +164,8 @@
         <div class="mt-10 rounded-[2rem] border border-border bg-white p-6 shadow-sm">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <h2 class="text-2xl font-heading font-bold text-slate-950">Guest reviews</h2>
-                <p class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600">{{ place.reviewsCount }} review{{ place.reviewsCount == 1 ? '' : 's' }}{% if place.avgRating %} · {{ place.avgRating }}/5{% endif %}</p>
+                    {% set liveReviewsCount = reviews|length %}
+                    <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600">{{ liveReviewsCount }} review{{ liveReviewsCount == 1 ? '' : 's' }}{% if place.avgRating %} · {{ place.avgRating }}/5{% endif %}</span>
             </div>
             <div class="mt-5 grid gap-4 md:grid-cols-2">
                 {% for review in reviews %}

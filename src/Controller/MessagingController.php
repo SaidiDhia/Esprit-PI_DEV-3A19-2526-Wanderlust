@@ -176,11 +176,11 @@ public function index(EntityManagerInterface $em): Response
     
     // Get active conversations (not archived)
     $sql = "
-        SELECT c.*, 
-               (SELECT role FROM conversation_user WHERE conversation_id = c.id AND user_id = :userId) as user_role
+        SELECT c.*, MAX(cu.role) as user_role
         FROM conversation c
         JOIN conversation_user cu ON c.id = cu.conversation_id
         WHERE cu.user_id = :userId AND cu.is_active = 1 AND c.is_archived = 0
+        GROUP BY c.id
         ORDER BY c.is_pinned DESC, c.last_activity DESC, c.id DESC
     ";
     
@@ -191,11 +191,11 @@ public function index(EntityManagerInterface $em): Response
     
     // Get archived conversations
     $sqlArchived = "
-        SELECT c.*, 
-               (SELECT role FROM conversation_user WHERE conversation_id = c.id AND user_id = :userId) as user_role
+        SELECT c.*, MAX(cu.role) as user_role
         FROM conversation c
         JOIN conversation_user cu ON c.id = cu.conversation_id
         WHERE cu.user_id = :userId AND cu.is_active = 1 AND c.is_archived = 1
+        GROUP BY c.id
         ORDER BY c.last_activity DESC, c.id DESC
     ";
     
@@ -254,7 +254,11 @@ public function index(EntityManagerInterface $em): Response
         if ($request->isMethod('POST')) {
             $name = $this->getPostString($request, 'name');
             $type = strtoupper($this->getPostString($request, 'type'));
-            $participantEmails = $this->getPostStringArray($request, 'participant_emails');
+            $participantEmails = array_values(array_unique(array_filter(array_map(
+                static fn (string $email): string => trim(mb_strtolower($email)),
+                $this->getPostStringArray($request, 'participant_emails')
+            ))));
+            $currentUserId = $this->getCurrentUserId();
             
             // Validate: name cannot be empty
             if (empty($name)) {
@@ -277,6 +281,7 @@ public function index(EntityManagerInterface $em): Response
             // Find all participants
             $conn = $em->getConnection();
             $participantIds = [];
+            $participantIdMap = [];
             
             foreach ($participantEmails as $email) {
                 $email = trim($email);
@@ -292,7 +297,26 @@ public function index(EntityManagerInterface $em): Response
                     $this->addFlash('error', 'User not found with email: ' . $email);
                     return $this->redirectToRoute('app_messaging');
                 }
-                $participantIds[] = $participant['id'];
+
+                $participantId = (string) $participant['id'];
+                if ($participantId === $currentUserId) {
+                    continue;
+                }
+
+                if (!isset($participantIdMap[$participantId])) {
+                    $participantIdMap[$participantId] = true;
+                    $participantIds[] = $participantId;
+                }
+            }
+
+            if ($type === 'GROUP' && count($participantIds) < 2) {
+                $this->addFlash('error', 'Group conversation needs at least 2 other participants.');
+                return $this->redirectToRoute('app_messaging');
+            }
+
+            if ($type === 'PERSONAL' && count($participantIds) !== 1) {
+                $this->addFlash('error', 'Personal conversation needs exactly 1 other participant.');
+                return $this->redirectToRoute('app_messaging');
             }
             
             // Create conversation
@@ -307,7 +331,7 @@ public function index(EntityManagerInterface $em): Response
             // Add current user as CREATOR
             $cu = new ConversationUser();
             $cu->setConversationId($conversation->getId());
-            $cu->setUserId($this->getCurrentUserId());
+            $cu->setUserId($currentUserId);
             $cu->setRole('CREATOR');
             $em->persist($cu);
             
