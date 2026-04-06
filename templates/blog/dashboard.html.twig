@@ -1,130 +1,504 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
-<div class="row">
-    <div class="col-md-3">
-        <div class="admin-sidebar p-3 rounded">
-            <h5 class="text-white">🛡 Admin</h5>
-            <ul class="nav flex-column">
-                <li class="nav-item"><a href="#posts" class="nav-link active" data-bs-toggle="pill">📄 Posts</a></li>
-                <li class="nav-item"><a href="#comments" class="nav-link" data-bs-toggle="pill">💬 Commentaires</a></li>
-                <li class="nav-item"><a href="#reactions" class="nav-link" data-bs-toggle="pill">♥ Réactions</a></li>
-            </ul>
-        </div>
-    </div>
-    <div class="col-md-9">
-        <div class="tab-content">
-            <div class="tab-pane fade show active" id="posts">
-                <div class="card">
-                    <div class="card-header">Toutes les publications</div>
-                    <div class="card-body">
-                        <table class="table table-sm">
-                            <thead class="admin-table-header">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Contenu</th>
-                                    <th>Utilisateur</th>
-                                    <th>Statut</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            {% for post in posts %}
-                                <tr>
-                                    <td>{{ post.idPost }}</td>
-                                    <td>{{ post.contenu|slice(0,50) }}…</td>
-                                    <td>{{ post.user.email }}</td>
-                                    <td>{{ post.statut }}</td>
-                                    <td>
-                                        <form method="post" action="{{ path('admin_post_delete', {'id': post.idPost}) }}">
-                                            <input type="hidden" name="_token" value="{{ csrf_token('admin_delete' ~ post.idPost) }}">
-                                            <button class="btn btn-sm btn-danger">🗑</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            {% else %}
-                                <tr><td colspan="5">Aucun post.</td></tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="tab-pane fade" id="comments">
-                <div class="card">
-                    <div class="card-header">Commentaires</div>
-                    <div class="card-body">
-                        <table class="table table-sm">
-                            <thead class="admin-table-header">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Contenu</th>
-                                    <th>Post</th>
-                                    <th>Utilisateur</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            {% for comment in comments %}
-                                <tr>
-                                    <td>{{ comment.idCommentaire }}</td>
-                                    <td>{{ comment.contenu|slice(0,50) }}…</td>
-                                    <td>{{ comment.post.idPost }}</td>
-                                    <td>{{ comment.user.email }}</td>
-                                    <td>
-                                        <form method="post" action="{{ path('admin_comment_delete', {'id': comment.idCommentaire}) }}">
-                                            <input type="hidden" name="_token" value="{{ csrf_token('admin_delete_comment' ~ comment.idCommentaire) }}">
-                                            <button class="btn btn-sm btn-danger">🗑</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            {% else %}
-                                <tr><td colspan="5">Aucun commentaire.</td></tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div class="tab-pane fade" id="reactions">
-                <div class="card">
-                    <div class="card-header">Réactions</div>
-                    <div class="card-body">
-                        <table class="table table-sm">
-                            <thead class="admin-table-header">
-                                <tr>
-                                    <th>#</th>
-                                    <th>Type</th>
-                                    <th>Post</th>
-                                    <th>Commentaire</th>
-                                    <th>Utilisateur</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            {% for reaction in reactions %}
-                                <tr>
-                                    <td>{{ reaction.idReaction }}</td>
-                                    <td>{{ reaction.type }}</td>
-                                    <td>{{ reaction.post ? reaction.post.idPost : '-' }}</td>
-                                    <td>{{ reaction.commentaire ? reaction.commentaire.idCommentaire : '-' }}</td>
-                                    <td>{{ reaction.user.email }}</td>
-                                    <td>
-                                        <form method="post" action="{{ path('admin_reaction_delete', {'id': reaction.idReaction}) }}">
-                                            <input type="hidden" name="_token" value="{{ csrf_token('admin_delete_reaction' ~ reaction.idReaction) }}">
-                                            <button class="btn btn-sm btn-danger">🗑</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            {% else %}
-                                <tr><td colspan="6">Aucune réaction.</td></tr>
-                            {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+
+<div id="toast-container" class="toast-container"></div>
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="wl-toast-data" data-type="{{ type }}" data-message="{{ message }}"></div>
+    {% endfor %}
+{% endfor %}
+
+{# ── Confirm Delete Modal ── #}
+<div class="wl-modal-overlay d-none" id="confirm-modal">
+    <div class="wl-modal">
+        <div class="wl-modal-icon" id="confirm-modal-icon">🗑</div>
+        <h5 class="wl-modal-title" id="confirm-modal-title">Confirmer la suppression</h5>
+        <p class="wl-modal-text" id="confirm-modal-text">Cette action est irréversible.</p>
+        <div class="wl-modal-actions">
+            <button type="button" class="btn-wl-ghost" onclick="closeConfirmModal()">Annuler</button>
+            <button type="button" class="btn-wl-danger" id="confirm-modal-ok">Supprimer</button>
         </div>
     </div>
 </div>
+
+<div class="admin-layout">
+
+    {# ── Sidebar ── #}
+    <aside class="admin-sidebar-card">
+        <div class="admin-sidebar-header">
+            <div class="admin-avatar">🛡</div>
+            <div>
+                <p class="admin-label">Panneau Admin</p>
+                <p class="admin-sub">Wanderlust</p>
+            </div>
+        </div>
+
+        <nav class="admin-nav">
+            <button class="admin-nav-item active" onclick="switchTab('posts', this)">
+                <span class="nav-item-icon">📄</span>
+                <span>Publications</span>
+                <span class="nav-badge">{{ posts|length }}</span>
+            </button>
+            <button class="admin-nav-item" onclick="switchTab('comments', this)">
+                <span class="nav-item-icon">💬</span>
+                <span>Commentaires</span>
+                <span class="nav-badge">{{ comments|length }}</span>
+            </button>
+            <button class="admin-nav-item" onclick="switchTab('reactions', this)">
+                <span class="nav-item-icon">♥</span>
+                <span>Réactions</span>
+                <span class="nav-badge">{{ reactions|length }}</span>
+            </button>
+        </nav>
+
+        <div class="admin-sidebar-footer">
+            <a href="{{ path('blog_index') }}" class="btn-sidebar-back">← Blog</a>
+        </div>
+    </aside>
+
+    {# ── Main content ── #}
+    <main class="admin-main">
+
+        {# ── POSTS TAB ── #}
+        <div class="admin-tab active" id="tab-posts">
+            <div class="admin-tab-header">
+                <div>
+                    <h3 class="admin-tab-title">📄 Publications</h3>
+                    <p class="admin-tab-sub">{{ posts|length }} publication{{ posts|length != 1 ? 's' }}</p>
+                </div>
+                <a href="{{ path('admin_post_new') }}" class="btn-wl-primary">
+                    ＋ Nouvelle publication
+                </a>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Contenu</th>
+                            <th>Auteur</th>
+                            <th>Statut</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for post in posts %}
+                        <tr>
+                            <td class="cell-id">{{ post.idPost }}</td>
+                            <td class="cell-content">
+                                <div class="content-preview">{{ post.contenu|slice(0, 80) }}{% if post.contenu|length > 80 %}…{% endif %}</div>
+                                {% if post.media %}
+                                    <span class="media-chip">📎 média</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="author-chip">
+                                    <div class="author-avatar">{{ post.user.email|first|upper }}</div>
+                                    <span>{{ post.user.fullName ?? post.user.email }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ post.statut }}">
+                                    {{ post.statut == 'public' ? '🌐 Public' : '🔒 Privé' }}
+                                </span>
+                            </td>
+                            <td class="cell-date">{{ post.dateCreation|date('d M Y') }}</td>
+                            <td>
+                                <div class="action-group">
+                                    <a href="{{ path('blog_post_show', {'id': post.idPost}) }}"
+                                       class="btn-icon btn-icon-view" title="Voir">👁</a>
+                                    <a href="{{ path('admin_post_edit', {'id': post.idPost}) }}"
+                                       class="btn-icon btn-icon-edit" title="Modifier">✏</a>
+                                    <button type="button"
+                                            class="btn-icon btn-icon-delete"
+                                            title="Supprimer"
+                                            onclick="confirmDelete('{{ path('admin_post_delete', {'id': post.idPost}) }}', '{{ csrf_token('admin_delete' ~ post.idPost) }}', 'Supprimer le post #{{ post.idPost }} ?')">
+                                        🗑
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6" class="empty-cell">Aucune publication.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# ── COMMENTS TAB ── #}
+        <div class="admin-tab" id="tab-comments">
+            <div class="admin-tab-header">
+                <div>
+                    <h3 class="admin-tab-title">💬 Commentaires</h3>
+                    <p class="admin-tab-sub">{{ comments|length }} commentaire{{ comments|length != 1 ? 's' }}</p>
+                </div>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Contenu</th>
+                            <th>Post</th>
+                            <th>Auteur</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for comment in comments %}
+                        <tr>
+                            <td class="cell-id">{{ comment.idCommentaire }}</td>
+                            <td class="cell-content">
+                                <div class="content-preview">{{ comment.contenu|slice(0, 80) }}{% if comment.contenu|length > 80 %}…{% endif %}</div>
+                                {% if comment.parent %}
+                                    <span class="reply-chip">↩ Réponse</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{{ path('blog_post_show', {'id': comment.post.idPost}) }}"
+                                   class="post-link">Post #{{ comment.post.idPost }}</a>
+                            </td>
+                            <td>
+                                <div class="author-chip">
+                                    <div class="author-avatar">{{ comment.user.email|first|upper }}</div>
+                                    <span>{{ comment.user.fullName ?? comment.user.email }}</span>
+                                </div>
+                            </td>
+                            <td class="cell-date">{{ comment.date|date('d M Y') }}</td>
+                            <td>
+                                <div class="action-group">
+                                    <button type="button"
+                                            class="btn-icon btn-icon-delete"
+                                            onclick="confirmDelete('{{ path('admin_comment_delete', {'id': comment.idCommentaire}) }}', '{{ csrf_token('admin_delete_comment' ~ comment.idCommentaire) }}', 'Supprimer ce commentaire ?')">
+                                        🗑
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="6" class="empty-cell">Aucun commentaire.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {# ── REACTIONS TAB ── #}
+        <div class="admin-tab" id="tab-reactions">
+            <div class="admin-tab-header">
+                <div>
+                    <h3 class="admin-tab-title">♥ Réactions</h3>
+                    <p class="admin-tab-sub">{{ reactions|length }} réaction{{ reactions|length != 1 ? 's' }}</p>
+                </div>
+            </div>
+
+            <div class="admin-table-wrap">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Type</th>
+                            <th>Post</th>
+                            <th>Commentaire</th>
+                            <th>Utilisateur</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for reaction in reactions %}
+                        <tr>
+                            <td class="cell-id">{{ reaction.idReaction }}</td>
+                            <td><span class="reaction-type-badge">{{ reaction.type }}</span></td>
+                            <td>
+                                {% if reaction.post %}
+                                    <a href="{{ path('blog_post_show', {'id': reaction.post.idPost}) }}" class="post-link">
+                                        Post #{{ reaction.post.idPost }}
+                                    </a>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td>{{ reaction.commentaire ? 'Cmt #' ~ reaction.commentaire.idCommentaire : '—' }}</td>
+                            <td>
+                                <div class="author-chip">
+                                    <div class="author-avatar">{{ reaction.user.email|first|upper }}</div>
+                                    <span>{{ reaction.user.fullName ?? reaction.user.email }}</span>
+                                </div>
+                            </td>
+                            <td class="cell-date">{{ reaction.date|date('d M Y') }}</td>
+                            <td>
+                                <div class="action-group">
+                                    <button type="button"
+                                            class="btn-icon btn-icon-delete"
+                                            onclick="confirmDelete('{{ path('admin_reaction_delete', {'id': reaction.idReaction}) }}', '{{ csrf_token('admin_delete_reaction' ~ reaction.idReaction) }}', 'Supprimer cette réaction ?')">
+                                        🗑
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% else %}
+                        <tr><td colspan="7" class="empty-cell">Aucune réaction.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<style>
+/* ── Layout ── */
+.admin-layout {
+    display: flex; gap: 24px; align-items: flex-start;
+    padding: 24px 0; min-height: 80vh;
+}
+.admin-sidebar-card {
+    width: 240px; flex-shrink: 0;
+    background: white; border-radius: 16px;
+    padding: 20px; box-shadow: 0 2px 20px rgba(0,0,0,.07);
+    border: 1px solid #e2e8f0; position: sticky; top: 80px;
+}
+.admin-main { flex: 1; min-width: 0; }
+
+/* ── Sidebar ── */
+.admin-sidebar-header {
+    display: flex; align-items: center; gap: 12px;
+    padding-bottom: 16px; margin-bottom: 16px;
+    border-bottom: 2px solid #f1f5f9;
+}
+.admin-avatar {
+    width: 42px; height: 42px; border-radius: 12px;
+    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+}
+.admin-label { font-weight: 700; font-size: 13px; color: #1e293b; margin: 0; }
+.admin-sub   { font-size: 11px; color: #94a3b8; margin: 0; }
+.admin-nav { display: flex; flex-direction: column; gap: 4px; }
+.admin-nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 10px;
+    border: none; background: transparent; cursor: pointer;
+    font-size: 13px; font-weight: 600; color: #64748b;
+    text-align: left; transition: all .18s;
+}
+.admin-nav-item:hover { background: #f8fafc; color: #1d4ed8; }
+.admin-nav-item.active { background: #eff6ff; color: #1d4ed8; }
+.nav-item-icon { font-size: 16px; }
+.nav-badge {
+    margin-left: auto; background: #e2e8f0; color: #64748b;
+    border-radius: 20px; padding: 1px 8px; font-size: 11px; font-weight: 700;
+}
+.admin-nav-item.active .nav-badge { background: #dbeafe; color: #1d4ed8; }
+.admin-sidebar-footer { margin-top: 20px; padding-top: 16px; border-top: 1px solid #f1f5f9; }
+.btn-sidebar-back {
+    display: block; text-align: center; padding: 9px; border-radius: 8px;
+    background: #f8fafc; color: #64748b; text-decoration: none;
+    font-size: 13px; font-weight: 600; transition: all .18s;
+    border: 1px solid #e2e8f0;
+}
+.btn-sidebar-back:hover { background: #eff6ff; color: #1d4ed8; }
+
+/* ── Tab ── */
+.admin-tab { display: none; }
+.admin-tab.active { display: block; }
+.admin-tab-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+}
+.admin-tab-title { font-weight: 700; font-size: 18px; color: #1e293b; margin: 0; }
+.admin-tab-sub   { font-size: 13px; color: #94a3b8; margin: 4px 0 0; }
+
+/* ── Table ── */
+.admin-table-wrap {
+    background: white; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06); border: 1px solid #e2e8f0;
+}
+.admin-table { width: 100%; border-collapse: collapse; }
+.admin-table thead tr {
+    background: #f8fafc; border-bottom: 2px solid #e2e8f0;
+}
+.admin-table th {
+    padding: 12px 14px; text-align: left;
+    font-size: 11px; font-weight: 700; color: #94a3b8;
+    text-transform: uppercase; letter-spacing: .06em;
+}
+.admin-table td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle; }
+.admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table tbody tr:hover { background: #fafbff; }
+.cell-id    { font-weight: 700; color: #94a3b8; font-size: 12px; width: 40px; }
+.cell-date  { font-size: 12px; color: #94a3b8; white-space: nowrap; }
+.cell-content { max-width: 280px; }
+.content-preview { font-size: 13px; color: #374151; line-height: 1.4; }
+.media-chip, .reply-chip {
+    display: inline-block; font-size: 11px; padding: 1px 7px;
+    border-radius: 6px; margin-top: 3px;
+    background: #f0f9ff; color: #0369a1;
+}
+.reply-chip { background: #f5f3ff; color: #7c3aed; }
+.empty-cell { text-align: center; color: #94a3b8; padding: 32px; font-size: 14px; }
+
+/* ── Author chip ── */
+.author-chip { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.author-avatar {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    color: white; font-size: 11px; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.author-chip span { font-size: 13px; color: #374151; }
+
+/* ── Badges ── */
+.status-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 600;
+}
+.status-public { background: #d1fae5; color: #065f46; }
+.status-private { background: #fef3c7; color: #92400e; }
+.reaction-type-badge {
+    display: inline-block; padding: 3px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+    background: #fff1f2; color: #be123c;
+}
+.post-link { color: #1d4ed8; text-decoration: none; font-size: 13px; font-weight: 600; }
+.post-link:hover { text-decoration: underline; }
+
+/* ── Action buttons ── */
+.action-group { display: flex; gap: 4px; align-items: center; }
+.btn-icon {
+    width: 30px; height: 30px; border-radius: 7px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; cursor: pointer; border: none;
+    text-decoration: none; transition: all .18s;
+}
+.btn-icon-view   { background: #f0f9ff; color: #0369a1; }
+.btn-icon-view:hover { background: #e0f2fe; }
+.btn-icon-edit   { background: #f0fdf4; color: #15803d; }
+.btn-icon-edit:hover { background: #dcfce7; }
+.btn-icon-delete { background: #fff1f2; color: #be123c; }
+.btn-icon-delete:hover { background: #ffe4e6; }
+
+/* ── Primary button ── */
+.btn-wl-primary {
+    display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+    border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    color: white; font-weight: 700; font-size: 14px; cursor: pointer;
+    text-decoration: none; transition: all .2s;
+}
+.btn-wl-primary:hover {
+    background: linear-gradient(135deg, #1e40af, #2563eb);
+    transform: translateY(-1px); box-shadow: 0 6px 20px rgba(29,78,216,.3);
+    color: white;
+}
+
+/* ── Toast ── */
+.toast-container {
+    position: fixed; top: 24px; right: 24px; z-index: 9999;
+    display: flex; flex-direction: column; gap: 10px; max-width: 360px;
+}
+.wl-toast {
+    display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px;
+    border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.14);
+    font-size: 14px; font-weight: 500; background: white; border-left: 4px solid;
+    animation: toastIn .35s cubic-bezier(.22,1,.36,1) forwards;
+}
+.wl-toast.toast-success { border-color: #10b981; }
+.wl-toast.toast-error   { border-color: #ef4444; }
+.wl-toast.toast-info    { border-color: #1d4ed8; }
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Modal ── */
+.wl-modal-overlay {
+    position: fixed; inset: 0; z-index: 9999;
+    background: rgba(0,0,0,.45);
+    display: flex; align-items: center; justify-content: center;
+}
+.wl-modal-overlay.d-none { display: none !important; }
+.wl-modal {
+    background: white; border-radius: 16px; padding: 32px 28px;
+    max-width: 380px; width: 90%; text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,.2);
+    animation: slideUp .25s ease;
+}
+.wl-modal-icon { font-size: 2.4rem; margin-bottom: 10px; }
+.wl-modal-title { font-weight: 700; font-size: 18px; margin-bottom: 8px; }
+.wl-modal-text  { color: #64748b; font-size: 14px; margin-bottom: 22px; }
+.wl-modal-actions { display: flex; gap: 10px; justify-content: center; }
+@keyframes slideUp {
+    from { transform: translateY(20px); opacity: 0; }
+    to   { transform: translateY(0); opacity: 1; }
+}
+.btn-wl-ghost {
+    display: inline-flex; align-items: center; padding: 9px 18px;
+    border-radius: 8px; border: 2px solid #e2e8f0; background: white;
+    color: #64748b; font-weight: 600; font-size: 14px; cursor: pointer;
+}
+.btn-wl-danger {
+    display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px;
+    border-radius: 8px; border: none;
+    background: linear-gradient(135deg, #dc2626, #ef4444);
+    color: white; font-weight: 600; font-size: 14px; cursor: pointer;
+}
+</style>
+
+<script>
+// ─── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(tabName, clickedBtn) {
+    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.admin-nav-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + tabName).classList.add('active');
+    clickedBtn.classList.add('active');
+}
+
+// ─── Toast ───────────────────────────────────────────────────────────────────
+function showToast(type, message) {
+    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `wl-toast toast-${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}`;
+    toast.innerHTML = `<span>${icons[type]||'ℹ️'}</span><span style="flex:1">${message}</span><button style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:16px" onclick="this.parentElement.remove()">×</button>`;
+    container.appendChild(toast);
+    setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity .3s'; setTimeout(()=>toast.remove(),300); }, 4500);
+}
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.wl-toast-data').forEach(el => {
+        showToast(el.dataset.type, el.dataset.message);
+        el.remove();
+    });
+});
+
+// ─── Confirm delete modal ─────────────────────────────────────────────────────
+let _deleteAction = null, _deleteToken = null;
+function confirmDelete(url, token, message) {
+    _deleteAction = url; _deleteToken = token;
+    document.getElementById('confirm-modal-text').textContent = message || 'Cette action est irréversible.';
+    document.getElementById('confirm-modal').classList.remove('d-none');
+}
+function closeConfirmModal() {
+    document.getElementById('confirm-modal').classList.add('d-none');
+    _deleteAction = null; _deleteToken = null;
+}
+document.getElementById('confirm-modal-ok').addEventListener('click', function () {
+    if (!_deleteAction) return;
+    const form = document.createElement('form');
+    form.method = 'POST'; form.action = _deleteAction;
+    const t = document.createElement('input');
+    t.type = 'hidden'; t.name = '_token'; t.value = _deleteToken;
+    form.appendChild(t); document.body.appendChild(form); form.submit();
+});
+document.getElementById('confirm-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeConfirmModal();
+});
+</script>
 {% endblock %}

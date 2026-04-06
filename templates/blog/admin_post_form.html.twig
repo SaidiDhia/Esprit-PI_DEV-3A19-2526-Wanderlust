@@ -1,0 +1,247 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+
+<div id="toast-container" class="toast-container"></div>
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="wl-toast-data" data-type="{{ type }}" data-message="{{ message }}"></div>
+    {% endfor %}
+{% endfor %}
+
+<div class="row justify-content-center">
+    <div class="col-md-7 col-lg-6">
+
+        <div class="wl-form-card">
+
+            <div class="wl-form-header">
+                <div class="wl-form-header-icon">🛡</div>
+                <div>
+                    <h2 class="wl-form-title">{{ title }}</h2>
+                    <p class="wl-form-subtitle">Panneau Administration · Wanderlust</p>
+                </div>
+            </div>
+
+            {% if post and post.media %}
+                <div class="current-media-box">
+                    <p class="media-label">📎 Média actuel</p>
+                    {% if post.media matches '/\\.(mp4|avi|mov|mkv)$/i' %}
+                        <video controls class="media-preview">
+                            <source src="{{ asset('uploads/' ~ post.media) }}">
+                        </video>
+                    {% else %}
+                        <img src="{{ asset('uploads/' ~ post.media) }}" class="media-preview" alt="Média actuel">
+                    {% endif %}
+                    <p class="media-hint">Laissez vide pour conserver le média existant.</p>
+                </div>
+            {% endif %}
+
+            {{ form_start(form, {
+                'attr': {
+                    'enctype': 'multipart/form-data',
+                    'novalidate': 'novalidate',
+                    'id': 'admin-post-form'
+                }
+            }) }}
+
+                <div class="wl-field-group">
+                    <label class="wl-label">📝 Contenu <span class="required">*</span></label>
+                    {{ form_widget(form.contenu, {
+                        'attr': {
+                            'class': 'wl-textarea',
+                            'rows': 6,
+                            'maxlength': 2000,
+                            'id': 'post-contenu',
+                            'placeholder': 'Rédigez le contenu de la publication...'
+                        }
+                    }) }}
+                    <div class="field-footer">
+                        {% if form.contenu.vars.errors|length > 0 %}
+                            <div class="wl-field-error">
+                                {% for error in form.contenu.vars.errors %}⚠ {{ error.message }}{% endfor %}
+                            </div>
+                        {% endif %}
+                        <span class="char-counter" id="contenu-counter">0 / 2000</span>
+                    </div>
+                </div>
+
+                <div class="wl-field-group">
+                    <label class="wl-label">🖼 Média <span class="optional">(optionnel)</span></label>
+                    <div class="file-drop-zone" id="file-drop-zone">
+                        <div class="file-drop-inner">
+                            <span class="file-drop-icon">☁</span>
+                            <p class="file-drop-text">Glissez-déposez ou <span class="file-drop-link">parcourez</span></p>
+                            <p class="file-drop-hint">JPG, PNG, GIF, WEBP, MP4 · max 10 Mo</p>
+                        </div>
+                        {{ form_widget(form.media, {
+                            'attr': {
+                                'class': 'file-input-hidden',
+                                'id': 'media-file-input',
+                                'accept': 'image/*,video/mp4,video/avi,video/quicktime'
+                            }
+                        }) }}
+                    </div>
+                    <div id="file-preview" class="file-preview d-none"></div>
+                </div>
+
+                <div class="wl-field-group">
+                    <label class="wl-label">🔒 Visibilité</label>
+                    <div class="statut-toggle">
+                        {% for choice in form.statut.vars.choices %}
+                            <label class="statut-option">
+                                <input type="radio"
+                                       name="{{ form.statut.vars.full_name }}"
+                                       value="{{ choice.value }}"
+                                       class="statut-radio"
+                                       {{ (form.statut.vars.data == choice.value or (not form.statut.vars.data and loop.first)) ? 'checked' }}>
+                                <span class="statut-label">
+                                    {{ choice.value == 'public' ? '🌐 Public' : '🔒 Privé' }}
+                                </span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {# ── FIX: mark statut as rendered so form_end() does NOT emit a duplicate raw <select> ── #}
+                {% do form.statut.setRendered() %}
+
+                <div class="wl-form-actions">
+                    <a href="{{ path('admin_dashboard') }}" class="btn-wl-ghost">← Dashboard</a>
+                    <button type="submit" class="btn-wl-admin" id="submit-btn">
+                        <span id="btn-text">{{ post ? '💾 Enregistrer' : '🚀 Créer' }}</span>
+                        <span id="btn-loading" class="d-none">⏳ En cours...</span>
+                    </button>
+                </div>
+
+            {{ form_end(form) }}
+        </div>
+    </div>
+</div>
+
+<style>
+.toast-container { position: fixed; top: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; max-width: 360px; }
+.wl-toast { display: flex; align-items: flex-start; gap: 12px; padding: 14px 18px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,.14); font-size: 14px; font-weight: 500; background: white; border-left: 4px solid; animation: toastIn .35s ease forwards; }
+.wl-toast.toast-success { border-color: #10b981; }
+.wl-toast.toast-error   { border-color: #ef4444; }
+.wl-toast-close { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px; padding: 0; }
+@keyframes toastIn { from { opacity: 0; transform: translateX(30px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateX(30px); } }
+
+.wl-form-card { background: white; border-radius: 20px; padding: 36px; margin: 32px 0; box-shadow: 0 4px 40px rgba(29,78,216,.08); border: 1px solid #e2e8f0; }
+.wl-form-header { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 2px solid #f1f5f9; }
+.wl-form-header-icon { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, #fef3c7, #fde68a); display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+.wl-form-title { font-family: var(--font-display, serif); font-size: 22px; font-weight: 700; color: #1e293b; margin: 0; }
+.wl-form-subtitle { font-size: 13px; color: #94a3b8; margin: 4px 0 0; }
+.current-media-box { background: #f8fafc; border-radius: 12px; padding: 14px; margin-bottom: 22px; border: 1px dashed #cbd5e1; }
+.media-label { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 10px; }
+.media-preview { width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; display: block; }
+.media-hint { font-size: 11px; color: #94a3b8; margin-top: 8px; margin-bottom: 0; }
+.wl-field-group { margin-bottom: 22px; }
+.wl-label { display: block; font-size: 13px; font-weight: 700; color: #374151; margin-bottom: 8px; }
+.required { color: #ef4444; }
+.optional { color: #94a3b8; font-weight: 400; font-size: 12px; }
+.wl-textarea { width: 100%; padding: 13px 15px; border: 2px solid #e2e8f0; border-radius: 10px; font-size: 14px; font-family: inherit; resize: vertical; transition: border-color .2s, box-shadow .2s; background: white; line-height: 1.6; }
+.wl-textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 4px rgba(59,130,246,.1); }
+.field-footer { display: flex; justify-content: space-between; margin-top: 5px; }
+.wl-field-error { font-size: 12px; color: #ef4444; font-weight: 600; }
+.char-counter { font-size: 11px; color: #94a3b8; margin-left: auto; }
+.file-drop-zone { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 28px; text-align: center; cursor: pointer; transition: all .2s; position: relative; background: #fafbfc; }
+.file-drop-zone:hover, .file-drop-zone.dragover { border-color: #3b82f6; background: #eff6ff; }
+.file-drop-inner { pointer-events: none; }
+.file-drop-icon { font-size: 2rem; display: block; margin-bottom: 8px; color: #94a3b8; }
+.file-drop-text { font-size: 14px; color: #64748b; margin: 0; }
+.file-drop-link { color: #3b82f6; font-weight: 600; }
+.file-drop-hint { font-size: 12px; color: #94a3b8; margin: 4px 0 0; }
+.file-input-hidden { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.file-preview { margin-top: 10px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+.file-preview img, .file-preview video { max-height: 160px; width: 100%; object-fit: cover; display: block; }
+.statut-toggle { display: flex; gap: 10px; }
+.statut-option { cursor: pointer; }
+.statut-radio { display: none; }
+.statut-label { display: inline-flex; align-items: center; gap: 6px; padding: 9px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; border: 2px solid #e2e8f0; background: white; cursor: pointer; transition: all .18s; color: #64748b; }
+.statut-radio:checked + .statut-label { background: #eff6ff; border-color: #3b82f6; color: #1d4ed8; }
+.wl-form-actions { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; padding-top: 22px; border-top: 2px solid #f1f5f9; }
+.btn-wl-admin { display: inline-flex; align-items: center; gap: 8px; padding: 11px 24px; border-radius: 10px; border: none; background: linear-gradient(135deg, #d97706, #f59e0b); color: white; font-weight: 700; font-size: 14px; cursor: pointer; transition: all .2s; }
+.btn-wl-admin:hover { background: linear-gradient(135deg, #b45309, #d97706); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(217,119,6,.3); }
+.btn-wl-ghost { display: inline-flex; align-items: center; gap: 6px; padding: 11px 20px; border-radius: 10px; border: 2px solid #e2e8f0; background: white; color: #64748b; font-weight: 600; font-size: 14px; cursor: pointer; text-decoration: none; transition: all .18s; }
+.btn-wl-ghost:hover { border-color: #cbd5e1; background: #f8fafc; color: #374151; }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ── Toasts ──────────────────────────────────────────────────────────────────
+    function showToast(type, message) {
+        const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        toast.className = `wl-toast toast-${type === 'error' ? 'error' : 'success'}`;
+        toast.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span style="flex:1">${message}</span><button class="wl-toast-close" onclick="this.parentElement.remove()">×</button>`;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.style.animation = 'toastOut .3s ease forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 4500);
+    }
+    document.querySelectorAll('.wl-toast-data').forEach(el => {
+        showToast(el.dataset.type, el.dataset.message);
+        el.remove();
+    });
+
+    // ── Character counter ────────────────────────────────────────────────────────
+    const ta = document.getElementById('post-contenu');
+    const counter = document.getElementById('contenu-counter');
+    if (ta && counter) {
+        counter.textContent = ta.value.length + ' / 2000';
+        ta.addEventListener('input', function () {
+            counter.textContent = this.value.length + ' / 2000';
+            counter.style.color = this.value.length > 1800 ? '#ef4444' : '#94a3b8';
+        });
+    }
+
+    // ── File preview + drag-and-drop ─────────────────────────────────────────────
+    const fileInput = document.getElementById('media-file-input');
+    const preview   = document.getElementById('file-preview');
+    const dropZone  = document.getElementById('file-drop-zone');
+
+    if (fileInput) {
+        fileInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) { preview.classList.add('d-none'); return; }
+            const url = URL.createObjectURL(file);
+            preview.innerHTML = file.type.startsWith('video/')
+                ? `<video controls src="${url}"></video>`
+                : `<img src="${url}" alt="Preview">`;
+            preview.classList.remove('d-none');
+        });
+    }
+    if (dropZone) {
+        dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) {
+                fileInput.files = e.dataTransfer.files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+
+    // ── Submit guard (prevent double-submit) ─────────────────────────────────────
+    const form      = document.getElementById('admin-post-form');
+    const submitBtn = document.getElementById('submit-btn');
+    let   _submitting = false;
+
+    if (form && submitBtn) {
+        form.addEventListener('submit', function (e) {
+            if (_submitting) { e.preventDefault(); return; }
+            _submitting = true;
+            submitBtn.disabled = true;
+            document.getElementById('btn-text').classList.add('d-none');
+            document.getElementById('btn-loading').classList.remove('d-none');
+        });
+    }
+});
+</script>
+{% endblock %}

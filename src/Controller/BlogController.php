@@ -29,17 +29,37 @@ class BlogController extends AbstractController
     #[Route('/', name: 'blog_index')]
     public function index(EntityManagerInterface $em): Response
     {
-        $posts = $em->getRepository(Posts::class)->createQueryBuilder('p')
-            ->where('p.statut = :public')
+        $user = $this->userResolver->getCurrentUser();
+
+        $qb = $em->getRepository(Posts::class)->createQueryBuilder('p');
+
+        if ($user) {
+            // Show all public posts + the current user's own private posts
+            $qb->where(
+                $qb->expr()->orX(
+                    $qb->expr()->eq('p.statut', ':public'),
+                    $qb->expr()->andX(
+                        $qb->expr()->eq('p.statut', ':private'),
+                        $qb->expr()->eq('p.user', ':user')
+                    )
+                )
+            )
             ->setParameter('public', 'public')
-            ->orderBy('p.dateCreation', 'DESC')
+            ->setParameter('private', 'private')
+            ->setParameter('user', $user);
+        } else {
+            $qb->where('p.statut = :public')
+               ->setParameter('public', 'public');
+        }
+
+        $posts = $qb->orderBy('p.dateCreation', 'DESC')
             ->getQuery()
             ->getResult();
 
         return $this->render('blog/index.html.twig', ['posts' => $posts]);
     }
 
-    // ─── NEW POST — must be BEFORE /post/{id} ─────────────────────────────────
+    // ─── NEW POST ─────────────────────────────────────────────────────────────
     #[Route('/post/new', name: 'blog_post_new')]
     public function newPost(Request $request, EntityManagerInterface $em): Response
     {
@@ -56,7 +76,8 @@ class BlogController extends AbstractController
             if ($form->isValid()) {
                 $post->setUser($user);
                 $post->setDateCreation(new \DateTime());
-                $post->setStatut('public');
+                // FIX: Do NOT hardcode 'public' — respect what the user chose in the form
+                // $post->setStatut() is already set by form->handleRequest via the radio buttons
 
                 $mediaFile = $form->get('media')->getData();
                 if ($mediaFile) {
@@ -76,7 +97,7 @@ class BlogController extends AbstractController
                     $postId = $em->getConnection()->lastInsertId();
                 }
 
-                $this->addFlash('success', 'Publication créée.');
+                $this->addFlash('success', 'Publication créée avec succès !');
                 return $this->redirectToRoute('blog_post_show', ['id' => $postId]);
             } else {
                 foreach ($form->getErrors(true) as $error) {
@@ -132,18 +153,28 @@ class BlogController extends AbstractController
             $replyForms[$c->getIdCommentaire()] = $this->createForm(CommentType::class, new Commentaires())->createView();
         }
 
+        // Build edit forms for comments
+        $editCommentForms = [];
+        foreach ($comments as $c) {
+            $editCommentForms[$c->getIdCommentaire()] = $this->createForm(CommentType::class, $c)->createView();
+            foreach ($c->getReplies() as $reply) {
+                $editCommentForms[$reply->getIdCommentaire()] = $this->createForm(CommentType::class, $reply)->createView();
+            }
+        }
+
         return $this->render('blog/show.html.twig', [
-            'post'           => $post,
-            'comments'       => $comments,
-            'commentForm'    => $form->createView(),
-            'userReaction'   => $userReaction,
-            'reactionsCount' => $reactionsCount,
-            'replyForms'     => $replyForms,
-            'currentUser'    => $user,
+            'post'               => $post,
+            'comments'           => $comments,
+            'commentForm'        => $form->createView(),
+            'userReaction'       => $userReaction,
+            'reactionsCount'     => $reactionsCount,
+            'replyForms'         => $replyForms,
+            'editCommentForms'   => $editCommentForms,
+            'currentUser'        => $user,
         ]);
     }
 
-    // ─── EDIT ─────────────────────────────────────────────────────────────────
+    // ─── EDIT POST ────────────────────────────────────────────────────────────
     #[Route('/post/{id}/edit', name: 'blog_post_edit', requirements: ['id' => '\d+'])]
     public function editPost(Posts $post, Request $request, EntityManagerInterface $em): Response
     {
@@ -174,7 +205,7 @@ class BlogController extends AbstractController
             }
 
             $em->flush();
-            $this->addFlash('success', 'Publication modifiée.');
+            $this->addFlash('success', 'Publication modifiée avec succès !');
             return $this->redirectToRoute('blog_post_show', ['id' => $post->getIdPost()]);
         }
 
@@ -184,7 +215,7 @@ class BlogController extends AbstractController
         ]);
     }
 
-    // ─── DELETE ───────────────────────────────────────────────────────────────
+    // ─── DELETE POST ──────────────────────────────────────────────────────────
     #[Route('/post/{id}/delete', name: 'blog_post_delete', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function deletePost(Posts $post, Request $request, EntityManagerInterface $em): Response
     {
@@ -202,55 +233,98 @@ class BlogController extends AbstractController
         return $this->redirectToRoute('blog_index');
     }
 
+    // ─── EDIT COMMENT ─────────────────────────────────────────────────────────
+    #[Route('/comment/{id}/edit', name: 'blog_comment_edit', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function editComment(Commentaires $comment, Request $request, EntityManagerInterface $em): Response
+    {
+        $user = $this->userResolver->getCurrentUser();
+        if (!$user || $comment->getUser() !== $user) {
+            return $this->json(['error' => 'Non autorisé'], 403);
+        }
+
+        $content = trim($request->request->get('contenu', ''));
+        if (strlen($content) < 2) {
+            $this->addFlash('error', 'Le commentaire doit contenir au moins 2 caractères.');
+            return $this->redirectToRoute('blog_post_show', ['id' => $comment->getPost()->getIdPost()]);
+        }
+        if (strlen($content) > 500) {
+            $this->addFlash('error', 'Le commentaire ne peut pas dépasser 500 caractères.');
+            return $this->redirectToRoute('blog_post_show', ['id' => $comment->getPost()->getIdPost()]);
+        }
+
+        $comment->setContenu($content);
+        $em->flush();
+
+        $this->addFlash('success', 'Commentaire modifié.');
+        return $this->redirectToRoute('blog_post_show', ['id' => $comment->getPost()->getIdPost()]);
+    }
+
+    // ─── DELETE COMMENT ───────────────────────────────────────────────────────
+    #[Route('/comment/{id}/delete', name: 'blog_comment_delete', methods: ['POST'], requirements: ['id' => '\d+'])]
+    public function deleteComment(Commentaires $comment, Request $request, EntityManagerInterface $em): Response
+    {
+        $user = $this->userResolver->getCurrentUser();
+        if (!$user || ($comment->getUser() !== $user && !$this->userResolver->isAdmin())) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $postId = $comment->getPost()->getIdPost();
+        if ($this->isCsrfTokenValid('delete_comment' . $comment->getIdCommentaire(), $request->request->get('_token'))) {
+            $em->remove($comment);
+            $em->flush();
+            $this->addFlash('success', 'Commentaire supprimé.');
+        }
+
+        return $this->redirectToRoute('blog_post_show', ['id' => $postId]);
+    }
+
     // ─── REACT TO POST ────────────────────────────────────────────────────────
     #[Route('/post/{id}/react/{type}', name: 'blog_react', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function react(Posts $post, string $type, EntityManagerInterface $em, Request $request): Response
-{
-    $userId = $request->getSession()->get('logged_user_id');
-    if (!$userId) {
-        return $this->json(['error' => 'Veuillez vous connecter'], 401);
+    {
+        $userId = $request->getSession()->get('logged_user_id');
+        if (!$userId) {
+            return $this->json(['error' => 'Veuillez vous connecter'], 401);
+        }
+
+        $user = $em->getRepository(User::class)->find($userId);
+        if (!$user) {
+            return $this->json(['error' => 'Utilisateur introuvable'], 404);
+        }
+
+        $existing = $em->getRepository(Reactions::class)->findOneBy([
+            'post' => $post,
+            'user' => $user,
+        ]);
+
+        if ($existing) {
+            $em->remove($existing);
+            $added = false;
+        } else {
+            $reaction = new Reactions();
+            $reaction->setType($type);
+            $reaction->setPost($post);
+            $reaction->setUser($user);
+            $reaction->setDate(new \DateTime());
+            $em->persist($reaction);
+            $added = true;
+        }
+
+        $em->flush();
+        $count = $em->getRepository(Reactions::class)->count(['post' => $post]);
+
+        return $this->json(['added' => $added, 'count' => $count]);
     }
-
-    $user = $em->getRepository(User::class)->find($userId);
-    $existing = $em->getRepository(Reactions::class)->findOneBy([
-        'post' => $post,
-        'user' => $user,
-    ]);
-
-    if ($existing) {
-        $em->remove($existing);
-        $added = false;
-    } else {
-        $reaction = new Reactions();
-        $reaction->setType($type);
-        $reaction->setPost($post);
-        $reaction->setUser($user);
-        $reaction->setDate(new \DateTime());
-        $em->persist($reaction);
-        $added = true;
-    }
-
-    $em->flush(); // Save changes to the database
-
-    // Recount after flush
-    $count = $em->getRepository(Reactions::class)->count(['post' => $post]);
-
-    return $this->json([
-        'added' => $added,
-        'count' => $count
-    ]);
-}
 
     // ─── REACT TO COMMENT ─────────────────────────────────────────────────────
     #[Route('/comment/{id}/react/{type}', name: 'blog_comment_react', methods: ['POST'], requirements: ['id' => '\d+'])]
     public function reactComment(Commentaires $comment, string $type, EntityManagerInterface $em, Request $request): Response
     {
-        // ✅ Read session directly
         $userId = $request->getSession()->get('logged_user_id');
 
         if (!$userId) {
             return $this->json([
-                'error' => 'Not authenticated',
+                'error' => 'Non authentifié',
                 'added' => false,
                 'count' => $em->getRepository(Reactions::class)->count(['commentaire' => $comment]),
             ]);
@@ -259,7 +333,7 @@ class BlogController extends AbstractController
         $user = $em->getRepository(User::class)->find($userId);
         if (!$user) {
             return $this->json([
-                'error' => 'User not found',
+                'error' => 'Utilisateur introuvable',
                 'added' => false,
                 'count' => $em->getRepository(Reactions::class)->count(['commentaire' => $comment]),
             ]);
@@ -272,7 +346,6 @@ class BlogController extends AbstractController
 
         if ($existing) {
             $em->remove($existing);
-            $em->flush();
             $added = false;
         } else {
             $reaction = new Reactions();
@@ -281,10 +354,10 @@ class BlogController extends AbstractController
             $reaction->setUser($user);
             $reaction->setDate(new \DateTime());
             $em->persist($reaction);
-            $em->flush();
             $added = true;
         }
 
+        $em->flush();
         $count = $em->getRepository(Reactions::class)->count(['commentaire' => $comment]);
         return $this->json(['added' => $added, 'count' => $count]);
     }
@@ -299,9 +372,17 @@ class BlogController extends AbstractController
             return $this->redirectToRoute('login_switch');
         }
 
-        $content = $request->request->get('contenu');
+        $content = trim($request->request->get('contenu', ''));
         if (empty($content)) {
             $this->addFlash('error', 'Le contenu ne peut pas être vide.');
+            return $this->redirectToRoute('blog_post_show', ['id' => $parent->getPost()->getIdPost()]);
+        }
+        if (strlen($content) < 2) {
+            $this->addFlash('error', 'Minimum 2 caractères.');
+            return $this->redirectToRoute('blog_post_show', ['id' => $parent->getPost()->getIdPost()]);
+        }
+        if (strlen($content) > 500) {
+            $this->addFlash('error', 'Maximum 500 caractères.');
             return $this->redirectToRoute('blog_post_show', ['id' => $parent->getPost()->getIdPost()]);
         }
 

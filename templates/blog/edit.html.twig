@@ -1,43 +1,368 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
+
+{# ── Toast container ── #}
+<div id="toast-container" class="toast-container"></div>
+{% for type, messages in app.flashes %}
+    {% for message in messages %}
+        <div class="wl-toast-data" data-type="{{ type }}" data-message="{{ message }}"></div>
+    {% endfor %}
+{% endfor %}
+
 <div class="row justify-content-center">
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">✏ Modifier la publication</div>
-            <div class="card-body">
+    <div class="col-md-7 col-lg-6">
 
-                {# ✅ Show existing media so user knows what's currently saved #}
-                {% if post.media %}
-                    <div class="mb-3">
-                        <label class="form-label text-muted">Média actuel :</label><br>
-                        {% if post.media matches '/\\.(mp4|avi|mov|mkv)$/i' %}
-                            <video controls class="img-fluid rounded" style="max-height:200px">
-                                <source src="{{ asset('uploads/' ~ post.media) }}">
-                            </video>
-                        {% else %}
-                            <img src="{{ asset('uploads/' ~ post.media) }}"
-                                 class="img-fluid rounded"
-                                 style="max-height:200px"
-                                 alt="Média actuel">
-                        {% endif %}
-                        <p class="small text-muted mt-1">Laissez le champ fichier vide pour conserver ce média.</p>
-                    </div>
-                {% endif %}
+        <div class="wl-form-card">
 
-                {{ form_start(form, {'attr': {'enctype': 'multipart/form-data'}}) }}
-                    {{ form_row(form.contenu) }}
-                    {{ form_row(form.media) }}
-                    {{ form_row(form.statut) }}
-                    <div class="d-flex gap-2 mt-3">
-                        <button class="btn btn-primary-custom">💾 Enregistrer</button>
-                        <a href="{{ path('blog_post_show', {'id': post.idPost}) }}"
-                           class="btn btn-outline-secondary">Annuler</a>
-                    </div>
-                {{ form_end(form) }}
-
+            {# ── Header ── #}
+            <div class="wl-form-header">
+                <div class="wl-form-header-icon">✏</div>
+                <div>
+                    <h2 class="wl-form-title">Modifier la publication</h2>
+                    <p class="wl-form-subtitle">Apportez vos modifications ci-dessous</p>
+                </div>
             </div>
+
+            {# ── Current media preview ── #}
+            {% if post.media %}
+                <div class="current-media-box">
+                    <p class="media-label">📎 Média actuel</p>
+                    {% if post.media matches '/\\.(mp4|avi|mov|mkv)$/i' %}
+                        <video controls class="media-preview">
+                            <source src="{{ asset('uploads/' ~ post.media) }}">
+                        </video>
+                    {% else %}
+                        <img src="{{ asset('uploads/' ~ post.media) }}"
+                             class="media-preview" alt="Média actuel">
+                    {% endif %}
+                    <p class="media-hint">Laissez le champ fichier vide pour conserver ce média.</p>
+                </div>
+            {% endif %}
+
+            {# ── Form ── #}
+            {{ form_start(form, {
+                'attr': {
+                    'enctype': 'multipart/form-data',
+                    'class': 'wl-post-form',
+                    'novalidate': 'novalidate',
+                    'id': 'edit-post-form'
+                }
+            }) }}
+
+                {# Contenu #}
+                <div class="wl-field-group">
+                    <label class="wl-label">📝 Contenu <span class="required">*</span></label>
+                    {{ form_widget(form.contenu, {
+                        'attr': {
+                            'class': 'wl-textarea',
+                            'placeholder': 'Partagez quelque chose avec la communauté...',
+                            'rows': 6,
+                            'maxlength': 2000,
+                            'id': 'post-contenu'
+                        }
+                    }) }}
+                    <div class="field-footer">
+                        {% if form.contenu.vars.errors|length > 0 %}
+                            <div class="wl-field-error">
+                                {% for error in form.contenu.vars.errors %}
+                                    <span>⚠ {{ error.message }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <span class="char-counter" id="contenu-counter">0 / 2000</span>
+                    </div>
+                </div>
+
+                {# Media upload #}
+                <div class="wl-field-group">
+                    <label class="wl-label">🖼 Remplacer le média</label>
+                    <div class="file-drop-zone" id="file-drop-zone">
+                        <div class="file-drop-inner">
+                            <span class="file-drop-icon">☁</span>
+                            <p class="file-drop-text">Glissez-déposez ou <span class="file-drop-link">parcourez</span></p>
+                            <p class="file-drop-hint">JPG, PNG, GIF, WEBP, MP4 · max 10 Mo</p>
+                        </div>
+                        {{ form_widget(form.media, {
+                            'attr': {
+                                'class': 'file-input-hidden',
+                                'id': 'media-file-input',
+                                'accept': 'image/*,video/mp4,video/avi,video/quicktime'
+                            }
+                        }) }}
+                    </div>
+                    <div id="file-preview" class="file-preview d-none"></div>
+                    {% if form.media.vars.errors|length > 0 %}
+                        <div class="wl-field-error">
+                            {% for error in form.media.vars.errors %}
+                                <span>⚠ {{ error.message }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                {# Statut — custom radio toggle (the raw Symfony <select> is suppressed below) #}
+                <div class="wl-field-group">
+                    <label class="wl-label">🔒 Visibilité</label>
+                    <div class="statut-toggle">
+                        {% for choice in form.statut.vars.choices %}
+                            <label class="statut-option">
+                                <input type="radio"
+                                       name="{{ form.statut.vars.full_name }}"
+                                       value="{{ choice.value }}"
+                                       class="statut-radio"
+                                       {{ form.statut.vars.data == choice.value ? 'checked' }}>
+                                <span class="statut-label">
+                                    {{ choice.value == 'public' ? '🌐 Public' : '🔒 Privé' }}
+                                </span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {# FIX: Tell Symfony the statut field is already rendered so form_end
+                   does NOT emit a duplicate raw <select> underneath the buttons #}
+                {% do form.statut.setRendered() %}
+
+                {# Form actions #}
+                <div class="wl-form-actions">
+                    <a href="{{ path('blog_post_show', {'id': post.idPost}) }}"
+                       class="btn-wl-ghost">← Annuler</a>
+                    <button type="submit" class="btn-wl-primary" id="submit-btn">
+                        <span id="btn-text">💾 Enregistrer</span>
+                        <span id="btn-loading" class="d-none">⏳ Enregistrement...</span>
+                    </button>
+                </div>
+
+            {{ form_end(form) }}
+
         </div>
+
     </div>
 </div>
+
+<style>
+.toast-container {
+    position: fixed; top: 24px; right: 24px; z-index: 9999;
+    display: flex; flex-direction: column; gap: 10px; max-width: 360px;
+}
+.wl-toast {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 18px; border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,.14);
+    font-size: 14px; font-weight: 500; background: white; border-left: 4px solid;
+    animation: toastIn .35s cubic-bezier(.22,1,.36,1) forwards;
+}
+.wl-toast.toast-success { border-color: #10b981; }
+.wl-toast.toast-error   { border-color: #ef4444; }
+.wl-toast.toast-info    { border-color: #1d4ed8; }
+.wl-toast-close { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px; }
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Form card ── */
+.wl-form-card {
+    background: white; border-radius: 20px;
+    padding: 36px; margin: 32px 0;
+    box-shadow: 0 4px 40px rgba(29,78,216,.08);
+    border: 1px solid #e2e8f0;
+}
+.wl-form-header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 28px; padding-bottom: 20px;
+    border-bottom: 2px solid #f1f5f9;
+}
+.wl-form-header-icon {
+    width: 52px; height: 52px; border-radius: 14px;
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+}
+.wl-form-title {
+    font-family: var(--font-display, 'Playfair Display', serif);
+    font-size: 22px; font-weight: 700; color: #1e293b; margin: 0;
+}
+.wl-form-subtitle { font-size: 13px; color: #94a3b8; margin: 4px 0 0; }
+
+/* ── Current media ── */
+.current-media-box {
+    background: #f8fafc; border-radius: 12px;
+    padding: 14px; margin-bottom: 22px;
+    border: 1px dashed #cbd5e1;
+}
+.media-label { font-size: 12px; font-weight: 600; color: #64748b; margin-bottom: 10px; }
+.media-preview {
+    width: 100%; max-height: 220px; object-fit: cover;
+    border-radius: 8px; display: block;
+}
+.media-hint { font-size: 11px; color: #94a3b8; margin-top: 8px; margin-bottom: 0; }
+
+/* ── Fields ── */
+.wl-field-group { margin-bottom: 22px; }
+.wl-label {
+    display: block; font-size: 13px; font-weight: 700;
+    color: #374151; margin-bottom: 8px; letter-spacing: .01em;
+}
+.required { color: #ef4444; }
+.wl-textarea {
+    width: 100%; padding: 13px 15px;
+    border: 2px solid #e2e8f0; border-radius: 10px;
+    font-size: 14px; font-family: inherit; resize: vertical;
+    transition: border-color .2s, box-shadow .2s; background: white;
+    line-height: 1.6;
+}
+.wl-textarea:focus {
+    outline: none; border-color: #3b82f6;
+    box-shadow: 0 0 0 4px rgba(59,130,246,.1);
+}
+.field-footer {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-top: 5px;
+}
+.wl-field-error {
+    font-size: 12px; color: #ef4444; font-weight: 600;
+}
+.char-counter { font-size: 11px; color: #94a3b8; margin-left: auto; }
+
+/* ── File drop zone ── */
+.file-drop-zone {
+    border: 2px dashed #cbd5e1; border-radius: 12px;
+    padding: 28px; text-align: center; cursor: pointer;
+    transition: all .2s; position: relative; background: #fafbfc;
+}
+.file-drop-zone:hover, .file-drop-zone.dragover {
+    border-color: #3b82f6; background: #eff6ff;
+}
+.file-drop-inner { pointer-events: none; }
+.file-drop-icon { font-size: 2rem; display: block; margin-bottom: 8px; color: #94a3b8; }
+.file-drop-text { font-size: 14px; color: #64748b; margin: 0; }
+.file-drop-link { color: #3b82f6; font-weight: 600; }
+.file-drop-hint { font-size: 12px; color: #94a3b8; margin: 4px 0 0; }
+.file-input-hidden {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%;
+}
+.file-preview {
+    margin-top: 10px; border-radius: 10px; overflow: hidden;
+    border: 1px solid #e2e8f0;
+}
+.file-preview img, .file-preview video {
+    max-height: 160px; width: 100%; object-fit: cover; display: block;
+}
+
+/* ── Statut toggle ── */
+.statut-toggle { display: flex; gap: 10px; }
+.statut-option { cursor: pointer; }
+.statut-radio { display: none; }
+.statut-label {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 20px; border-radius: 10px; font-size: 13px; font-weight: 600;
+    border: 2px solid #e2e8f0; background: white; cursor: pointer;
+    transition: all .18s; color: #64748b;
+}
+.statut-radio:checked + .statut-label {
+    background: #eff6ff; border-color: #3b82f6; color: #1d4ed8;
+}
+
+/* ── Form actions ── */
+.wl-form-actions {
+    display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px;
+    padding-top: 22px; border-top: 2px solid #f1f5f9;
+}
+.btn-wl-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 11px 24px; border-radius: 10px; border: none;
+    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    color: white; font-weight: 700; font-size: 14px; cursor: pointer;
+    transition: all .2s; letter-spacing: .01em;
+}
+.btn-wl-primary:hover {
+    background: linear-gradient(135deg, #1e40af, #2563eb);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(29,78,216,.3);
+}
+.btn-wl-ghost {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 11px 20px; border-radius: 10px;
+    border: 2px solid #e2e8f0; background: white;
+    color: #64748b; font-weight: 600; font-size: 14px;
+    cursor: pointer; text-decoration: none; transition: all .18s;
+}
+.btn-wl-ghost:hover { border-color: #cbd5e1; background: #f8fafc; color: #374151; }
+</style>
+
+<script>
+// ─── Toasts ───────────────────────────────────────────────────────────────────
+function showToast(type, message) {
+    const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `wl-toast toast-${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}`;
+    toast.innerHTML = `
+        <span>${icons[type] || 'ℹ️'}</span>
+        <span style="flex:1">${message}</span>
+        <button class="wl-toast-close" onclick="this.parentElement.remove()">×</button>`;
+    container.appendChild(toast);
+    setTimeout(() => { toast.style.opacity='0'; toast.style.transition='opacity .3s'; setTimeout(()=>toast.remove(),300); }, 4500);
+}
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.wl-toast-data').forEach(el => {
+        showToast(el.dataset.type, el.dataset.message);
+        el.remove();
+    });
+
+    // Character counter
+    const ta = document.getElementById('post-contenu');
+    const counter = document.getElementById('contenu-counter');
+    if (ta && counter) {
+        counter.textContent = ta.value.length + ' / 2000';
+        ta.addEventListener('input', function () {
+            counter.textContent = this.value.length + ' / 2000';
+            counter.style.color = this.value.length > 1800 ? '#ef4444' : '#94a3b8';
+        });
+    }
+
+    // File preview
+    const fileInput = document.getElementById('media-file-input');
+    const preview   = document.getElementById('file-preview');
+    const dropZone  = document.getElementById('file-drop-zone');
+
+    if (fileInput) {
+        fileInput.addEventListener('change', function () {
+            const file = this.files[0];
+            if (!file) { preview.classList.add('d-none'); return; }
+            const url = URL.createObjectURL(file);
+            const isVideo = file.type.startsWith('video/');
+            preview.innerHTML = isVideo
+                ? `<video controls src="${url}"></video>`
+                : `<img src="${url}" alt="Preview">`;
+            preview.classList.remove('d-none');
+        });
+    }
+    if (dropZone) {
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files[0]) {
+                fileInput.files = e.dataTransfer.files;
+                fileInput.dispatchEvent(new Event('change'));
+            }
+        });
+    }
+
+    // Submit loading state
+    const form = document.getElementById('edit-post-form');
+    const submitBtn = document.getElementById('submit-btn');
+    if (form && submitBtn) {
+        form.addEventListener('submit', function () {
+            submitBtn.disabled = true;
+            document.getElementById('btn-text').classList.add('d-none');
+            document.getElementById('btn-loading').classList.remove('d-none');
+        });
+    }
+});
+</script>
 {% endblock %}
