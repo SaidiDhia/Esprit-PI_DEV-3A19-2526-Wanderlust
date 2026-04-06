@@ -483,7 +483,7 @@
                                 </a>
                                 <form method="post" action="{{ path('app_events_delete', {'id': event.id}) }}" class="d-inline">
                                     <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ event.id) }}">
-                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Êtes-vous sûr de vouloir supprimer cet événement ?');">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirmEventDeletion({{ event.id }}, '{{ event.lieu|e('js') }}');">
                                         <i class="fas fa-trash me-1"></i>Supprimer
                                     </button>
                                 </form>
@@ -519,4 +519,24 @@
         </div>
     {% endif %}
 </div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+function confirmEventDeletion(eventId, eventTitle) {
+    const confirmation = confirm(
+        '⚠️ CONFIRMATION DE SUPPRESSION ⚠️\n\n' +
+        'Êtes-vous sûr de vouloir supprimer l\'événement #' + eventId + ' : ' + eventTitle + ' ?\n\n' +
+        'Cette action est IRRÉVERSIBLE et :\n' +
+        '• Supprimera définitivement l\'événement\n' +
+        '• Supprimera toutes les réservations associées\n' +
+        '• Libérera toutes les activités associées\n' +
+        '• Effacera toutes les données associées\n\n' +
+        'Cliquez sur OK pour confirmer ou Annuler pour garder l\'événement.'
+    );
+    
+    return confirmation;
+}
+</script>
 {% endblock %}

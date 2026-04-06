@@ -82,8 +82,7 @@ class Events
     #[Assert\Length(min: 10, minMessage: 'La description des matériels doit contenir au moins {{ limit }} caractères')]
     private ?string $materiels_necessaires = null;
 
-    #[ORM\Column(length: 255)]
-    #[Assert\NotBlank(message: 'Une image est obligatoire')]
+    #[ORM\Column(length: 255, nullable: true)]
     #[Assert\Length(max: 255, maxMessage: 'Le nom du fichier image ne peut pas dépasser {{ limit }} caractères')]
     private ?string $image = null;
 
