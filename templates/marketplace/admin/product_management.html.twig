@@ -1,0 +1,130 @@
+{% extends 'base.html.twig' %}
+{% block title %}Product Management — Admin{% endblock %}
+{% block content %}
+
+<div class="admin-topnav">
+    <div class="admin-topnav-inner">
+        <div style="display:flex; align-items:center; gap:12px;">
+            <a href="{{ path('app_marketplace_admin') }}" class="admin-nav-btn">⬅ Admin Home</a>
+            <span class="admin-nav-title">📦 All Products — Admin View</span>
+        </div>
+        <div style="display:flex; gap:10px;">
+            <a href="{{ path('app_marketplace_admin_dashboard') }}" class="admin-nav-btn">📊 Dashboard</a>
+            <a href="{{ path('app_marketplace_admin_orders') }}" class="admin-nav-btn">🚚 Orders</a>
+            <a href="{{ path('app_marketplace_admin_product_add') }}" class="admin-nav-btn admin-btn-orange">➕ Add Product</a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="admin-filter-bar">
+        <form method="GET" action="{{ path('app_marketplace_product_management') }}" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; width:100%;">
+            <input type="text" name="search" value="{{ search }}" placeholder="🔍 Search all products..." class="admin-input" style="min-width:220px;">
+
+            <select name="user_filter" class="admin-select">
+                <option value="all">👤 All Sellers</option>
+                {% for uid in userIds %}
+                    <option value="{{ uid }}" {% if user_filter == uid %}selected{% endif %}>{{ uid }}</option>
+                {% endfor %}
+            </select>
+
+            <select name="category" class="admin-select">
+                <option value="all">📂 All Categories</option>
+                <option value="camping" {% if category=='camping' %}selected{% endif %}>⛺ Camping</option>
+                <option value="hiking"  {% if category=='hiking'  %}selected{% endif %}>🥾 Hiking</option>
+                <option value="beach"   {% if category=='beach'   %}selected{% endif %}>🏖️ Beach</option>
+                <option value="nature"  {% if category=='nature'  %}selected{% endif %}>🌿 Nature</option>
+            </select>
+
+            <select name="type" class="admin-select">
+                <option value="all">🏷️ All Types</option>
+                <option value="For Sale" {% if type=='For Sale' %}selected{% endif %}>For Sale</option>
+                <option value="For Rent" {% if type=='For Rent' %}selected{% endif %}>For Rent</option>
+            </select>
+
+            <button type="submit" class="admin-btn-primary">🔍 Filter</button>
+            <a href="{{ path('app_marketplace_product_management') }}" class="admin-btn-ghost">🔄 Reset</a>
+
+            <span style="margin-left:auto; color:rgba(255,255,255,0.7); font-size:13px;">
+                {{ products|length }} product{{ products|length != 1 ? 's' : '' }} found
+            </span>
+        </form>
+    </div>
+</div>
+
+<div class="admin-page-content">
+
+    {% for msg in app.flashes('success') %}<div class="flash flash-success">{{ msg }}</div>{% endfor %}
+    {% for msg in app.flashes('error') %}<div class="flash flash-error">{{ msg }}</div>{% endfor %}
+
+    {% if products is empty %}
+        <div class="mp-empty">
+            <div style="font-size:64px; margin-bottom:16px;">📦</div>
+            <h3>No products found</h3>
+            <p>Try adjusting your filters.</p>
+        </div>
+    {% else %}
+        <div class="admin-product-grid">
+            {% for p in products %}
+                <div class="admin-product-card">
+                    <!-- Image -->
+                    <div class="mp-card-img">
+                        {% if p.image %}
+                            <img src="{{ p.image }}" alt="{{ p.title }}" onerror="this.src='https://dummyimage.com/300x200/cccccc/666666&text=No+Photo'">
+                        {% else %}
+                            <div class="mp-card-img-placeholder">📦</div>
+                        {% endif %}
+                        <span class="mp-type-badge {{ p.type == 'For Rent' ? 'rent' : 'sale' }}">{{ p.type }}</span>
+                        <!-- User ID badge -->
+                        <span class="admin-user-badge">👤 {{ p.userId }}</span>
+                    </div>
+
+                    <div class="mp-card-body">
+                        <div class="mp-card-category">📂 {{ p.category }}</div>
+                        <h3 class="mp-card-title">{{ p.title }}</h3>
+                        <p class="mp-card-desc">{{ p.description|slice(0,65) }}{% if p.description|length > 65 %}...{% endif %}</p>
+                        <div class="mp-card-price">{{ p.price|number_format(2) }} TND</div>
+                        <div style="display:flex; gap:8px; font-size:11px; margin-top:6px; flex-wrap:wrap;">
+                            <span style="color:var(--gray-500);">📦 {{ p.quantity }}</span>
+                            <span style="color:#F59E0B;">🔒 {{ p.reserved_quantity ?? 0 }}</span>
+                            <span style="color:#10B981;">✅ {{ p.available_quantity }}</span>
+                        </div>
+                    </div>
+
+                    <div class="mp-card-footer" style="flex-direction:column; gap:8px; align-items:stretch;">
+                        <div style="display:flex; gap:8px;">
+                            <a href="{{ path('app_marketplace_admin_product_edit', {id: p.id}) }}"
+                               class="mp-btn-outline" style="flex:1; text-align:center; font-size:12px;">✏️ Edit</a>
+                            <form method="POST" action="{{ path('app_marketplace_admin_product_delete', {id: p.id}) }}"
+                                  onsubmit="return confirm('Delete product: {{ p.title }}?')" style="flex:1;">
+                                <button type="submit" class="mp-btn-danger" style="width:100%; font-size:12px;">🗑️ Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.admin-user-badge {
+    position: absolute; bottom: 8px; right: 8px;
+    background: rgba(0,0,0,0.65); color: white;
+    font-size: 10px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px;
+    backdrop-filter: blur(4px);
+}
+.admin-product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 18px;
+}
+.admin-product-card {
+    background: white; border-radius: 14px;
+    border: 1px solid var(--gray-200);
+    overflow: hidden; box-shadow: var(--shadow-sm);
+    transition: all 0.25s; display: flex; flex-direction: column;
+}
+.admin-product-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+</style>
+{% endblock %}

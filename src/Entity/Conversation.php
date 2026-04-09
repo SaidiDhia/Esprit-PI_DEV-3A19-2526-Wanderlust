@@ -24,11 +24,20 @@ class Conversation
     #[ORM\Column(type: "datetime", options: ["default" => "CURRENT_TIMESTAMP"])]
     private ?\DateTimeInterface $created_at = null;
 
+    #[ORM\Column(type: "datetime", nullable: true)]
+    private ?\DateTimeInterface $last_activity = null;
+
     #[ORM\Column(type: "boolean", options: ["default" => false])]
     private bool $is_archived = false;
 
     #[ORM\Column(type: "boolean", options: ["default" => false])]
     private bool $is_pinned = false;
+
+    public function __construct()
+    {
+        $this->created_at = new \DateTime();
+        $this->last_activity = new \DateTime();
+    }
 
     // Getters and setters...
     public function getId(): ?int { return $this->id; }
@@ -38,6 +47,8 @@ class Conversation
     public function setType(string $type): self { $this->type = $type; return $this; }
     public function getCreatedAt(): ?\DateTimeInterface { return $this->created_at; }
     public function setCreatedAt(\DateTimeInterface $created_at): self { $this->created_at = $created_at; return $this; }
+    public function getLastActivity(): ?\DateTimeInterface { return $this->last_activity; }
+    public function setLastActivity(?\DateTimeInterface $last_activity): self { $this->last_activity = $last_activity; return $this; }
     public function isArchived(): bool { return $this->is_archived; }
     public function setIsArchived(bool $is_archived): self { $this->is_archived = $is_archived; return $this; }
     public function isPinned(): bool { return $this->is_pinned; }

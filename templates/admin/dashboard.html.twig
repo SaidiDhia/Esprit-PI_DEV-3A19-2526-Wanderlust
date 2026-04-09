@@ -46,7 +46,12 @@
                             <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider">Current</span>
                         {% endif %}
                     </a>
-                    <a href="{{ path('app_marketplace') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Marketplace</a>
+                    <a href="{{ path('app_admin_dashboard', { section: 'marketplace' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'marketplace' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
+                        <span>Marketplace</span>
+                        {% if activeSection == 'marketplace' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
+                        {% endif %}
+                    </a>
                     <a href="{{ path('app_booking') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Booking</a>
                     <a href="{{ path('app_activities') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Activities</a>
                     <a href="{{ path('app_blog') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Blog</a>
@@ -529,6 +534,206 @@
                                     <p class="text-sm text-muted-foreground">No bookings yet.</p>
                                 {% endfor %}
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="marketplace-analytics" class="{{ activeSection == 'marketplace' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6 space-y-6">
+                    <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <h2 class="text-xl font-heading font-bold text-foreground">Marketplace Analytics</h2>
+                            <p class="text-sm text-muted-foreground">Seller and buyer activity, orders, and revenue in one view.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <a href="{{ path('app_marketplace_buyer') }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-xs font-bold transition-colors hover:bg-secondary/50">Buyer View</a>
+                            <a href="{{ path('app_marketplace_seller') }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-xs font-bold transition-colors hover:bg-secondary/50">Seller View</a>
+                            <a href="{{ path('app_admin_dashboard', { section: 'users' }) }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2 text-xs font-bold transition-colors hover:bg-secondary/50">Show Users</a>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Total Products</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-foreground">{{ marketplaceStats.totalProducts }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Active Listings</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-primary">{{ marketplaceStats.activeListings }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Sellers</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-accent">{{ marketplaceStats.sellerCount }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Gross Revenue</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-foreground">{{ marketplaceStats.grossRevenue|number_format(2) }} TND</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Orders Total</p>
+                            <p class="mt-1 text-2xl font-heading font-bold text-foreground">{{ marketplaceStats.totalOrders }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pending</p>
+                            <p class="mt-1 text-2xl font-heading font-bold text-destructive">{{ marketplaceStats.pendingOrders }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Confirmed</p>
+                            <p class="mt-1 text-2xl font-heading font-bold text-primary">{{ marketplaceStats.confirmedOrders }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Orders Trend</h3>
+                                <span class="text-xs text-muted-foreground">Last 7 days</span>
+                            </div>
+                            <div class="h-[260px] w-full">
+                                <canvas id="marketplaceOrdersTrendChart" class="h-full w-full"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Top Products</h3>
+                            <div class="space-y-3">
+                                {% for product in marketplaceTopProducts %}
+                                    <div class="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+                                        <div class="min-w-0">
+                                            <p class="truncate text-sm font-semibold text-foreground">{{ product.title }}</p>
+                                            <p class="truncate text-xs text-muted-foreground">{{ product.category ?: 'Uncategorized' }}</p>
+                                        </div>
+                                        <div class="ml-3 shrink-0 text-right">
+                                            <p class="text-sm font-bold text-primary">{{ product.sold_units }} sold</p>
+                                            <p class="text-xs text-muted-foreground">{{ product.revenue|number_format(2) }} TND</p>
+                                        </div>
+                                    </div>
+                                {% else %}
+                                    <p class="text-sm text-muted-foreground">No product sales data yet.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Recent Orders</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[860px] border-collapse">
+                                <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Order</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Customer</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">City</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Date</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Total</th>
+                                    <th class="py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for order in marketplaceRecentOrders %}
+                                    <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                        <td class="py-3 pr-3 text-sm font-semibold text-foreground">#{{ order.id_facture }}</td>
+                                        <td class="py-3 pr-3 text-sm text-foreground">{{ order.customer_name ?: 'Unknown customer' }}</td>
+                                        <td class="py-3 pr-3 text-sm text-muted-foreground">{{ order.customer_city ?: '-' }}</td>
+                                        <td class="py-3 pr-3 text-sm text-muted-foreground">{{ order.date_facture|date('Y-m-d H:i') }}</td>
+                                        <td class="py-3 pr-3 text-sm font-semibold text-foreground">{{ order.total_price|number_format(2) }} TND</td>
+                                        <td class="py-3 text-sm">
+                                            {% set status = order.delivery_status|lower %}
+                                            <span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ status == 'confirmed' ? 'bg-primary/10 text-primary' : (status == 'pending' ? 'bg-accent/20 text-accent' : 'bg-destructive/10 text-destructive') }}">{{ order.delivery_status }}</span>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="6" class="py-8 text-center text-sm text-muted-foreground">No marketplace orders yet.</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-5 space-y-4">
+                        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Create Marketplace Product</h3>
+                                <p class="text-xs text-muted-foreground">Admin can create listings for any active seller.</p>
+                            </div>
+                        </div>
+                        <form method="post" action="{{ path('app_admin_marketplace_product_create') }}" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                            <input type="hidden" name="_token" value="{{ csrf_token('admin_marketplace_product_create') }}">
+                            <input type="text" name="title" required placeholder="Title" class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                            <input type="text" name="category" required placeholder="Category" class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                            <select name="type" required class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                                <option value="For Sale">For Sale</option>
+                                <option value="For Rent">For Rent</option>
+                            </select>
+                            <select name="user_id" required class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                                <option value="">Select seller</option>
+                                {% for seller in marketplaceSellerOptions %}
+                                    <option value="{{ seller.id }}">{{ seller.full_name }} ({{ seller.email }})</option>
+                                {% endfor %}
+                            </select>
+                            <input type="number" name="price" min="0.01" step="0.01" required placeholder="Price" class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                            <input type="number" name="quantity" min="0" required placeholder="Quantity" class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                            <input type="url" name="image" placeholder="Image URL (optional)" class="rounded-xl border border-border bg-background px-3 py-2 text-sm md:col-span-2">
+                            <textarea name="description" rows="2" required placeholder="Product description" class="rounded-xl border border-border bg-background px-3 py-2 text-sm xl:col-span-3"></textarea>
+                            <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary/90">Create Product</button>
+                        </form>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Manage Products (CRUD)</h3>
+                        <div class="space-y-3">
+                            {% for product in marketplaceProducts %}
+                                <details class="rounded-xl border border-border bg-background p-3">
+                                    <summary class="cursor-pointer list-none">
+                                        <div class="flex flex-wrap items-center justify-between gap-3">
+                                            <div class="min-w-0">
+                                                <p class="truncate text-sm font-semibold text-foreground">{{ product.title }}</p>
+                                                <p class="truncate text-xs text-muted-foreground">Seller: {{ product.seller_name }} · {{ product.type }} · {{ product.category }}</p>
+                                            </div>
+                                            <div class="flex items-center gap-2 text-xs">
+                                                <span class="rounded-full bg-secondary/30 px-2.5 py-1 font-semibold text-foreground">{{ product.price|number_format(2) }} TND</span>
+                                                <span class="rounded-full bg-primary/10 px-2.5 py-1 font-semibold text-primary">Qty {{ product.quantity }}</span>
+                                                <span class="rounded-full bg-accent/20 px-2.5 py-1 font-semibold text-accent">Reserved {{ product.reserved_quantity }}</span>
+                                            </div>
+                                        </div>
+                                    </summary>
+
+                                    <div class="mt-3 space-y-3 border-t border-border/60 pt-3">
+                                        <form method="post" action="{{ path('app_admin_marketplace_product_update', { id: product.id }) }}" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('admin_marketplace_product_update_' ~ product.id) }}">
+                                            <input type="text" name="title" value="{{ product.title }}" required class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                                            <input type="text" name="category" value="{{ product.category }}" required class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                                            <select name="type" required class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                                                <option value="For Sale" {% if product.type == 'For Sale' %}selected{% endif %}>For Sale</option>
+                                                <option value="For Rent" {% if product.type == 'For Rent' %}selected{% endif %}>For Rent</option>
+                                            </select>
+                                            <select name="user_id" required class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                                                {% for seller in marketplaceSellerOptions %}
+                                                    <option value="{{ seller.id }}" {% if seller.id == product.userId %}selected{% endif %}>{{ seller.full_name }} ({{ seller.email }})</option>
+                                                {% endfor %}
+                                            </select>
+                                            <input type="number" name="price" min="0.01" step="0.01" value="{{ product.price }}" required class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                                            <input type="number" name="quantity" min="0" value="{{ product.quantity }}" required class="rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                                            <input type="url" name="image" value="{{ product.image }}" placeholder="Image URL" class="rounded-xl border border-border bg-background px-3 py-2 text-sm md:col-span-2">
+                                            <textarea name="description" rows="2" required class="rounded-xl border border-border bg-background px-3 py-2 text-sm xl:col-span-3">{{ product.description }}</textarea>
+                                            <div class="flex gap-2">
+                                                <button type="submit" class="rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white">Save</button>
+                                            </div>
+                                        </form>
+
+                                        <form method="post" action="{{ path('app_admin_marketplace_product_delete', { id: product.id }) }}" onsubmit="return confirm('Delete this product?');" class="flex justify-end">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('admin_marketplace_product_delete_' ~ product.id) }}">
+                                            <button type="submit" class="rounded-xl bg-destructive px-4 py-2 text-xs font-bold text-white">Delete Product</button>
+                                        </form>
+                                    </div>
+                                </details>
+                            {% else %}
+                                <p class="text-sm text-muted-foreground">No products found. Create one above.</p>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
@@ -1022,6 +1227,39 @@
         }
     }
 
+    function initMarketplaceCharts() {
+        if (typeof Chart === 'undefined') {
+            return;
+        }
+
+        const marketplaceOrdersTrendElement = document.getElementById('marketplaceOrdersTrendChart');
+        if (marketplaceOrdersTrendElement) {
+            const ordersTrendData = {{ marketplaceOrdersPerDay|json_encode|raw }};
+            new Chart(marketplaceOrdersTrendElement, {
+                type: 'line',
+                data: {
+                    labels: ordersTrendData.map((item) => item.label),
+                    datasets: [{
+                        label: 'Orders',
+                        data: ordersTrendData.map((item) => item.count),
+                        borderColor: '#0ea5e9',
+                        backgroundColor: 'rgba(14, 165, 233, 0.14)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
+    }
+
     function openCreateUserModal() {
         userForm.action = '{{ path('app_admin_user_create') }}';
         userFormToken.value = '{{ csrf_token('admin_user_create') }}';
@@ -1495,6 +1733,9 @@
     {% endif %}
     {% if activeSection == 'messaging' %}
     initMessagingCharts();
+    {% endif %}
+    {% if activeSection == 'marketplace' %}
+    initMarketplaceCharts();
     {% endif %}
     initImageUploaders();
     initExistingImageRemoval();

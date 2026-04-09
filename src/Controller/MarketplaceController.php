@@ -12,8 +12,7 @@ use PDO;
 #[Route('/marketplace', name: 'app_marketplace')]
 class MarketplaceController extends AbstractController
 {
-    // ── Hardcoded current user (replace with real auth later) ──────────────────
-    private string $CURRENT_USER_ID = '1';
+    private ?string $CURRENT_USER_ID = null;
 
     private PDO $pdo;
 
@@ -44,6 +43,8 @@ class MarketplaceController extends AbstractController
     #[Route('/buyer', name: '_buyer')]
     public function buyerHome(Request $request): Response
     {
+        $this->ensureCurrentUserId();
+
         $search   = $request->query->get('search', '');
         $category = $request->query->get('category', '');
         $type     = $request->query->get('type', '');
@@ -101,6 +102,8 @@ class MarketplaceController extends AbstractController
     #[Route('/seller', name: '_seller')]
     public function sellerHome(Request $request): Response
     {
+        $this->ensureCurrentUserId();
+
         $search   = $request->query->get('search', '');
         $category = $request->query->get('category', '');
         $type     = $request->query->get('type', '');
@@ -146,6 +149,8 @@ class MarketplaceController extends AbstractController
     #[Route('/seller/add', name: '_product_add', methods: ['GET', 'POST'])]
     public function addProduct(Request $request): Response
     {
+        $this->ensureCurrentUserId();
+
         if ($request->isMethod('POST')) {
             $stmt = $this->pdo->prepare(
                 'INSERT INTO products (title, description, type, price, quantity, category, image, created_date, userId)
@@ -178,6 +183,8 @@ class MarketplaceController extends AbstractController
     #[Route('/seller/edit/{id}', name: '_product_edit', methods: ['GET', 'POST'])]
     public function editProduct(int $id, Request $request): Response
     {
+        $this->ensureCurrentUserId();
+
         $stmt = $this->pdo->prepare('SELECT * FROM products WHERE id = ? AND userId = ?');
         $stmt->execute([$id, $this->CURRENT_USER_ID]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -219,6 +226,8 @@ class MarketplaceController extends AbstractController
     #[Route('/seller/delete/{id}', name: '_product_delete', methods: ['POST'])]
     public function deleteProduct(int $id): Response
     {
+        $this->ensureCurrentUserId();
+
         $stmt = $this->pdo->prepare('DELETE FROM products WHERE id = ? AND userId = ?');
         $stmt->execute([$id, $this->CURRENT_USER_ID]);
         $this->addFlash('success', '🗑️ Product deleted.');
@@ -232,6 +241,8 @@ class MarketplaceController extends AbstractController
     #[Route('/product/{id}', name: '_product_details')]
     public function productDetails(int $id): Response
     {
+        $this->ensureCurrentUserId();
+
         $stmt = $this->pdo->prepare('SELECT * FROM products WHERE id = ?');
         $stmt->execute([$id]);
         $product = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -256,6 +267,8 @@ class MarketplaceController extends AbstractController
     #[Route('/cart', name: '_cart')]
     public function cart(): Response
     {
+        $this->ensureCurrentUserId();
+
         $cartId    = $this->getOrCreateCart($this->CURRENT_USER_ID);
         $cartItems = $this->getCartItemsDetailed($cartId);
         $total     = array_reduce($cartItems, fn($sum, $item) => $sum + ($item['price'] * $item['cart_qty']), 0);
@@ -270,6 +283,8 @@ class MarketplaceController extends AbstractController
     #[Route('/cart/add', name: '_cart_add', methods: ['POST'])]
     public function addToCart(Request $request): Response
     {
+        $this->ensureCurrentUserId();
+
         $productId = (int) $request->request->get('product_id');
         $quantity  = (int) $request->request->get('quantity', 1);
 
@@ -316,6 +331,8 @@ class MarketplaceController extends AbstractController
     #[Route('/cart/remove/{productId}', name: '_cart_remove', methods: ['POST'])]
     public function removeFromCart(int $productId): Response
     {
+        $this->ensureCurrentUserId();
+
         $cartId = $this->getOrCreateCart($this->CURRENT_USER_ID);
         $stmt   = $this->pdo->prepare('DELETE FROM cart_item WHERE cart_id = ? AND product_id = ?');
         $stmt->execute([$cartId, $productId]);
@@ -325,6 +342,8 @@ class MarketplaceController extends AbstractController
     #[Route('/cart/update', name: '_cart_update', methods: ['POST'])]
     public function updateCart(Request $request): Response
     {
+        $this->ensureCurrentUserId();
+
         $productId = (int) $request->request->get('product_id');
         $quantity  = (int) $request->request->get('quantity');
         $cartId    = $this->getOrCreateCart($this->CURRENT_USER_ID);
@@ -347,6 +366,8 @@ class MarketplaceController extends AbstractController
     #[Route('/checkout', name: '_checkout')]
     public function checkout(): Response
     {
+        $this->ensureCurrentUserId();
+
         $cartId    = $this->getOrCreateCart($this->CURRENT_USER_ID);
         $cartItems = $this->getCartItemsDetailed($cartId);
         $total     = array_reduce($cartItems, fn($sum, $item) => $sum + ($item['price'] * $item['cart_qty']), 0);
@@ -365,6 +386,8 @@ class MarketplaceController extends AbstractController
     #[Route('/checkout/confirm', name: '_checkout_confirm', methods: ['POST'])]
     public function confirmOrder(Request $request): Response
     {
+        $this->ensureCurrentUserId();
+
         $paymentMethod = $request->request->get('payment_method', 'cash');
         $cartId        = $this->getOrCreateCart($this->CURRENT_USER_ID);
         $cartItems     = $this->getCartItemsDetailed($cartId);
@@ -462,6 +485,8 @@ class MarketplaceController extends AbstractController
     #[Route('/orders', name: '_orders')]
     public function orders(): Response
     {
+        $this->ensureCurrentUserId();
+
         $stmt = $this->pdo->prepare('SELECT * FROM facture WHERE user_id = ? ORDER BY date_facture DESC');
         $stmt->execute([$this->CURRENT_USER_ID]);
         $factures = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -474,6 +499,8 @@ class MarketplaceController extends AbstractController
     #[Route('/orders/{id}', name: '_order_detail')]
     public function orderDetail(int $id): Response
     {
+        $this->ensureCurrentUserId();
+
         $stmt = $this->pdo->prepare('SELECT * FROM facture WHERE id_facture = ? AND user_id = ?');
         $stmt->execute([$id, $this->CURRENT_USER_ID]);
         $facture = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -504,6 +531,8 @@ class MarketplaceController extends AbstractController
     #[Route('/seller/orders', name: '_seller_orders')]
     public function sellerOrders(): Response
     {
+        $this->ensureCurrentUserId();
+
         // Orders that include at least one product owned by this seller
         $sql = '
             SELECT DISTINCT f.*, da.full_name, da.city, da.phone
@@ -603,6 +632,8 @@ class MarketplaceController extends AbstractController
     #[Route('/seller/dashboard', name: '_seller_dashboard')]
     public function sellerDashboard(): Response
     {
+        $this->ensureCurrentUserId();
+
         // Total products
         $stmt = $this->pdo->prepare('SELECT COUNT(*) FROM products WHERE userId = ?');
         $stmt->execute([$this->CURRENT_USER_ID]);
@@ -656,6 +687,20 @@ class MarketplaceController extends AbstractController
     // ══════════════════════════════════════════════════════════════════════════
     //  HELPERS
     // ══════════════════════════════════════════════════════════════════════════
+
+    private function ensureCurrentUserId(): void
+    {
+        if ($this->CURRENT_USER_ID !== null && $this->CURRENT_USER_ID !== '') {
+            return;
+        }
+
+        $user = $this->getUser();
+        if ($user === null || !method_exists($user, 'getId')) {
+            throw $this->createAccessDeniedException('You must be logged in to access the marketplace.');
+        }
+
+        $this->CURRENT_USER_ID = (string) $user->getId();
+    }
 
     private function getOrCreateCart(string $userId): int
     {

@@ -1,121 +1,85 @@
 {% extends 'base.html.twig' %}
 {% block title %}Checkout — WanderLust{% endblock %}
 {% block content %}
-
-<div class="mp-topnav">
-    <div class="mp-topnav-inner">
-        <a href="{{ path('app_marketplace_cart') }}" class="mp-nav-btn mp-nav-back">← Back to Cart</a>
-        <span style="font-size:16px; font-weight:700; color:white;">🧾 Checkout</span>
-        <span></span>
+<section class="min-h-[calc(100vh-64px)] bg-gradient-to-b from-slate-50 via-white to-sky-50/40 px-4 py-8">
+<div class="mx-auto max-w-6xl space-y-6">
+    <div class="flex items-center justify-between">
+        <a href="{{ path('app_marketplace_cart') }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Back to Cart</a>
+        <h1 class="text-xl font-heading font-bold text-slate-900">Checkout</h1>
     </div>
-</div>
 
-<div class="mp-page-content" style="max-width:900px;">
     {% for msg in app.flashes('error') %}
-        <div class="flash flash-error">{{ msg }}</div>
+        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">{{ msg }}</div>
     {% endfor %}
 
     <form method="POST" action="{{ path('app_marketplace_checkout_confirm') }}">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px;">
-
-            <!-- LEFT: Delivery Form -->
-            <div>
-                <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:28px; box-shadow:var(--shadow-sm); margin-bottom:24px;">
-                    <h3 style="font-family:var(--font-display); font-size:20px; font-weight:700; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--gray-100);">📦 Delivery Address</h3>
-
-                    <div class="mp-form-group">
-                        <label class="mp-form-label">Full Name *</label>
-                        <input type="text" name="full_name" required class="mp-form-input" placeholder="Your full name">
-                    </div>
-                    <div class="mp-form-group">
-                        <label class="mp-form-label">Phone *</label>
-                        <input type="tel" name="phone" required class="mp-form-input" placeholder="(+216) XX XXX XXX">
-                    </div>
-                    <div class="mp-form-group">
-                        <label class="mp-form-label">Email (for confirmation)</label>
-                        <input type="email" name="email" class="mp-form-input" placeholder="your@email.com">
-                    </div>
-                    <div class="mp-form-group">
-                        <label class="mp-form-label">Address *</label>
-                        <input type="text" name="address" required class="mp-form-input" placeholder="Street, Building, Apt...">
-                    </div>
-                    <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px;">
-                        <div class="mp-form-group">
-                            <label class="mp-form-label">City *</label>
-                            <input type="text" name="city" required class="mp-form-input" placeholder="Tunis">
-                        </div>
-                        <div class="mp-form-group">
-                            <label class="mp-form-label">Postal Code</label>
-                            <input type="text" name="postal_code" class="mp-form-input" placeholder="1000">
-                        </div>
-                    </div>
-                    <div class="mp-form-group">
-                        <label class="mp-form-label">Notes</label>
-                        <textarea name="notes" class="mp-form-input" rows="2" placeholder="Delivery instructions..."></textarea>
+        <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div class="space-y-4">
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <h3 class="mb-4 text-lg font-heading font-bold text-slate-900">Delivery Address</h3>
+                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div class="space-y-1 md:col-span-2"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Full Name</label><input type="text" name="full_name" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
+                        <div class="space-y-1"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</label><input type="tel" name="phone" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
+                        <div class="space-y-1"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Email</label><input type="email" name="email" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
+                        <div class="space-y-1 md:col-span-2"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Address</label><input type="text" name="address" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
+                        <div class="space-y-1"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">City</label><input type="text" name="city" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
+                        <div class="space-y-1"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Postal Code</label><input type="text" name="postal_code" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
+                        <div class="space-y-1 md:col-span-2"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Notes</label><textarea name="notes" rows="2" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></textarea></div>
                     </div>
                 </div>
 
-                <!-- Payment Method -->
-                <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:28px; box-shadow:var(--shadow-sm);">
-                    <h3 style="font-family:var(--font-display); font-size:20px; font-weight:700; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--gray-100);">💳 Payment Method</h3>
-
-                    <label class="mp-payment-option" id="opt-cash">
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <h3 class="mb-4 text-lg font-heading font-bold text-slate-900">Payment Method</h3>
+                    <label class="mp-payment-option selected" id="opt-cash">
                         <input type="radio" name="payment_method" value="cash" checked onchange="selectPayment(this)">
-                        <span style="font-size:28px;">💵</span>
                         <div>
                             <div style="font-weight:700;">Cash on Delivery</div>
-                            <div style="font-size:12px; color:var(--gray-400);">Pay when your order arrives. Stock reserved until confirmed.</div>
+                            <div style="font-size:12px; color:var(--gray-400);">Stock is reserved until order confirmation.</div>
                         </div>
                     </label>
-
                     <label class="mp-payment-option" id="opt-online" style="margin-top:12px;">
                         <input type="radio" name="payment_method" value="online" onchange="selectPayment(this)">
-                        <span style="font-size:28px;">💳</span>
                         <div>
-                            <div style="font-weight:700;">Pay Online (Stripe)</div>
-                            <div style="font-size:12px; color:var(--gray-400);">Instant confirmation. Stock deducted immediately.</div>
+                            <div style="font-weight:700;">Pay Online</div>
+                            <div style="font-size:12px; color:var(--gray-400);">Instant confirmation and stock deduction.</div>
                         </div>
                     </label>
                 </div>
             </div>
 
-            <!-- RIGHT: Order Summary -->
             <div>
-                <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:28px; box-shadow:var(--shadow-sm); position:sticky; top:160px;">
-                    <h3 style="font-family:var(--font-display); font-size:20px; font-weight:700; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--gray-100);">🛒 Order Summary</h3>
-
-                    {% for item in cartItems %}
-                        <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px;">
-                            <div style="width:50px; height:50px; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--gray-100);">
-                                {% if item.image %}
-                                    <img src="{{ item.image }}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentNode.innerHTML='📦'">
-                                {% else %}
-                                    <div style="display:flex; align-items:center; justify-content:center; height:100%;">📦</div>
-                                {% endif %}
+                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:sticky xl:top-24">
+                    <h3 class="mb-4 text-lg font-heading font-bold text-slate-900">Order Summary</h3>
+                    <div class="space-y-3">
+                        {% for item in cartItems %}
+                            <div class="flex items-center gap-3">
+                                <div class="h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
+                                    {% if item.image %}
+                                        <img src="{{ item.image }}" alt="{{ item.product_title }}" class="h-full w-full object-cover" onerror="this.parentNode.innerHTML='No image'">
+                                    {% endif %}
+                                </div>
+                                <div class="flex-1 text-sm">
+                                    <p class="font-semibold text-slate-900">{{ item.product_title }}</p>
+                                    <p class="text-xs text-slate-500">x {{ item.cart_qty }}</p>
+                                </div>
+                                <p class="text-sm font-bold text-slate-900">{{ (item.price * item.cart_qty)|number_format(2) }} TND</p>
                             </div>
-                            <div style="flex:1; font-size:13px;">
-                                <div style="font-weight:600; color:var(--gray-900);">{{ item.product_title }}</div>
-                                <div style="color:var(--gray-400);">× {{ item.cart_qty }}</div>
-                            </div>
-                            <div style="font-weight:700; color:var(--gray-900); white-space:nowrap;">{{ (item.price * item.cart_qty)|number_format(2) }} TND</div>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
 
-                    <div style="border-top:2px solid var(--gray-100); padding-top:16px; margin-top:8px;">
-                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                            <span style="font-size:16px; font-weight:600; color:var(--gray-700);">Total:</span>
-                            <span style="font-family:var(--font-display); font-size:28px; font-weight:900; color:#2E7D32;">{{ total|number_format(2) }} TND</span>
+                    <div class="mt-5 border-t border-slate-100 pt-4">
+                        <div class="mb-4 flex items-center justify-between">
+                            <span class="text-sm font-semibold text-slate-700">Total</span>
+                            <span class="text-2xl font-heading font-bold text-slate-900">{{ total|number_format(2) }} TND</span>
                         </div>
-                        <button type="submit" class="mp-btn-primary" style="width:100%; padding:16px; font-size:16px; border-radius:12px;">
-                            ✅ Place Order
-                        </button>
+                        <button type="submit" class="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700">Place Order</button>
                     </div>
                 </div>
             </div>
-
         </div>
     </form>
 </div>
+</section>
 
 {% endblock %}
 {% block javascripts %}
@@ -124,6 +88,5 @@ function selectPayment(radio) {
     document.querySelectorAll('.mp-payment-option').forEach(el => el.classList.remove('selected'));
     radio.closest('.mp-payment-option').classList.add('selected');
 }
-document.querySelector('.mp-payment-option').classList.add('selected');
 </script>
 {% endblock %}

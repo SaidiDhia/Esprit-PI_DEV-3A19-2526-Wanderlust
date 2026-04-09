@@ -1,85 +1,72 @@
 {% extends 'base.html.twig' %}
 {% block title %}My Cart — WanderLust{% endblock %}
 {% block content %}
-
-<div class="mp-topnav">
-    <div class="mp-topnav-inner">
-        <a href="{{ path('app_marketplace_buyer') }}" class="mp-nav-btn mp-nav-back">← Back to Products</a>
-        <span style="font-size:16px; font-weight:700; color:white;">🛒 Your Shopping Cart</span>
-        <span></span>
+<section class="min-h-[calc(100vh-64px)] bg-gradient-to-b from-slate-50 via-white to-emerald-50/40 px-4 py-8">
+<div class="mx-auto max-w-6xl space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <a href="{{ path('app_marketplace_buyer') }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Back to Products</a>
+        <h1 class="text-xl font-heading font-bold text-slate-900">Shopping Cart</h1>
     </div>
-</div>
 
-<div class="mp-page-content" style="max-width:900px;">
     {% for msg in app.flashes('success') %}
-        <div class="flash flash-success">{{ msg }}</div>
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">{{ msg }}</div>
     {% endfor %}
     {% for msg in app.flashes('error') %}
-        <div class="flash flash-error">{{ msg }}</div>
+        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">{{ msg }}</div>
     {% endfor %}
 
     {% if cartItems is empty %}
-        <div class="mp-empty">
-            <div style="font-size:64px; margin-bottom:16px;">🛒</div>
-            <h3>Your cart is empty</h3>
-            <p>Add some products to get started!</p>
-            <a href="{{ path('app_marketplace_buyer') }}" class="mp-btn-primary" style="margin-top:16px; display:inline-block;">🛍️ Browse Products</a>
+        <div class="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
+            <h3 class="text-lg font-heading font-bold text-slate-900">Your cart is empty</h3>
+            <p class="mt-2 text-sm text-slate-600">Add some products to get started.</p>
+            <a href="{{ path('app_marketplace_buyer') }}" class="mt-4 inline-flex rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-slate-800">Browse Products</a>
         </div>
     {% else %}
-        <!-- Cart Items -->
-        <div style="display:flex; flex-direction:column; gap:16px; margin-bottom:24px;">
+        <div class="space-y-3">
             {% for item in cartItems %}
-                <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:20px; display:flex; gap:20px; align-items:center; box-shadow:var(--shadow-sm);">
-                    <!-- Image -->
-                    <div style="width:90px; height:90px; border-radius:10px; overflow:hidden; flex-shrink:0; background:var(--gray-100);">
+                <div class="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center">
+                    <div class="h-20 w-20 overflow-hidden rounded-xl bg-slate-100">
                         {% if item.image %}
-                            <img src="{{ item.image }}" alt="{{ item.product_title }}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentNode.innerHTML='<div style=font-size:32px;display:flex;align-items:center;justify-content:center;height:100%>📦</div>'">
+                            <img src="{{ item.image }}" alt="{{ item.product_title }}" class="h-full w-full object-cover" onerror="this.parentNode.innerHTML='<div style=display:flex;align-items:center;justify-content:center;height:100%;font-size:14px;color:#64748b>No image</div>'">
                         {% else %}
-                            <div style="display:flex; align-items:center; justify-content:center; height:100%; font-size:32px;">📦</div>
+                            <div class="flex h-full items-center justify-center text-sm text-slate-400">No image</div>
                         {% endif %}
                     </div>
 
-                    <!-- Info -->
-                    <div style="flex:1;">
-                        <h4 style="font-family:var(--font-display); font-size:16px; font-weight:700; color:var(--gray-900); margin-bottom:4px;">{{ item.product_title }}</h4>
-                        <div style="font-size:12px; color:var(--gray-400); margin-bottom:8px;">📂 {{ item.category }} · {{ item.type }}</div>
-                        <div style="font-size:18px; font-weight:700; color:#2E7D32;">{{ item.price|number_format(2) }} TND</div>
+                    <div class="flex-1">
+                        <h4 class="text-base font-heading font-bold text-slate-900">{{ item.product_title }}</h4>
+                        <p class="mt-1 text-xs text-slate-500">{{ item.category }} · {{ item.type }}</p>
+                        <p class="mt-2 text-sm font-semibold text-slate-900">{{ item.price|number_format(2) }} TND</p>
                     </div>
 
-                    <!-- Quantity update -->
-                    <form method="POST" action="{{ path('app_marketplace_cart_update') }}" style="display:flex; align-items:center; gap:8px;">
+                    <form method="POST" action="{{ path('app_marketplace_cart_update') }}" class="flex items-center gap-2">
                         <input type="hidden" name="product_id" value="{{ item.product_id }}">
-                        <input type="number" name="quantity" value="{{ item.cart_qty }}" min="1" max="{{ item.stock }}"
-                               class="mp-qty-input" style="width:70px;" onchange="this.form.submit()">
+                        <input type="number" name="quantity" value="{{ item.cart_qty }}" min="1" max="{{ item.stock }}" class="w-20 rounded-xl border border-slate-200 bg-slate-50 px-2 py-2 text-sm text-slate-900" onchange="this.form.submit()">
                     </form>
 
-                    <!-- Subtotal -->
-                    <div style="text-align:right; min-width:100px;">
-                        <div style="font-size:12px; color:var(--gray-400);">Subtotal</div>
-                        <div style="font-size:18px; font-weight:800; color:var(--blue-primary);">{{ (item.price * item.cart_qty)|number_format(2) }} TND</div>
+                    <div class="text-right sm:min-w-[120px]">
+                        <div class="text-xs text-slate-500">Subtotal</div>
+                        <div class="text-base font-bold text-sky-700">{{ (item.price * item.cart_qty)|number_format(2) }} TND</div>
                     </div>
 
-                    <!-- Remove -->
                     <form method="POST" action="{{ path('app_marketplace_cart_remove', {productId: item.product_id}) }}">
-                        <button type="submit" style="background:none; border:none; cursor:pointer; font-size:20px; color:#EF4444;" title="Remove">🗑️</button>
+                        <button type="submit" class="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700 transition-colors hover:bg-rose-100" title="Remove">Remove</button>
                     </form>
                 </div>
             {% endfor %}
         </div>
 
-        <!-- Total & Checkout -->
-        <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:24px; box-shadow:var(--shadow-sm);">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <div style="font-size:14px; color:var(--gray-500);">Total ({{ cartItems|length }} item{{ cartItems|length > 1 ? 's' : '' }})</div>
-                    <div style="font-family:var(--font-display); font-size:36px; font-weight:900; color:#2E7D32;">{{ total|number_format(2) }} TND</div>
+                    <p class="text-sm text-slate-600">Total ({{ cartItems|length }} item{{ cartItems|length > 1 ? 's' : '' }})</p>
+                    <p class="mt-1 text-3xl font-heading font-bold text-slate-900">{{ total|number_format(2) }} TND</p>
                 </div>
-                <a href="{{ path('app_marketplace_checkout') }}" class="mp-btn-primary" style="padding:16px 40px; font-size:16px; border-radius:50px;">
-                    🛒 Proceed to Checkout
-                </a>
+                <a href="{{ path('app_marketplace_checkout') }}" class="rounded-xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700">Proceed to Checkout</a>
             </div>
         </div>
     {% endif %}
 </div>
+</section>
 
 {% endblock %}
