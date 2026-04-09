@@ -751,14 +751,14 @@ class BookingController extends AbstractController
 
         if (!$this->isCsrfTokenValid('booking_host_confirm_' . $booking->getId(), (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Invalid booking token. Please try again.');
-            return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $hostUser->getId()]);
+            return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
         }
 
         $booking->setStatus(Booking::STATUS_CONFIRMED);
         $em->flush();
 
         $this->addFlash('success', 'Booking request approved.');
-        return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $hostUser->getId()]);
+        return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
     }
 
     #[Route('/host/bookings/{id}/reject', name: '_host_booking_reject', methods: ['POST'])]
@@ -777,14 +777,14 @@ class BookingController extends AbstractController
 
         if (!$this->isCsrfTokenValid('booking_host_reject_' . $booking->getId(), (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Invalid booking token. Please try again.');
-            return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $hostUser->getId()]);
+            return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
         }
 
         $booking->setStatus(Booking::STATUS_REJECTED);
         $em->flush();
 
         $this->addFlash('success', 'Booking request rejected.');
-        return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $hostUser->getId()]);
+        return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
     }
 
     private function countHostPendingRequests(EntityManagerInterface $em, User $user): int
@@ -1189,6 +1189,11 @@ class BookingController extends AbstractController
         }
 
         return $user;
+    }
+
+    private function normalizeDecimalString(string $value): string
+    {
+        return rtrim(rtrim(number_format((float) $value, 8, '.', ''), '0'), '.') ?: '0';
     }
 
     private function isPlaceAvailable(EntityManagerInterface $em, Place $place, \DateTimeImmutable $start, \DateTimeImmutable $end, ?int $ignoreBookingId = null): bool
