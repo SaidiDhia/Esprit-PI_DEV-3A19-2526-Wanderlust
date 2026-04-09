@@ -12,7 +12,7 @@
 # https://symfony.com/doc/current/configuration/secrets.html
 #
 # Run "composer dump-env prod" to compile .env files for production use (requires symfony/flex >=1.2).
-# https://symfony.com/doc/current/best_practices.html#use-environment-variables-for-infrastructure-configuration
+# https://symfony.com/doc/current/best_practices.html#use-parameters-for-infrastructure-configuration
 
 ###> symfony/framework-bundle ###
 APP_ENV=dev
@@ -20,14 +20,5 @@ APP_SECRET=d2afbc4656cc9d276e0e3dde1b77e096
 ###< symfony/framework-bundle ###
 
 ###> doctrine/doctrine-bundle ###
-# Format described at https://www.doctrine-project.org/projects/doctrine-dbal/en/latest/reference/configuration.html#connecting-using-a-url
-# IMPORTANT: You MUST configure your server version, either here or in config/packages/doctrine.yaml
-#
-DATABASE_URL="mysql://root:saididhia@127.0.0.1:3306/wonderlust_db?serverVersion=8.0.0&charset=utf8mb4"
+DATABASE_URL="mysql://root@127.0.0.1:3306/wonderlust_db?serverVersion=8.0&charset=utf8mb4"
 ###< doctrine/doctrine-bundle ###
-
-###> lexik/jwt-authentication-bundle ###
-JWT_SECRET_KEY=%kernel.project_dir%/config/jwt/private.pem
-JWT_PUBLIC_KEY=%kernel.project_dir%/config/jwt/public.pem
-JWT_PASSPHRASE=2a8896dc73ef1ffd8709d1889d906f4b39752ca3815d09450473493e68ef6c8e
-###< lexik/jwt-authentication-bundle ###
