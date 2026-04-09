@@ -57,7 +57,11 @@ SQL);
         }
 
         if ($this->tableExists('booking')) {
-            $this->addColumnIfMissing('booking', 'created_at', "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '(DC2Type:datetime_immutable)' AFTER `cancel_reason`");
+            $this->addColumnIfMissing('booking', 'cancel_reason', "VARCHAR(255) DEFAULT NULL");
+            $this->addColumnIfMissing('booking', 'cancelled_by', "VARCHAR(10) DEFAULT NULL");
+            $this->addColumnIfMissing('booking', 'refund_amount', "NUMERIC(10, 2) NOT NULL DEFAULT 0");
+            $this->addColumnIfMissing('booking', 'cancelled_at', "DATETIME DEFAULT NULL COMMENT '(DC2Type:datetime_immutable)'");
+            $this->addColumnIfMissing('booking', 'created_at', "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '(DC2Type:datetime_immutable)'");
         } else {
             $this->addSql(<<<'SQL'
 CREATE TABLE booking (
