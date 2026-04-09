@@ -1,0 +1,118 @@
+{% extends 'base.html.twig' %}
+{% block title %}All Factures — Admin{% endblock %}
+{% block content %}
+
+<div class="admin-topnav">
+    <div class="admin-topnav-inner">
+        <a href="{{ path('app_marketplace_admin') }}" class="admin-nav-btn">⬅ Admin Home</a>
+        <span class="admin-nav-title">🧾 All Factures — Complete History</span>
+        <a href="{{ path('app_marketplace_admin_orders') }}" class="admin-nav-btn">🚚 Orders</a>
+    </div>
+
+    <!-- Filters -->
+    <div class="admin-filter-bar">
+        <form method="GET" action="{{ path('app_marketplace_admin_factures') }}" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; width:100%;">
+            <select name="user_filter" class="admin-select">
+                <option value="all">👤 All Buyers</option>
+                {% for uid in buyerIds %}
+                    <option value="{{ uid }}" {% if userFilter == uid %}selected{% endif %}>{{ uid }}</option>
+                {% endfor %}
+            </select>
+            <select name="status" class="admin-select">
+                <option value="all">📋 All Statuses</option>
+                <option value="pending"   {% if statusFilter == 'pending'   %}selected{% endif %}>⏳ Pending</option>
+                <option value="confirmed" {% if statusFilter == 'confirmed' %}selected{% endif %}>✅ Confirmed</option>
+                <option value="cancelled" {% if statusFilter == 'cancelled' %}selected{% endif %}>❌ Cancelled</option>
+            </select>
+            <button type="submit" class="admin-btn-primary">🔍 Filter</button>
+            <a href="{{ path('app_marketplace_admin_factures') }}" class="admin-btn-ghost">🔄 Reset</a>
+            <span style="margin-left:auto; color:rgba(255,255,255,0.7); font-size:13px;">
+                {{ factures|length }} facture{{ factures|length != 1 ? 's' : '' }}
+                — Total: <strong>{{ factures|reduce((acc, f) => acc + f.total_price, 0)|number_format(2) }} TND</strong>
+            </span>
+        </form>
+    </div>
+</div>
+
+<div class="admin-page-content">
+
+    {% if factures is empty %}
+        <div class="mp-empty">
+            <div style="font-size:64px; margin-bottom:16px;">🧾</div>
+            <h3>No factures found</h3>
+        </div>
+    {% else %}
+
+        <!-- Summary row -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-bottom:28px;">
+            {% set confirmed = factures|filter(f => f.delivery_status == 'confirmed') %}
+            {% set pending   = factures|filter(f => f.delivery_status == 'pending') %}
+            {% set cancelled = factures|filter(f => f.delivery_status == 'cancelled') %}
+            <div style="background:white; border-radius:12px; padding:16px; text-align:center; border:1px solid var(--gray-200);">
+                <div style="font-size:24px; font-weight:800; color:var(--blue-primary);">{{ factures|length }}</div>
+                <div style="font-size:12px; color:var(--gray-400);">Total Factures</div>
+            </div>
+            <div style="background:white; border-radius:12px; padding:16px; text-align:center; border:1px solid #6EE7B7;">
+                <div style="font-size:24px; font-weight:800; color:#059669;">{{ confirmed|length }}</div>
+                <div style="font-size:12px; color:var(--gray-400);">✅ Confirmed</div>
+            </div>
+            <div style="background:white; border-radius:12px; padding:16px; text-align:center; border:1px solid #FCD34D;">
+                <div style="font-size:24px; font-weight:800; color:#F59E0B;">{{ pending|length }}</div>
+                <div style="font-size:12px; color:var(--gray-400);">⏳ Pending</div>
+            </div>
+            <div style="background:white; border-radius:12px; padding:16px; text-align:center; border:1px solid #FCA5A5;">
+                <div style="font-size:24px; font-weight:800; color:#EF4444;">{{ cancelled|length }}</div>
+                <div style="font-size:12px; color:var(--gray-400);">❌ Cancelled</div>
+            </div>
+            <div style="background:linear-gradient(135deg,var(--blue-primary),#7C3AED); border-radius:12px; padding:16px; text-align:center;">
+                <div style="font-size:22px; font-weight:800; color:#BAE6FD;">{{ factures|reduce((acc, f) => acc + f.total_price, 0)|number_format(2) }}</div>
+                <div style="font-size:12px; color:rgba(255,255,255,0.7);">💰 Total TND</div>
+            </div>
+        </div>
+
+        <!-- Factures Table -->
+        <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); overflow:hidden; box-shadow:var(--shadow-sm);">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="background:var(--gray-50); border-bottom:1px solid var(--gray-200);">
+                        <th style="padding:14px 16px; text-align:left; font-weight:700; color:var(--gray-700);">ID</th>
+                        <th style="padding:14px 16px; text-align:left; font-weight:700; color:var(--gray-700);">Buyer</th>
+                        <th style="padding:14px 16px; text-align:left; font-weight:700; color:var(--gray-700);">Customer</th>
+                        <th style="padding:14px 16px; text-align:left; font-weight:700; color:var(--gray-700);">Date</th>
+                        <th style="padding:14px 16px; text-align:left; font-weight:700; color:var(--gray-700);">Payment</th>
+                        <th style="padding:14px 16px; text-align:right; font-weight:700; color:var(--gray-700);">Total</th>
+                        <th style="padding:14px 16px; text-align:center; font-weight:700; color:var(--gray-700);">Status</th>
+                        <th style="padding:14px 16px; text-align:center; font-weight:700; color:var(--gray-700);">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for f in factures %}
+                    <tr style="border-bottom:1px solid var(--gray-100); transition:background 0.15s;" onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='white'">
+                        <td style="padding:12px 16px; font-weight:700; color:var(--gray-500);">#{{ f.id_facture }}</td>
+                        <td style="padding:12px 16px;">
+                            <span style="background:var(--blue-pale); color:var(--blue-primary); padding:2px 10px; border-radius:12px; font-size:11px; font-weight:700;">{{ f.user_id }}</span>
+                        </td>
+                        <td style="padding:12px 16px; color:var(--gray-700);">{{ f.full_name ?? '—' }}</td>
+                        <td style="padding:12px 16px; color:var(--gray-500);">{{ f.date_facture|date('d/m/Y H:i') }}</td>
+                        <td style="padding:12px 16px;">{{ f.payment_method == 'online' ? '💳' : '💵' }} {{ f.payment_method|capitalize }}</td>
+                        <td style="padding:12px 16px; text-align:right; font-weight:700; color:var(--blue-primary);">{{ f.total_price|number_format(2) }} TND</td>
+                        <td style="padding:12px 16px; text-align:center;">
+                            <span class="mp-status-badge {{ f.delivery_status }}" style="font-size:11px;">
+                                {% if f.delivery_status == 'confirmed' %}✅ Confirmed
+                                {% elseif f.delivery_status == 'cancelled' %}❌ Cancelled
+                                {% else %}⏳ Pending{% endif %}
+                            </span>
+                        </td>
+                        <td style="padding:12px 16px; text-align:center;">
+                            <a href="{{ path('app_marketplace_order_detail', {id: f.id_facture}) }}"
+                               style="font-size:11px; color:var(--blue-primary); text-decoration:none; font-weight:600;">🔍 Orders</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+    {% endif %}
+</div>
+{% endblock %}
