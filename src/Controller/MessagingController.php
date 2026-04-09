@@ -118,7 +118,7 @@ public function index(EntityManagerInterface $em): Response
         if ($request->isMethod('POST')) {
             $name = trim($request->request->get('name'));
             $type = $request->request->get('type');
-            $participantEmails = $request->request->get('participant_emails', []);
+            $participantEmails = $request->request->all()['participant_emails'] ?? [];
             
             // Validate: name cannot be empty
             if (empty($name)) {
