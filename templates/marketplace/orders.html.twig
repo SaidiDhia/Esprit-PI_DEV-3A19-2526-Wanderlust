@@ -1,59 +1,56 @@
 {% extends 'base.html.twig' %}
 {% block title %}My Orders — WanderLust{% endblock %}
 {% block content %}
-
-<div class="mp-topnav">
-    <div class="mp-topnav-inner">
-        <a href="{{ path('app_marketplace_buyer') }}" class="mp-nav-btn mp-nav-back">← Back to Shop</a>
-        <span style="font-size:16px; font-weight:700; color:white;">🧾 My Invoices</span>
-        <span></span>
+<section class="min-h-[calc(100vh-64px)] bg-gradient-to-b from-slate-50 via-white to-sky-50/30 px-4 py-8">
+<div class="mx-auto max-w-5xl space-y-6">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <a href="{{ path('app_marketplace_buyer') }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Back to Shop</a>
+        <h1 class="text-xl font-heading font-bold text-slate-900">My Orders</h1>
     </div>
-</div>
 
-<div class="mp-page-content" style="max-width:900px;">
     {% for msg in app.flashes('success') %}
-        <div class="flash flash-success">{{ msg }}</div>
+        <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">{{ msg }}</div>
     {% endfor %}
 
     {% if factures is empty %}
-        <div class="mp-empty">
-            <div style="font-size:64px; margin-bottom:16px;">🧾</div>
-            <h3>No orders yet</h3>
-            <p>Your purchase history will appear here.</p>
-            <a href="{{ path('app_marketplace_buyer') }}" class="mp-btn-primary" style="margin-top:16px; display:inline-block;">🛍️ Start Shopping</a>
+        <div class="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
+            <h3 class="text-lg font-heading font-bold text-slate-900">No orders yet</h3>
+            <p class="mt-2 text-sm text-slate-600">Your purchase history will appear here.</p>
+            <a href="{{ path('app_marketplace_buyer') }}" class="mt-4 inline-flex rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-slate-800">Start Shopping</a>
         </div>
     {% else %}
-        <div style="display:flex; flex-direction:column; gap:16px;">
+        <div class="space-y-3">
             {% for f in factures %}
-                <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:24px; box-shadow:var(--shadow-sm);">
-                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
+                <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
                         <div>
-                            <div style="font-size:12px; color:var(--gray-400); margin-bottom:4px;">Order #{{ f.id_facture }}</div>
-                            <div style="font-family:var(--font-display); font-size:20px; font-weight:700; color:var(--gray-900);">
+                            <div class="text-xs text-slate-500">Order #{{ f.id_facture }}</div>
+                            <div class="text-xl font-heading font-bold text-slate-900">
                                 {{ f.total_price|number_format(2) }} TND
                             </div>
-                            <div style="font-size:13px; color:var(--gray-500); margin-top:4px;">
-                                📅 {{ f.date_facture|date('d M Y, H:i') }}
+                            <div class="mt-1 text-sm text-slate-600">
+                                {{ f.date_facture|date('d M Y, H:i') }}
                             </div>
                         </div>
-                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                        <div class="flex flex-col items-end gap-2">
                             <span class="mp-status-badge {{ f.delivery_status }}">
                                 {% if f.delivery_status == 'confirmed' %}✅ Confirmed
                                 {% elseif f.delivery_status == 'cancelled' %}❌ Cancelled
                                 {% else %}⏳ Pending{% endif %}
                             </span>
-                            <span style="font-size:12px; background:var(--gray-100); padding:3px 10px; border-radius:20px; color:var(--gray-500);">
-                                {{ f.payment_method == 'online' ? '💳 Online' : '💵 Cash' }}
+                            <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                                {{ f.payment_method == 'online' ? 'Online' : 'Cash' }}
                             </span>
                         </div>
                     </div>
-                    <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--gray-100);">
-                        <a href="{{ path('app_marketplace_order_detail', {id: f.id_facture}) }}" class="mp-btn-outline">🔍 View Details</a>
+                    <div class="mt-4 border-t border-slate-100 pt-3">
+                        <a href="{{ path('app_marketplace_order_detail', {id: f.id_facture}) }}" class="inline-flex rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">View Details</a>
                     </div>
-                </div>
+                </article>
             {% endfor %}
         </div>
     {% endif %}
 </div>
+</section>
 
 {% endblock %}

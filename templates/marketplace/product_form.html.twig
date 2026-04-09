@@ -1,93 +1,80 @@
 {% extends 'base.html.twig' %}
 {% block title %}{{ action }} Product — WanderLust{% endblock %}
 {% block content %}
-
-<div class="mp-page-content" style="max-width:700px;">
-    <div class="mp-form-card">
-        <div class="mp-form-header">
-            <h2>{{ action == 'Add' ? '➕ Add New Product' : '✏️ Edit Product' }}</h2>
-            <a href="{{ path('app_marketplace_seller') }}" class="mp-btn-ghost">← Back</a>
+<section class="min-h-[calc(100vh-64px)] bg-gradient-to-b from-amber-50/70 via-white to-slate-50 px-4 py-8">
+    <div class="mx-auto max-w-4xl space-y-6">
+        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.26em] text-amber-700">Marketplace</p>
+                    <h1 class="mt-2 text-2xl font-heading font-bold text-slate-900">{{ action == 'Add' ? 'Add Product' : 'Edit Product' }}</h1>
+                    <p class="mt-1 text-sm text-slate-600">Fill in product details and publish to your seller catalog.</p>
+                </div>
+                <a href="{{ path('app_marketplace_seller') }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Back to Seller</a>
+            </div>
         </div>
 
         {% for msg in app.flashes('success') %}
-            <div class="flash flash-success">{{ msg }}</div>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">{{ msg }}</div>
         {% endfor %}
         {% for msg in app.flashes('error') %}
-            <div class="flash flash-error">{{ msg }}</div>
+            <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">{{ msg }}</div>
         {% endfor %}
 
-        <form method="POST" action="{{ action == 'Add' ? path('app_marketplace_product_add') : path('app_marketplace_product_edit', {id: product.id}) }}">
+        <form method="POST" action="{{ action == 'Add' ? path('app_marketplace_product_add') : path('app_marketplace_product_edit', {id: product.id}) }}" class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div class="md:col-span-2 space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Title</label>
+                    <input type="text" name="title" required placeholder="e.g. Sahara Backpack 60L" value="{{ product ? product.title : '' }}" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100">
+                </div>
 
-            <div class="mp-form-group">
-                <label class="mp-form-label">Product Title *</label>
-                <input type="text" name="title" required class="mp-form-input"
-                       placeholder="e.g. Sahara Backpack 60L"
-                       value="{{ product ? product.title : '' }}">
-            </div>
-
-            <div class="mp-form-group">
-                <label class="mp-form-label">Description *</label>
-                <textarea name="description" required class="mp-form-input" rows="4"
-                          placeholder="Describe your product...">{{ product ? product.description : '' }}</textarea>
-            </div>
-
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                <div class="mp-form-group">
-                    <label class="mp-form-label">Type *</label>
-                    <select name="type" required class="mp-form-input">
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Type</label>
+                    <select name="type" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100">
                         <option value="For Sale" {{ product and product.type == 'For Sale' ? 'selected' : '' }}>For Sale</option>
-                        <option value="For Rent"  {{ product and product.type == 'For Rent'  ? 'selected' : '' }}>For Rent</option>
+                        <option value="For Rent" {{ product and product.type == 'For Rent' ? 'selected' : '' }}>For Rent</option>
                     </select>
                 </div>
-                <div class="mp-form-group">
-                    <label class="mp-form-label">Category *</label>
-                    <select name="category" required class="mp-form-input">
-                        <option value="camping" {{ product and product.category == 'camping' ? 'selected' : '' }}>⛺ Camping</option>
-                        <option value="hiking"  {{ product and product.category == 'hiking'  ? 'selected' : '' }}>🥾 Hiking</option>
-                        <option value="beach"   {{ product and product.category == 'beach'   ? 'selected' : '' }}>🏖️ Beach</option>
-                        <option value="nature"  {{ product and product.category == 'nature'  ? 'selected' : '' }}>🌿 Nature</option>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Category</label>
+                    <select name="category" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100">
+                        <option value="camping" {{ product and product.category == 'camping' ? 'selected' : '' }}>Camping</option>
+                        <option value="hiking" {{ product and product.category == 'hiking' ? 'selected' : '' }}>Hiking</option>
+                        <option value="beach" {{ product and product.category == 'beach' ? 'selected' : '' }}>Beach</option>
+                        <option value="nature" {{ product and product.category == 'nature' ? 'selected' : '' }}>Nature</option>
                     </select>
                 </div>
-            </div>
 
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                <div class="mp-form-group">
-                    <label class="mp-form-label">Price (TND) *</label>
-                    <input type="number" name="price" required class="mp-form-input"
-                           placeholder="0.00" step="0.01" min="0"
-                           value="{{ product ? product.price : '' }}">
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Price (TND)</label>
+                    <input type="number" name="price" required step="0.01" min="0" value="{{ product ? product.price : '' }}" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100">
                 </div>
-                <div class="mp-form-group">
-                    <label class="mp-form-label">Quantity *</label>
-                    <input type="number" name="quantity" required class="mp-form-input"
-                           placeholder="0" min="0"
-                           value="{{ product ? product.quantity : '' }}">
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Quantity</label>
+                    <input type="number" name="quantity" required min="0" value="{{ product ? product.quantity : '' }}" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100">
                 </div>
-            </div>
 
-            <div class="mp-form-group">
-                <label class="mp-form-label">Image URL</label>
-                <input type="url" name="image" class="mp-form-input"
-                       placeholder="https://... (Cloudinary, Unsplash, etc.)"
-                       value="{{ product ? product.image : '' }}"
-                       id="imageUrlInput">
-                <!-- Preview -->
-                <div id="imgPreview" style="margin-top:10px; display:{{ product and product.image ? 'block' : 'none' }};">
-                    <img id="previewImg" src="{{ product ? product.image : '' }}"
-                         style="max-width:200px; border-radius:8px; border:1px solid var(--gray-200);"
-                         onerror="this.style.display='none'">
+                <div class="md:col-span-2 space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Description</label>
+                    <textarea name="description" required rows="4" placeholder="Describe your product..." class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100">{{ product ? product.description : '' }}</textarea>
+                </div>
+
+                <div class="md:col-span-2 space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-slate-500">Image URL (optional)</label>
+                    <input type="url" name="image" id="imageUrlInput" placeholder="https://..." value="{{ product ? product.image : '' }}" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-100">
+                    <div id="imgPreview" class="{{ product and product.image ? '' : 'hidden' }} rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <img id="previewImg" src="{{ product ? product.image : '' }}" alt="Product preview" class="h-48 w-full rounded-lg object-cover" onerror="this.style.display='none'">
+                    </div>
                 </div>
             </div>
 
-            <div style="display:flex; gap:12px; margin-top:24px;">
-                <button type="submit" class="mp-btn-primary" style="flex:1; padding:14px; font-size:15px;">
-                    {{ action == 'Add' ? '➕ Add Product' : '💾 Save Changes' }}
-                </button>
-                <a href="{{ path('app_marketplace_seller') }}" class="mp-btn-ghost" style="padding:14px 24px;">Cancel</a>
+            <div class="flex flex-wrap items-center justify-end gap-2 pt-2">
+                <a href="{{ path('app_marketplace_seller') }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Cancel</a>
+                <button type="submit" class="rounded-xl bg-amber-600 px-5 py-2 text-sm font-bold text-white transition-colors hover:bg-amber-700">{{ action == 'Add' ? 'Add Product' : 'Save Changes' }}</button>
             </div>
         </form>
     </div>
-</div>
+</section>
 
 {% endblock %}
 
@@ -98,10 +85,10 @@ document.getElementById('imageUrlInput').addEventListener('input', function() {
     const img = document.getElementById('previewImg');
     if (this.value) {
         img.src = this.value;
-        preview.style.display = 'block';
+        preview.classList.remove('hidden');
         img.style.display = 'block';
     } else {
-        preview.style.display = 'none';
+        preview.classList.add('hidden');
     }
 });
 </script>

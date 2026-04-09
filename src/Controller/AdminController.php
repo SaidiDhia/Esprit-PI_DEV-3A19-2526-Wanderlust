@@ -27,7 +27,7 @@ class AdminController extends AbstractController
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
         $section = (string) $request->query->get('section', 'users');
-        if (!in_array($section, ['users', 'messaging', 'booking'], true)) {
+        if (!in_array($section, ['users', 'messaging', 'booking', 'marketplace'], true)) {
             $section = 'users';
         }
 
@@ -171,6 +171,80 @@ class AdminController extends AbstractController
         $bookingPlaceGalleryImages = $this->buildPlaceGalleryImagesMap($entityManager, $bookingPlaces);
         $bookingPlaceGalleryImageRecords = $this->buildPlaceGalleryImageRecordsMap($entityManager, $bookingPlaces);
 
+        $marketplaceStats = [
+            'totalProducts' => 0,
+            'activeListings' => 0,
+            'sellerCount' => 0,
+            'totalOrders' => 0,
+            'pendingOrders' => 0,
+            'confirmedOrders' => 0,
+            'grossRevenue' => 0.0,
+        ];
+        $marketplaceRecentOrders = [];
+        $marketplaceTopProducts = [];
+        $marketplaceOrdersPerDay = [];
+        $marketplaceProducts = [];
+        $marketplaceSellerOptions = [];
+
+        // Marketplace stats - gracefully handle if tables don't exist
+        try {
+            $marketplaceStats['totalProducts'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM products')->fetchOne();
+            $marketplaceStats['activeListings'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM products WHERE (quantity - COALESCE(reserved_quantity, 0)) > 0')->fetchOne();
+            $marketplaceStats['sellerCount'] = (int) $conn->executeQuery('SELECT COUNT(DISTINCT userId) FROM products')->fetchOne();
+        } catch (\Throwable $e) {
+            // Products table might not exist yet
+        }
+
+        // Facture stats - gracefully handle if tables don't exist
+        try {
+            $marketplaceStats['totalOrders'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM facture')->fetchOne();
+            $marketplaceStats['pendingOrders'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM facture WHERE delivery_status = 'pending'")->fetchOne();
+            $marketplaceStats['confirmedOrders'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM facture WHERE delivery_status = 'confirmed'")->fetchOne();
+            $marketplaceStats['grossRevenue'] = (float) $conn->executeQuery("SELECT COALESCE(SUM(total_price), 0) FROM facture WHERE delivery_status = 'confirmed'")->fetchOne();
+        } catch (\Throwable $e) {
+            // Facture table might not exist yet
+        }
+
+        // Marketplace recent orders - gracefully handle if tables don't exist
+        try {
+            $marketplaceRecentOrders = $conn->executeQuery("\n                SELECT f.id_facture, f.date_facture, f.total_price, f.delivery_status,\n                       COALESCE(da.full_name, '') AS customer_name, COALESCE(da.city, '') AS customer_city\n                FROM facture f\n                LEFT JOIN delivery_address da ON da.facture_id = f.id_facture\n                ORDER BY f.date_facture DESC\n                LIMIT 8\n            ")->fetchAllAssociative();
+        } catch (\Throwable $e) {
+            // Facture tables might not exist yet
+        }
+
+        // Marketplace top products - gracefully handle if tables don't exist
+        try {
+            $marketplaceTopProducts = $conn->executeQuery("\n                SELECT p.id, p.title, p.category,\n                       COALESCE(SUM(fp.quantity), 0) AS sold_units,\n                       COALESCE(SUM(fp.quantity * fp.price), 0) AS revenue\n                FROM products p\n                LEFT JOIN facture_product fp ON fp.product_id = p.id\n                LEFT JOIN facture f ON f.id_facture = fp.facture_id AND f.delivery_status = 'confirmed'\n                GROUP BY p.id, p.title, p.category\n                ORDER BY sold_units DESC, revenue DESC\n                LIMIT 6\n            ")->fetchAllAssociative();
+        } catch (\Throwable $e) {
+            // Products or facture tables might not exist yet
+        }
+
+        // Marketplace orders per day - gracefully handle if tables don't exist
+        try {
+            $ordersPerDayRows = $conn->executeQuery("\n                SELECT DATE(date_facture) AS date, COUNT(*) AS count\n                FROM facture\n                WHERE date_facture >= DATE_SUB(NOW(), INTERVAL 7 DAY)\n                GROUP BY DATE(date_facture)\n                ORDER BY date ASC\n            ")->fetchAllAssociative();
+
+            $marketplaceOrdersPerDay = array_map(static fn (array $row): array => [
+                'label' => (new \DateTimeImmutable((string) $row['date']))->format('M d'),
+                'count' => (int) $row['count'],
+            ], $ordersPerDayRows);
+        } catch (\Throwable $e) {
+            // Facture table might not exist yet
+        }
+
+        // Marketplace products - this is critical, so we log errors if any
+        try {
+            $marketplaceProducts = $conn->executeQuery("\n                SELECT p.id, p.title, p.description, p.type, p.category, p.price, p.quantity,\n                       COALESCE(p.reserved_quantity, 0) AS reserved_quantity, p.image, p.userId,\n                       p.created_date, COALESCE(u.full_name, 'Unknown Seller') AS seller_name\n                FROM products p\n                LEFT JOIN users u ON u.id = p.userId\n                ORDER BY p.created_date DESC\n                LIMIT 40\n            ")->fetchAllAssociative();
+        } catch (\Throwable $e) {
+            // Products table might not exist yet or query failed
+        }
+
+        // Marketplace seller options
+        try {
+            $marketplaceSellerOptions = $conn->executeQuery("\n                SELECT u.id, u.full_name, u.email\n                FROM users u\n                ORDER BY u.full_name ASC\n            ")->fetchAllAssociative();
+        } catch (\Throwable $e) {
+            // Users table might not exist or unreachable
+        }
+
         return $this->render('admin/dashboard.html.twig', [
             'users' => $users,
             'roles' => array_map(static fn (RoleEnum $role): array => [
@@ -207,7 +281,109 @@ class AdminController extends AbstractController
             'bookingHosts' => $bookingHosts,
             'bookingPlaceGalleryImages' => $bookingPlaceGalleryImages,
             'bookingPlaceGalleryImageRecords' => $bookingPlaceGalleryImageRecords,
+            'marketplaceStats' => $marketplaceStats,
+            'marketplaceRecentOrders' => $marketplaceRecentOrders,
+            'marketplaceTopProducts' => $marketplaceTopProducts,
+            'marketplaceOrdersPerDay' => $marketplaceOrdersPerDay,
+            'marketplaceProducts' => $marketplaceProducts,
+            'marketplaceSellerOptions' => $marketplaceSellerOptions,
         ]);
+    }
+
+    #[Route('/admin/marketplace/products/create', name: 'app_admin_marketplace_product_create', methods: ['POST'])]
+    public function createMarketplaceProduct(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_marketplace_product_create', (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid marketplace form token. Please try again.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'marketplace']);
+        }
+
+        $data = $this->normalizeMarketplaceProductPayload($request);
+        $errors = $this->validateMarketplaceProductPayload($data, false, null);
+
+        if ($errors !== []) {
+            foreach ($errors as $error) {
+                $this->addFlash('error', $error);
+            }
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'marketplace']);
+        }
+
+        $conn = $entityManager->getConnection();
+        $conn->insert('products', [
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'type' => $data['type'],
+            'price' => $data['price'],
+            'quantity' => $data['quantity'],
+            'category' => $data['category'],
+            'image' => $data['image'],
+            'created_date' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+            'userId' => $data['userId'],
+            'reserved_quantity' => 0,
+        ]);
+
+        $this->addFlash('success', 'Marketplace product created successfully.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'marketplace']);
+    }
+
+    #[Route('/admin/marketplace/products/{id}/update', name: 'app_admin_marketplace_product_update', methods: ['POST'])]
+    public function updateMarketplaceProduct(int $id, Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_marketplace_product_update_' . $id, (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid marketplace form token. Please try again.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'marketplace']);
+        }
+
+        $conn = $entityManager->getConnection();
+        $existing = $conn->fetchAssociative('SELECT id, COALESCE(reserved_quantity, 0) AS reserved_quantity FROM products WHERE id = ?', [$id]);
+        if (!is_array($existing)) {
+            $this->addFlash('error', 'Product not found.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'marketplace']);
+        }
+
+        $data = $this->normalizeMarketplaceProductPayload($request);
+        $errors = $this->validateMarketplaceProductPayload($data, true, (int) $existing['reserved_quantity']);
+        if ($errors !== []) {
+            foreach ($errors as $error) {
+                $this->addFlash('error', $error);
+            }
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'marketplace']);
+        }
+
+        $conn->update('products', [
+            'title' => $data['title'],
+            'description' => $data['description'],
+            'type' => $data['type'],
+            'price' => $data['price'],
+            'quantity' => $data['quantity'],
+            'category' => $data['category'],
+            'image' => $data['image'],
+            'userId' => $data['userId'],
+        ], ['id' => $id]);
+
+        $this->addFlash('success', 'Marketplace product updated successfully.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'marketplace']);
+    }
+
+    #[Route('/admin/marketplace/products/{id}/delete', name: 'app_admin_marketplace_product_delete', methods: ['POST'])]
+    public function deleteMarketplaceProduct(int $id, Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_marketplace_product_delete_' . $id, (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid marketplace form token. Please try again.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'marketplace']);
+        }
+
+        $conn = $entityManager->getConnection();
+        $conn->executeStatement('DELETE FROM products WHERE id = ?', [$id]);
+
+        $this->addFlash('success', 'Marketplace product deleted successfully.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'marketplace']);
     }
 
     #[Route('/admin/places/create', name: 'app_admin_place_create', methods: ['POST'])]
@@ -1003,6 +1179,60 @@ class AdminController extends AbstractController
             } elseif (!preg_match('/[a-z]/', $password) || !preg_match('/[A-Z]/', $password) || !preg_match('/\d/', $password)) {
                 $errors[] = 'Password must contain uppercase, lowercase, and a number.';
             }
+        }
+
+        return $errors;
+    }
+
+    /**
+     * @return array{title:string,description:string,type:string,category:string,image:string,userId:string,price:float,quantity:int}
+     */
+    private function normalizeMarketplaceProductPayload(Request $request): array
+    {
+        return [
+            'title' => trim((string) $request->request->get('title', '')),
+            'description' => trim((string) $request->request->get('description', '')),
+            'type' => trim((string) $request->request->get('type', '')),
+            'category' => trim((string) $request->request->get('category', '')),
+            'image' => trim((string) $request->request->get('image', '')),
+            'userId' => trim((string) $request->request->get('user_id', '')),
+            'price' => (float) $request->request->get('price', 0),
+            'quantity' => (int) $request->request->get('quantity', 0),
+        ];
+    }
+
+    /**
+     * @param array{title:string,description:string,type:string,category:string,image:string,userId:string,price:float,quantity:int} $data
+     * @return string[]
+     */
+    private function validateMarketplaceProductPayload(array $data, bool $isUpdate, ?int $reservedQuantity): array
+    {
+        $errors = [];
+
+        if ($data['title'] === '') {
+            $errors[] = 'Product title is required.';
+        }
+        if ($data['description'] === '') {
+            $errors[] = 'Product description is required.';
+        }
+        if (!in_array($data['type'], ['For Sale', 'For Rent'], true)) {
+            $errors[] = 'Invalid product type.';
+        }
+        if ($data['category'] === '') {
+            $errors[] = 'Product category is required.';
+        }
+        if ($data['price'] <= 0) {
+            $errors[] = 'Product price must be greater than 0.';
+        }
+        if ($data['quantity'] < 0) {
+            $errors[] = 'Product quantity must be 0 or greater.';
+        }
+        if ($data['userId'] === '') {
+            $errors[] = 'Please choose a seller.';
+        }
+
+        if ($isUpdate && $reservedQuantity !== null && $data['quantity'] < $reservedQuantity) {
+            $errors[] = sprintf('Quantity cannot be less than reserved quantity (%d).', $reservedQuantity);
         }
 
         return $errors;

@@ -35,12 +35,12 @@
         </div>
     {% else %}
         {% for msg in messages %}
-            <div style="margin-bottom: 16px; display: flex; justify-content: {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}flex-end{% else %}flex-start{% endif %};">
-                <div style="max-width: 70%; background: {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}var(--blue-primary){% else %}var(--gray-100){% endif %}; color: {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}white{% else %}var(--gray-900){% endif %}; border-radius: 16px; padding: 10px 16px;">
+            <div style="margin-bottom: 16px; display: flex; justify-content: {% if msg.sender_id == currentUserId %}flex-end{% else %}flex-start{% endif %};">
+                <div style="max-width: 70%; background: {% if msg.sender_id == currentUserId %}var(--blue-primary){% else %}var(--gray-100){% endif %}; color: {% if msg.sender_id == currentUserId %}white{% else %}var(--gray-900){% endif %}; border-radius: 16px; padding: 10px 16px;">
                     <div style="font-size: 11px; opacity: 0.7; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
                         <span>{{ msg.sender_name ?: 'User ' ~ msg.sender_id|slice(0,8) }} • {{ msg.created_at|date('H:i') }}</span>
                         
-                        {% if msg.sender_id == '123e4567-e89b-12d3-a456-426614174000' %}
+                        {% if msg.sender_id == currentUserId %}
                             <div style="display: flex; gap: 8px; margin-left: 12px;">
                                 <!-- Edit Button -->
                                 <button onclick="editMessage({{ msg.id }}, '{{ msg.content|e('js') }}')" 

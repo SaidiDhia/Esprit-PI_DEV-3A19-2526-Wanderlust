@@ -1,0 +1,186 @@
+{% extends 'base.html.twig' %}
+{% block title %}Global Dashboard — Admin{% endblock %}
+{% block content %}
+
+<div class="admin-topnav">
+    <div class="admin-topnav-inner">
+        <a href="{{ path('app_marketplace_admin') }}" class="admin-nav-btn">⬅ Admin Home</a>
+        <span class="admin-nav-title">📊 Global Dashboard</span>
+        <div style="display:flex; gap:10px;">
+            <a href="{{ path('app_marketplace_admin_orders') }}" class="admin-nav-btn">🚚 Orders</a>
+            <a href="{{ path('app_marketplace_product_management') }}" class="admin-nav-btn">📦 Products</a>
+        </div>
+    </div>
+</div>
+
+<div class="admin-page-content">
+
+    <!-- ── GLOBAL STATS ──────────────────────────────────────────────────── -->
+    <div class="admin-section-title">🌐 Platform Overview</div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:16px; margin-bottom:40px;">
+        <div class="admin-stat-card" style="background:linear-gradient(135deg,#1D4ED8,#1e3a8a);">
+            <div class="asc-icon">📦</div>
+            <div class="asc-value">{{ totalProducts }}</div>
+            <div class="asc-label">Total Products</div>
+        </div>
+        <div class="admin-stat-card" style="background:linear-gradient(135deg,#059669,#10B981);">
+            <div class="asc-icon">✅</div>
+            <div class="asc-value">{{ totalOrders }}</div>
+            <div class="asc-label">Confirmed Orders</div>
+        </div>
+        <div class="admin-stat-card" style="background:linear-gradient(135deg,#F59E0B,#EF4444);">
+            <div class="asc-icon">⏳</div>
+            <div class="asc-value">{{ pendingOrders }}</div>
+            <div class="asc-label">Pending Orders</div>
+        </div>
+        <div class="admin-stat-card" style="background:linear-gradient(135deg,#7C3AED,#EC4899);">
+            <div class="asc-icon">💰</div>
+            <div class="asc-value">{{ totalRevenue|number_format(0) }}</div>
+            <div class="asc-label">Total Revenue (TND)</div>
+        </div>
+        <div class="admin-stat-card" style="background:linear-gradient(135deg,#0EA5E9,#1D4ED8);">
+            <div class="asc-icon">🛒</div>
+            <div class="asc-value">{{ itemsInCarts }}</div>
+            <div class="asc-label">Items in Carts</div>
+        </div>
+    </div>
+
+    <!-- ── SELLER STATS PER USER ─────────────────────────────────────────── -->
+    {% if sellerStats is not empty %}
+    <div class="admin-section-title">🏪 Seller Stats — Per User</div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:20px; margin-bottom:40px;">
+        {% for s in sellerStats %}
+        <div class="admin-user-card">
+            <div class="admin-user-card-header">
+                <div class="admin-user-avatar">{{ s.userId|slice(0,2)|upper }}</div>
+                <div>
+                    <div style="font-weight:700; font-size:15px; color:var(--gray-900);">{{ s.userId }}</div>
+                    <div style="font-size:12px; color:var(--gray-400);">Seller</div>
+                </div>
+            </div>
+            <div class="admin-user-stats-grid">
+                <div class="admin-user-stat">
+                    <div class="aus-value" style="color:var(--blue-primary);">{{ s.products }}</div>
+                    <div class="aus-label">Products</div>
+                </div>
+                <div class="admin-user-stat">
+                    <div class="aus-value" style="color:#059669;">{{ s.orders ?? 0 }}</div>
+                    <div class="aus-label">Confirmed</div>
+                </div>
+                <div class="admin-user-stat">
+                    <div class="aus-value" style="color:#F59E0B;">{{ s.pending ?? 0 }}</div>
+                    <div class="aus-label">Pending</div>
+                </div>
+                <div class="admin-user-stat">
+                    <div class="aus-value" style="color:#7C3AED;">{{ (s.revenue ?? 0)|number_format(0) }}</div>
+                    <div class="aus-label">Revenue TND</div>
+                </div>
+            </div>
+            {% if s.top_product %}
+            <div style="margin-top:12px; padding:10px; background:var(--gray-50); border-radius:8px; font-size:12px;">
+                🏆 Top: <strong>{{ s.top_product.title }}</strong>
+                <span style="color:var(--gray-400);">({{ s.top_product.sold }} sold)</span>
+            </div>
+            {% endif %}
+            <div style="margin-top:12px; display:flex; gap:8px;">
+                <a href="{{ path('app_marketplace_product_management', {user_filter: s.userId}) }}"
+                   class="mp-btn-outline" style="flex:1; text-align:center; font-size:11px; padding:6px 10px;">
+                   📦 View Products
+                </a>
+                <a href="{{ path('app_marketplace_admin_orders', {user_filter: s.userId}) }}"
+                   class="mp-btn-outline" style="flex:1; text-align:center; font-size:11px; padding:6px 10px;">
+                   🚚 View Orders
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ── BUYER STATS PER USER ──────────────────────────────────────────── -->
+    {% if buyerStats is not empty %}
+    <div class="admin-section-title">🛍️ Buyer Stats — Per User</div>
+
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px,1fr)); gap:20px;">
+        {% for b in buyerStats %}
+        <div class="admin-user-card" style="border-color:#D1FAE5;">
+            <div class="admin-user-card-header">
+                <div class="admin-user-avatar" style="background:linear-gradient(135deg,#059669,#10B981);">{{ b.userId|slice(0,2)|upper }}</div>
+                <div>
+                    <div style="font-weight:700; font-size:15px; color:var(--gray-900);">{{ b.userId }}</div>
+                    <div style="font-size:12px; color:var(--gray-400);">Buyer</div>
+                </div>
+            </div>
+            <div class="admin-user-stats-grid">
+                <div class="admin-user-stat">
+                    <div class="aus-value" style="color:var(--blue-primary);">{{ b.orders }}</div>
+                    <div class="aus-label">Total Orders</div>
+                </div>
+                <div class="admin-user-stat">
+                    <div class="aus-value" style="color:#059669;">{{ b.confirmed ?? 0 }}</div>
+                    <div class="aus-label">Confirmed</div>
+                </div>
+                <div class="admin-user-stat">
+                    <div class="aus-value" style="color:#F59E0B;">{{ b.pending ?? 0 }}</div>
+                    <div class="aus-label">Pending</div>
+                </div>
+                <div class="admin-user-stat">
+                    <div class="aus-value" style="color:#7C3AED;">{{ (b.spent ?? 0)|number_format(0) }}</div>
+                    <div class="aus-label">Spent TND</div>
+                </div>
+            </div>
+            <div style="margin-top:12px;">
+                <a href="{{ path('app_marketplace_admin_factures', {user_filter: b.userId}) }}"
+                   class="mp-btn-outline" style="display:block; text-align:center; font-size:11px; padding:6px 10px;">
+                   🧾 View Factures
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+.admin-section-title {
+    font-family: var(--font-display);
+    font-size: 20px; font-weight: 700;
+    color: var(--gray-900); margin-bottom: 16px;
+    padding-bottom: 10px; border-bottom: 2px solid var(--gray-200);
+}
+.admin-stat-card {
+    border-radius: 14px; padding: 22px 18px; color: white;
+    text-align: center; box-shadow: var(--shadow-md);
+    transition: transform 0.2s;
+}
+.admin-stat-card:hover { transform: translateY(-3px); }
+.asc-icon { font-size: 28px; margin-bottom: 8px; }
+.asc-value { font-family: var(--font-display); font-size: 36px; font-weight: 900; color: #BAE6FD; line-height: 1; margin-bottom: 4px; }
+.asc-label { font-size: 12px; opacity: 0.8; }
+
+.admin-user-card {
+    background: white; border-radius: 16px;
+    border: 1px solid var(--gray-200);
+    padding: 20px; box-shadow: var(--shadow-sm);
+    transition: all 0.25s;
+}
+.admin-user-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+.admin-user-card-header { display: flex; gap: 14px; align-items: center; margin-bottom: 16px; }
+.admin-user-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--blue-primary), var(--blue-light));
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 900; font-size: 18px; flex-shrink: 0;
+}
+.admin-user-stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+    padding: 14px; background: var(--gray-50); border-radius: 10px;
+}
+.admin-user-stat { text-align: center; }
+.aus-value { font-family: var(--font-display); font-size: 22px; font-weight: 800; line-height: 1; }
+.aus-label { font-size: 10px; color: var(--gray-400); margin-top: 2px; }
+</style>
+{% endblock %}

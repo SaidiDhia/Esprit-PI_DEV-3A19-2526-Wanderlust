@@ -1,63 +1,84 @@
 {% extends 'base.html.twig' %}
 {% block title %}Dashboard — WanderLust{% endblock %}
 {% block content %}
-<div class="mp-topnav">
-    <div class="mp-topnav-inner">
-        <a href="{{ path('app_marketplace_seller') }}" class="mp-nav-btn mp-nav-back">← My Products</a>
-        <span style="font-size:16px; font-weight:700; color:white;">📊 Sales Dashboard</span>
-        <a href="{{ path('app_marketplace_seller_orders') }}" class="mp-nav-btn">📦 Orders</a>
-    </div>
-</div>
-<div class="mp-page-content" style="max-width:1000px;">
-
-    <!-- Stats Cards -->
-    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:20px; margin-bottom:32px;">
-        <div class="mp-stat-card">
-            <div class="mp-stat-icon">📦</div>
-            <div class="mp-stat-value">{{ totalProducts }}</div>
-            <div class="mp-stat-label">My Products</div>
-        </div>
-        <div class="mp-stat-card" style="background:linear-gradient(135deg,#059669,#10B981);">
-            <div class="mp-stat-icon">✅</div>
-            <div class="mp-stat-value">{{ totalOrders }}</div>
-            <div class="mp-stat-label">Confirmed Orders</div>
-        </div>
-        <div class="mp-stat-card" style="background:linear-gradient(135deg,#F59E0B,#EF4444);">
-            <div class="mp-stat-icon">⏳</div>
-            <div class="mp-stat-value">{{ pendingOrders }}</div>
-            <div class="mp-stat-label">Pending Orders</div>
-        </div>
-        <div class="mp-stat-card" style="background:linear-gradient(135deg,#7C3AED,#EC4899);">
-            <div class="mp-stat-icon">💰</div>
-            <div class="mp-stat-value">{{ totalRevenue|number_format(0) }}</div>
-            <div class="mp-stat-label">Revenue (TND)</div>
-        </div>
-    </div>
-
-    <!-- Top Products -->
-    {% if topProducts is not empty %}
-    <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:28px; box-shadow:var(--shadow-sm);">
-        <h3 style="font-family:var(--font-display); font-size:20px; font-weight:700; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--gray-100);">🏆 Top Selling Products</h3>
-        <div style="display:flex; flex-direction:column; gap:14px;">
-            {% for i, p in topProducts %}
-            <div style="display:flex; gap:16px; align-items:center; padding:12px; background:var(--gray-50); border-radius:12px;">
-                <div style="font-size:20px; font-weight:900; color:var(--blue-primary); min-width:32px; text-align:center;">{{ i+1 }}</div>
-                <div style="width:50px; height:50px; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--gray-100);">
-                    {% if p.image %}
-                        <img src="{{ p.image }}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentNode.innerHTML='📦'">
-                    {% else %}<div style="display:flex; align-items:center; justify-content:center; height:100%;">📦</div>{% endif %}
+<section class="min-h-[calc(100vh-64px)] bg-gradient-to-b from-sky-50/70 via-white to-emerald-50/50 px-4 py-8">
+    <div class="mx-auto max-w-6xl space-y-6">
+        <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <p class="text-xs font-bold uppercase tracking-[0.26em] text-sky-700">Marketplace</p>
+                    <h1 class="mt-2 text-2xl font-heading font-bold text-slate-900">Seller Analytics</h1>
+                    <p class="mt-2 text-sm text-slate-600">Track products, orders, and confirmed revenue.</p>
                 </div>
-                <div style="flex:1;"><div style="font-weight:700; color:var(--gray-900);">{{ p.title }}</div></div>
-                <div style="text-align:right;">
-                    <div style="font-size:18px; font-weight:800; color:#2E7D32;">{{ p.revenue|number_format(2) }} TND</div>
-                    <div style="font-size:12px; color:var(--gray-400);">{{ p.sold }} units sold</div>
+                <div class="flex flex-wrap gap-2">
+                    <a href="{{ path('app_marketplace_seller') }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">My Products</a>
+                    <a href="{{ path('app_marketplace_seller_orders') }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Orders</a>
                 </div>
             </div>
-            {% endfor %}
         </div>
+
+        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Products</p>
+                <p class="mt-2 text-3xl font-heading font-bold text-slate-900">{{ totalProducts }}</p>
+            </article>
+            <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Confirmed Orders</p>
+                <p class="mt-2 text-3xl font-heading font-bold text-emerald-700">{{ totalOrders }}</p>
+            </article>
+            <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Pending Orders</p>
+                <p class="mt-2 text-3xl font-heading font-bold text-amber-700">{{ pendingOrders }}</p>
+            </article>
+            <article class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500">Revenue</p>
+                <p class="mt-2 text-3xl font-heading font-bold text-sky-700">{{ totalRevenue|number_format(2) }} TND</p>
+            </article>
+        </div>
+
+        {% if topProducts is not empty %}
+            <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-heading font-bold text-slate-900">Top Selling Products</h3>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Confirmed orders only</span>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[720px] border-collapse">
+                        <thead>
+                        <tr class="border-b border-slate-200 text-left">
+                            <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-slate-500">Product</th>
+                            <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-slate-500">Sold Units</th>
+                            <th class="py-3 text-xs font-bold uppercase tracking-wider text-slate-500">Revenue</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for p in topProducts %}
+                            <tr class="border-b border-slate-100 align-top hover:bg-slate-50/70">
+                                <td class="py-3 pr-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
+                                            {% if p.image %}
+                                                <img src="{{ p.image }}" alt="{{ p.title }}" class="h-full w-full object-cover" onerror="this.src='https://dummyimage.com/96x96/d1d5db/64748b&text=No+Photo'">
+                                            {% endif %}
+                                        </div>
+                                        <p class="text-sm font-semibold text-slate-900">{{ p.title }}</p>
+                                    </div>
+                                </td>
+                                <td class="py-3 pr-3 text-sm font-semibold text-slate-700">{{ p.sold }}</td>
+                                <td class="py-3 text-sm font-bold text-sky-700">{{ p.revenue|number_format(2) }} TND</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="rounded-3xl border border-dashed border-slate-300 bg-white p-10 text-center">
+                <h3 class="text-lg font-heading font-bold text-slate-900">No sales data yet</h3>
+                <p class="mt-2 text-sm text-slate-600">Confirmed orders will appear here automatically.</p>
+            </div>
+        {% endif %}
     </div>
-    {% else %}
-    <div class="mp-empty"><div style="font-size:48px; margin-bottom:12px;">📊</div><h3>No sales data yet</h3><p>Confirmed orders will show your stats here.</p></div>
-    {% endif %}
-</div>
+</section>
 {% endblock %}
