@@ -19,7 +19,7 @@ class MarketplaceController extends AbstractController
     public function __construct()
     {
         $this->pdo = new PDO(
-            'mysql:host=localhost;dbname=3a19;charset=utf8mb4',
+            'mysql:host=localhost;dbname=wonderlust_db;charset=utf8mb4',
             'root',
             '',
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
@@ -825,6 +825,39 @@ if (!$facture) throw $this->createNotFoundException('Order not found.');
         $address = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $this->render('marketplace/order_detail.html.twig', ['facture' => $facture, 'items' => $items, 'address' => $address]);
+    }
+
+    #[Route('/orders/{id}/pdf', name: '_order_pdf')]
+    public function orderPdf(int $id): Response
+    {
+        // Admin can view any invoice PDF, buyer only their own
+        if ($this->isAdmin()) {
+            $stmt = $this->pdo->prepare('SELECT * FROM facture WHERE id_facture = ?');
+            $stmt->execute([$id]);
+        } else {
+            $stmt = $this->pdo->prepare('SELECT * FROM facture WHERE id_facture = ? AND user_id = ?');
+            $stmt->execute([$id, $this->CURRENT_USER_ID]);
+        }
+        $facture = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$facture) {
+            throw $this->createNotFoundException('Invoice not found.');
+        }
+
+        $stmt = $this->pdo->prepare('SELECT * FROM facture_product WHERE facture_id = ?');
+        $stmt->execute([$id]);
+        $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $this->pdo->prepare('SELECT * FROM delivery_address WHERE facture_id = ?');
+        $stmt->execute([$id]);
+        $address = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Render without base layout — standalone HTML page for print/PDF
+        return $this->render('marketplace/invoice_pdf.html.twig', [
+            'facture' => $facture,
+            'items'   => $items,
+            'address' => $address,
+        ]);
     }
 
     #[Route('/seller/orders', name: '_seller_orders')]
