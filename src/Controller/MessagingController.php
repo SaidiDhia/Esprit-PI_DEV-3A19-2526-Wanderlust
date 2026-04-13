@@ -299,10 +299,8 @@ public function index(EntityManagerInterface $em): Response
                 }
 
                 $participantId = (string) $participant['id'];
-                if ($participantId === $currentUserId) {
-                    continue;
-                }
-
+                // Don't skip current user - they will be added as CREATOR
+                // Just add all participants found
                 if (!isset($participantIdMap[$participantId])) {
                     $participantIdMap[$participantId] = true;
                     $participantIds[] = $participantId;
