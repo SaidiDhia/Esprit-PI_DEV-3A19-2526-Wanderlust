@@ -14,7 +14,7 @@ class Facture
 {
     #[ORM\Id]
     #[ORM\GeneratedValue]
-    #[ORM\Column]
+    #[ORM\Column(name: 'id_facture')]
     private ?int $idFacture = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]

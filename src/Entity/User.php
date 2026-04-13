@@ -4,6 +4,8 @@ namespace App\Entity;
 
 use App\Enum\RoleEnum;
 use App\Enum\TFAMethod;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -44,10 +46,38 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private ?\DateTimeImmutable $createdAt = null;
 
+    /**
+     * @var Collection<int, Posts>
+     */
+    #[ORM\OneToMany(targetEntity: Posts::class, mappedBy: 'user', cascade: ['remove'])]
+    private Collection $posts;
+
+    /**
+     * @var Collection<int, Commentaires>
+     */
+    #[ORM\OneToMany(targetEntity: Commentaires::class, mappedBy: 'user', cascade: ['remove'])]
+    private Collection $commentaires;
+
+    /**
+     * @var Collection<int, Reactions>
+     */
+    #[ORM\OneToMany(targetEntity: Reactions::class, mappedBy: 'user', cascade: ['remove'])]
+    private Collection $reactions;
+
+    /**
+     * @var Collection<int, PostsSauvegardes>
+     */
+    #[ORM\OneToMany(targetEntity: PostsSauvegardes::class, mappedBy: 'user', cascade: ['remove'])]
+    private Collection $savedPosts;
+
     public function __construct()
     {
         $this->id = $this->generateUuidV4();
         $this->createdAt = new \DateTimeImmutable();
+        $this->posts = new ArrayCollection();
+        $this->commentaires = new ArrayCollection();
+        $this->reactions = new ArrayCollection();
+        $this->savedPosts = new ArrayCollection();
     }
 
     public function getId(): ?string
@@ -215,6 +245,114 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     {
         $this->createdAt = $createdAt;
 
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Posts>
+     */
+    public function getPosts(): Collection
+    {
+        return $this->posts;
+    }
+
+    public function addPost(Posts $post): self
+    {
+        if (!$this->posts->contains($post)) {
+            $this->posts->add($post);
+            $post->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removePost(Posts $post): self
+    {
+        if ($this->posts->removeElement($post)) {
+            if ($post->getUser() === $this) {
+                $post->setUser(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Commentaires>
+     */
+    public function getCommentaires(): Collection
+    {
+        return $this->commentaires;
+    }
+
+    public function addCommentaire(Commentaires $commentaire): self
+    {
+        if (!$this->commentaires->contains($commentaire)) {
+            $this->commentaires->add($commentaire);
+            $commentaire->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeCommentaire(Commentaires $commentaire): self
+    {
+        if ($this->commentaires->removeElement($commentaire)) {
+            if ($commentaire->getUser() === $this) {
+                $commentaire->setUser(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Reactions>
+     */
+    public function getReactions(): Collection
+    {
+        return $this->reactions;
+    }
+
+    public function addReaction(Reactions $reaction): self
+    {
+        if (!$this->reactions->contains($reaction)) {
+            $this->reactions->add($reaction);
+            $reaction->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeReaction(Reactions $reaction): self
+    {
+        if ($this->reactions->removeElement($reaction)) {
+            if ($reaction->getUser() === $this) {
+                $reaction->setUser(null);
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, PostsSauvegardes>
+     */
+    public function getSavedPosts(): Collection
+    {
+        return $this->savedPosts;
+    }
+
+    public function addSavedPost(PostsSauvegardes $savedPost): self
+    {
+        if (!$this->savedPosts->contains($savedPost)) {
+            $this->savedPosts->add($savedPost);
+            $savedPost->setUser($this);
+        }
+        return $this;
+    }
+
+    public function removeSavedPost(PostsSauvegardes $savedPost): self
+    {
+        if ($this->savedPosts->removeElement($savedPost)) {
+            if ($savedPost->getUser() === $this) {
+                $savedPost->setUser(null);
+            }
+        }
         return $this;
     }
 
