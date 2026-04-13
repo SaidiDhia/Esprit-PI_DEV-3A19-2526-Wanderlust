@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
-#[Route('/booking', name: 'app_booking')]
+#[Route('/booking')]
 class BookingController extends AbstractController
 {
     private const DEFAULT_LATITUDE = '36.80650000';

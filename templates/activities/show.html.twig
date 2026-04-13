@@ -1,0 +1,526 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ activity.titre }}{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --danger-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        --hover-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        --border-radius: 20px;
+    }
+
+    /* Hero Section */
+    .show-hero {
+        background: var(--primary-gradient);
+        border-radius: 0 0 80px 80px;
+        padding: 4rem 0;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .show-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+        background-size: cover;
+        opacity: 0.1;
+    }
+
+    .hero-title {
+        font-size: 4rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: fadeInUp 0.8s ease;
+        text-shadow: 0 0 30px rgba(255,255,255,0.3);
+    }
+
+    .hero-subtitle {
+        color: rgba(255,255,255,0.95);
+        font-size: 1.3rem;
+        font-weight: 300;
+        animation: fadeInUp 0.8s ease 0.2s both;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Activity Card */
+    .activity-show-card {
+        border: none;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        background: white;
+        position: relative;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .activity-show-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--primary-gradient);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .activity-show-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .activity-show-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--hover-shadow);
+    }
+
+    /* Image Section */
+    .image-section {
+        position: relative;
+        height: 400px;
+        overflow: hidden;
+    }
+
+    .image-section img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s ease;
+    }
+
+    .activity-show-card:hover .image-section img {
+        transform: scale(1.05);
+    }
+
+    .image-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .activity-show-card:hover .image-overlay {
+        opacity: 0.9;
+    }
+
+    .overlay-content {
+        text-align: center;
+        color: white;
+        transform: translateY(20px);
+        transition: transform 0.3s ease;
+    }
+
+    .activity-show-card:hover .overlay-content {
+        transform: translateY(0);
+    }
+
+    /* Badges Modernes */
+    .badge-modern {
+        display: inline-block;
+        padding: 8px 20px;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        background: rgba(255,255,255,0.95);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        margin: 0.5rem;
+    }
+
+    .activity-show-card:hover .badge-modern {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    /* Content Section */
+    .content-section {
+        padding: 3rem;
+    }
+
+    .info-item {
+        display: flex;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+        padding: 1.5rem;
+        border-radius: 15px;
+        background: #f8f9fa;
+        transition: all 0.3s ease;
+    }
+
+    .info-item:hover {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        transform: translateX(5px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .info-icon {
+        width: 50px;
+        height: 50px;
+        background: var(--primary-gradient);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1.5rem;
+        flex-shrink: 0;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .info-icon i {
+        font-size: 1.5rem;
+        color: white;
+    }
+
+    .info-content {
+        flex: 1;
+    }
+
+    .info-label {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #6c757d;
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .info-value {
+        font-size: 1.1rem;
+        font-weight: 500;
+        color: #2d3748;
+        line-height: 1.6;
+    }
+
+    /* Boutons Modernes */
+    .btn-modern {
+        border-radius: 25px;
+        font-weight: 600;
+        padding: 12px 30px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        border: 2px solid transparent;
+    }
+
+    .btn-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .btn-modern:hover::before {
+        left: 100%;
+    }
+
+    .btn-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .btn-warning-modern {
+        background: var(--danger-gradient);
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
+    }
+
+    .btn-warning-modern:hover {
+        box-shadow: 0 8px 25px rgba(240, 147, 251, 0.4);
+    }
+
+    .btn-success-modern {
+        background: var(--success-gradient);
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+    }
+
+    .btn-success-modern:hover {
+        box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+    }
+
+    .btn-secondary-modern {
+        background: white;
+        border: 2px solid #dee2e6;
+        color: #6c757d;
+    }
+
+    .btn-secondary-modern:hover {
+        border-color: #667eea;
+        color: #667eea;
+    }
+
+    .btn-danger-modern {
+        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    }
+
+    .btn-danger-modern:hover {
+        box-shadow: 0 8px 25px rgba(220, 53, 69, 0.4);
+    }
+
+    /* Alertes Modernes */
+    .alert-modern {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        animation: slideInRight 0.5s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .alert-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--primary-gradient);
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+
+        .image-section {
+            height: 300px;
+        }
+
+        .show-hero {
+            padding: 2rem 0;
+            border-radius: 0 0 40px 40px;
+        }
+
+        .content-section {
+            padding: 2rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="show-hero">
+    <div class="container text-center">
+        <h1 class="hero-title mb-4">
+            🌟 {{ activity.titre }}
+        </h1>
+        <p class="hero-subtitle mb-0">
+            Découvrez les détails de cette activité exceptionnelle
+        </p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <!-- Messages Flash -->
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-modern alert-dismissible fade show mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-check-circle fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    {{ message }}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger alert-modern alert-dismissible fade show mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-exclamation-circle fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    {{ message }}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('info') %}
+        <div class="alert alert-info alert-modern alert-dismissible fade show mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-info-circle fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    {{ message }}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    {% endfor %}
+
+    <!-- Activity Card -->
+    <div class="activity-show-card">
+        <!-- Image Section -->
+        <div class="image-section">
+            {% if activity.image %}
+                <img src="{{ asset('uploads/activities/' ~ activity.image) }}" alt="{{ activity.titre }}">
+                <div class="image-overlay">
+                    <div class="overlay-content">
+                        <div class="badge-modern">
+                            <span class="me-2">
+                                {% if activity.categorie.value == 'DESERT' %}🏜️
+                                {% elseif activity.categorie.value == 'MER' %}🌊
+                                {% elseif activity.categorie.value == 'AERIEN' %}🪂
+                                {% elseif activity.categorie.value == 'NATURE' %}🌳
+                                {% else %}🏛️
+                                {% endif %}
+                            </span>
+                            {{ activity.categorie.value|default('Non classé') }}
+                        </div>
+                        <h2 class="display-4 fw-bold mb-3">{{ activity.titre }}</h2>
+                        <div class="badge-modern">
+                            {{ activity.typeActivite ?: 'Non défini' }}
+                        </div>
+                    </div>
+                </div>
+            {% else %}
+                <div class="image-section d-flex align-items-center justify-content-center" style="background: var(--primary-gradient);">
+                    <div class="text-center text-white">
+                        <i class="fas fa-hiking fa-5x mb-4"></i>
+                        <h2 class="display-4 fw-bold mb-3">{{ activity.titre }}</h2>
+                        <div class="badge-modern">
+                            {{ activity.categorie.value|default('Non classé') }} - {{ activity.typeActivite ?: 'Non défini' }}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Content Section -->
+        <div class="content-section">
+            <!-- Description -->
+            <div class="info-item">
+                <div class="info-icon">
+                    <i class="fas fa-align-left"></i>
+                </div>
+                <div class="info-content">
+                    <div class="info-label">Description</div>
+                    <div class="info-value">{{ activity.description|nl2br }}</div>
+                </div>
+            </div>
+
+            <!-- Catégorie -->
+            <div class="info-item">
+                <div class="info-icon">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div class="info-content">
+                    <div class="info-label">Catégorie</div>
+                    <div class="info-value">
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill me-2">
+                            {% if activity.categorie.value == 'DESERT' %}🏜️ Désert
+                            {% elseif activity.categorie.value == 'MER' %}🌊 Mer
+                            {% elseif activity.categorie.value == 'AERIEN' %}🪂 Aérien
+                            {% elseif activity.categorie.value == 'NATURE' %}🌳 Nature
+                            {% elseif activity.categorie.value == 'CULTUREL' %}🏛️ Culturel
+                            {% else %}{{ activity.categorie.value }}
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Type d'activité -->
+            <div class="info-item">
+                <div class="info-icon">
+                    <i class="fas fa-tag"></i>
+                </div>
+                <div class="info-content">
+                    <div class="info-label">Type d'activité</div>
+                    <div class="info-value">{{ activity.typeActivite ?: 'Non défini' }}</div>
+                </div>
+            </div>
+
+            <!-- Image -->
+            {% if activity.image %}
+                <div class="info-item">
+                    <div class="info-icon">
+                        <i class="fas fa-image"></i>
+                    </div>
+                    <div class="info-content">
+                        <div class="info-label">Image</div>
+                        <div class="info-value">
+                            <small class="text-muted d-block">Fichier: {{ activity.image }}</small>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Actions -->
+        <div class="border-top p-4">
+            <div class="d-flex justify-content-center">
+                <a href="{{ path('app_activities_index') }}" class="btn btn-secondary-modern btn-modern">
+                    <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+// Pas de JavaScript nécessaire pour le moment
+</script>
+{% endblock %}

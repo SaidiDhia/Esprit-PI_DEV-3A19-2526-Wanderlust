@@ -1,0 +1,25 @@
+<form method="post" action="{{ path('app_events_delete', {'id': event.id}) }}" onsubmit="return confirmSupprimerEvenement(event);">
+    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ event.id) }}">
+    <button type="submit" class="btn btn-danger btn-sm" title="Supprimer l'événement">
+        <i class="fas fa-trash-alt"></i>
+        Supprimer
+    </button>
+</form>
+
+<script>
+function confirmSupprimerEvenement(event) {
+    // Empêcher la soumission par défaut
+    event.preventDefault();
+    
+    // Message de confirmation détaillé
+    const message = `Êtes-vous sûr de vouloir supprimer l'événement "${{ event.lieu|e('script') }}" ?\n\nCette action est irréversible et supprimera définitivement toutes les données associées à cet événement.`;
+    
+    // Afficher la boîte de dialogue de confirmation
+    if (confirm(message)) {
+        // Si l'utilisateur confirme, soumettre le formulaire
+        event.target.submit();
+    }
+    
+    return false;
+}
+</script>

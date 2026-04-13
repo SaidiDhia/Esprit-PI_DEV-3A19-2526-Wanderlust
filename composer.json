@@ -77,5 +77,9 @@
             "allow-contrib": false,
             "require": "6.4.*"
         }
+    },
+    "require-dev": {
+        "symfony/debug-bundle": "6.4.*",
+        "symfony/maker-bundle": "^1.67"
     }
 }
