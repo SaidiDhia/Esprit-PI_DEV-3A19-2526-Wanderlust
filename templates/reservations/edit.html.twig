@@ -5,51 +5,96 @@
 {% block stylesheets %}
 {{ parent() }}
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
     :root {
-        --accent: #e8572a;
-        --ink:    #0f0e17;
-        --mid:    #6b6b80;
-        --line:   #e4e1d8;
-        --paper:  #fffcf5;
+        --primary-color: #667eea;
+        --primary-dark: #5a67d8;
+        --secondary-color: #764ba2;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --border-radius: 16px;
+        --shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
+        --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
+        --shadow-lg: 0 16px 40px rgba(0,0,0,0.15);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    body { background: var(--paper); font-family: 'DM Sans', sans-serif; }
+    body { 
+        background: #fffcf5; 
+        font-family: 'DM Sans', sans-serif;
+        color: #0f0e17;
+    }
 
+    /* Section Header */
     .edit-hero {
-        background: linear-gradient(135deg, #0f0e17 0%, #2d2b3d 100%);
-        padding: 3rem 0 2rem;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        padding: 4rem 0 2rem;
         text-align: center;
         color: white;
         margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
     }
-    .edit-hero h1 { font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800; margin-bottom: .5rem; }
-    .edit-hero p  { opacity: .8; font-size: 1.1rem; }
 
-    .container { max-width: 800px; margin: 0 auto; padding: 0 2rem; }
+    .edit-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+        background-size: cover;
+        opacity: 0.3;
+    }
 
+    .edit-hero h1 { 
+        font-family: 'Syne', sans-serif; 
+        font-size: 2.5rem; 
+        font-weight: 800; 
+        margin-bottom: .5rem; 
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .edit-hero p  { 
+        opacity: .8; 
+        font-size: 1.1rem; 
+    }
+
+    .container { 
+        max-width: 800px; 
+        margin: 0 auto; 
+        padding: 0 2rem; 
+    }
+
+    /* Edit Card */
     .edit-card {
         background: white;
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0,0,0,.08);
+        border: 1px solid #e4e1d8;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-md);
         margin-bottom: 2rem;
         overflow: hidden;
     }
 
     .card-header {
-        background: linear-gradient(135deg, var(--accent), #f7a278);
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         color: white;
         padding: 1.5rem 2rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
+
     .card-title {
         font-family: 'Syne', sans-serif;
         font-size: 1.3rem;
         font-weight: 700;
         margin: 0;
     }
+
     .reservation-id {
         background: rgba(255,255,255,0.2);
         padding: 0.5rem 1rem;
@@ -63,54 +108,48 @@
     }
 
     .form-section {
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #0f0e17;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .form-group .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e4e1d8;
+        border-radius: var(--border-radius);
+        font-size: 0.95rem;
+        transition: var(--transition);
+        background: white;
+    }
+
+    .form-group .form-control:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .form-section {
         margin-bottom: 2rem;
     }
     .section-title {
         font-family: 'Syne', sans-serif;
         font-size: 1rem;
         font-weight: 700;
-        color: var(--accent);
+        color: var(--primary-color);
         margin-bottom: 1rem;
         padding-bottom: 0.5rem;
-        border-bottom: 2px solid var(--line);
+        border-bottom: 2px solid var(--primary-color);
         display: flex;
         align-items: center;
         gap: 0.5rem;
-    }
-
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-    .form-label {
-        display: block;
-        font-weight: 600;
-        color: var(--ink);
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
-    }
-    .form-control {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 1.5px solid var(--line);
-        border-radius: 10px;
-        font-size: 1rem;
-        font-family: 'DM Sans', sans-serif;
-        color: var(--ink);
-        background: var(--paper);
-        transition: all 0.2s;
-    }
-    .form-control:focus {
-        outline: none;
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px rgba(232,87,42,0.1);
-    }
-    .form-control.is-invalid {
-        border-color: #ef4444;
-    }
-    .invalid-feedback {
-        color: #ef4444;
-        font-size: 0.875rem;
-        margin-top: 0.25rem;
     }
 
     .form-row {
@@ -131,15 +170,15 @@
         margin-bottom: 1.5rem;
     }
     .counter-box {
-        border: 1.5px solid var(--line);
+        border: 1.5px solid var(--primary-color);
         border-radius: 12px;
         padding: 1rem 1.25rem;
         text-align: center;
-        background: var(--paper);
+        background: white;
     }
     .counter-label {
         font-weight: 600;
-        color: var(--ink);
+        color: #0f0e17;
         margin-bottom: 0.5rem;
         font-size: 0.9rem;
     }

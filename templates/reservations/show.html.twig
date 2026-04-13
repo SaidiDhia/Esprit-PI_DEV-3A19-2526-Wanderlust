@@ -5,63 +5,122 @@
 {% block stylesheets %}
 {{ parent() }}
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
     :root {
-        --accent: #e8572a;
-        --ink:    #0f0e17;
-        --mid:    #6b6b80;
-        --line:   #e4e1d8;
-        --paper:  #fffcf5;
+        --primary-color: #667eea;
+        --primary-dark: #5a67d8;
+        --secondary-color: #764ba2;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --border-radius: 16px;
+        --shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
+        --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
+        --shadow-lg: 0 16px 40px rgba(0,0,0,0.15);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    body { background: var(--paper); font-family: 'DM Sans', sans-serif; }
+    body { 
+        background: #fffcf5; 
+        font-family: 'DM Sans', sans-serif;
+        color: #0f0e17;
+    }
 
+    /* Section Header */
     .show-hero {
-        background: linear-gradient(135deg, #0f0e17 0%, #2d2b3d 100%);
-        padding: 3rem 0 2rem;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        padding: 4rem 0 2rem;
         text-align: center;
         color: white;
         margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
     }
-    .show-hero h1 { font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800; margin-bottom: .5rem; }
-    .show-hero p  { opacity: .8; font-size: 1.1rem; }
 
-    .container { max-width: 1000px; margin: 0 auto; padding: 0 2rem; }
+    .show-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+        background-size: cover;
+        opacity: 0.3;
+    }
 
+    .show-hero h1 { 
+        font-family: 'Syne', sans-serif; 
+        font-size: 2.5rem; 
+        font-weight: 800; 
+        margin-bottom: .5rem; 
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .show-hero p  { 
+        opacity: .8; 
+        font-size: 1.1rem; 
+    }
+
+    .container { 
+        max-width: 1000px; 
+        margin: 0 auto; 
+        padding: 0 2rem; 
+    }
+
+    /* Detail Card */
     .detail-card {
         background: white;
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(0,0,0,.08);
+        border: 1px solid #e4e1d8;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-md);
         margin-bottom: 2rem;
         overflow: hidden;
     }
 
     .card-header {
-        background: linear-gradient(135deg, var(--accent), #f7a278);
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         color: white;
         padding: 1.5rem 2rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
+
     .card-title {
         font-family: 'Syne', sans-serif;
         font-size: 1.3rem;
         font-weight: 700;
         margin: 0;
     }
+
     .status-badge {
         padding: 0.5rem 1.2rem;
         border-radius: 20px;
         font-size: 0.8rem;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.5px;
     }
-    .status-en_attente { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-    .status-confirmee { background: rgba(16, 185, 129, 0.2); color: #10b981; }
-    .status-annulee { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
-    .status-terminee { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+
+    .status-en_attente { 
+        background: linear-gradient(135deg, var(--warning-color) 0%, #ff9800 100%);
+        color: #856404; 
+        box-shadow: 0 4px 20px rgba(255, 193, 7, 0.25);
+    }
+
+    .status-confirmee { 
+        background: linear-gradient(135deg, var(--success-color) 0%, #157347 100%);
+        color: #ffffff; 
+        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.25);
+    }
+
+    .status-annulee { 
+        background: linear-gradient(135deg, var(--danger-color) 0%, #b02a37 100%);
+        color: #ffffff; 
+        box-shadow: 0 4px 20px rgba(220, 38, 38, 0.25);
+    }
 
     .card-body {
         padding: 2rem;
@@ -125,7 +184,7 @@
 
     .price-tag {
         background: linear-gradient(135deg, var(--accent), #f7a278);
-        color: white;
+        color: black;
         padding: 1rem 1.5rem;
         border-radius: 12px;
         font-family: 'Syne', sans-serif;

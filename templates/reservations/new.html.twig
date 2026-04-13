@@ -8,62 +8,338 @@
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
     :root {
-        --accent: #e8572a;
-        --ink:    #0f0e17;
-        --mid:    #6b6b80;
-        --line:   #e4e1d8;
-        --paper:  #fffcf5;
+        --primary-color: #667eea;
+        --primary-dark: #5a67d8;
+        --secondary-color: #764ba2;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --border-radius: 16px;
+        --shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
+        --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
+        --shadow-lg: 0 16px 40px rgba(0,0,0,0.15);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    body { background: var(--paper); font-family: 'DM Sans', sans-serif; }
+    body { 
+        background: #fffcf5; 
+        font-family: 'DM Sans', sans-serif;
+        color: #0f0e17;
+    }
 
-    /* ── Hero ── */
+    /* Section Header */
     .res-hero {
-        background: linear-gradient(135deg, #0f0e17 0%, #2d2b3d 100%);
-        padding: 3rem 0 2rem;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        padding: 4rem 0 2rem;
         text-align: center;
         color: white;
         margin-bottom: 2.5rem;
+        position: relative;
+        overflow: hidden;
     }
-    .res-hero h1 { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; margin-bottom: .4rem; }
-    .res-hero p  { opacity: .6; font-size: .95rem; }
 
-    .res-wrapper { max-width: 780px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+    .res-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+        background-size: cover;
+        opacity: 0.3;
+    }
 
-    /* ── Event recap ── */
+    .res-hero h1 { 
+        font-family: 'Syne', sans-serif; 
+        font-size: 2rem; 
+        font-weight: 800; 
+        margin-bottom: .4rem; 
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .res-hero p  { 
+        opacity: .6; 
+        font-size: .95rem; 
+    }
+
+    .res-wrapper { 
+        max-width: 780px; 
+        margin: 0 auto; 
+        padding: 0 1.5rem 4rem; 
+    }
+
+    /* Event recap */
     .event-recap {
         background: white;
-        border: 1px solid var(--line);
-        border-radius: 16px;
+        border: 1px solid #e4e1d8;
+        border-radius: var(--border-radius);
         padding: 1.25rem 1.5rem;
         margin-bottom: 2rem;
         display: flex;
         align-items: center;
         gap: 1rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,.04);
+        box-shadow: var(--shadow-sm);
     }
 
     .recap-icon {
-        width: 48px; height: 48px;
-        background: linear-gradient(135deg, var(--accent), #f7a278);
+        width: 48px; 
+        height: 48px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         border-radius: 12px;
-        display: flex; align-items: center; justify-content: center;
-        color: white; font-size: 1.2rem; flex-shrink: 0;
+        display: flex; 
+        align-items: center; 
+        justify-content: center;
     }
 
-    .recap-info h3 { font-family: 'Syne',sans-serif; font-size: 1rem; font-weight: 700; margin: 0 0 .2rem; }
-    .recap-info p  { color: var(--mid); font-size: .82rem; margin: 0; }
+    .recap-icon i {
+        font-size: 1.25rem;
+        color: white;
+    }
+
+    .recap-content h3 {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #0f0e17;
+        margin-bottom: 0.25rem;
+    }
+
+    .recap-content p {
+        color: #6b6b80;
+        font-size: 0.9rem;
+        margin-bottom: 0;
+    }
+
+    .recap-info h3 { 
+        font-family: 'Syne', sans-serif; 
+        font-size: 1rem; 
+        font-weight: 700; 
+        margin: 0 0 .2rem; 
+    }
+    
+    .recap-info p  { 
+        color: var(--mid); 
+        font-size: .82rem; 
+        margin: 0; 
+    }
 
     .recap-price {
-        margin-left: auto; text-align: right; flex-shrink: 0;
+        margin-left: auto; 
+        text-align: right; 
+        flex-shrink: 0;
     }
-    .recap-price .price { font-family: 'Syne',sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--accent); }
-    .recap-price small  { color: var(--mid); font-size: .75rem; display: block; }
+
+    .recap-price .price { 
+        font-family: 'Syne', sans-serif; 
+        font-size: 1.5rem; 
+        font-weight: 800; 
+        color: var(--primary-color); 
+    }
+    
+    .recap-price small  { 
+        color: var(--mid); 
+        font-size: .75rem; 
+        display: block; 
+    }
+
+    /* Form Card */
+    .form-card {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: var(--border-radius);
+        padding: 1.75rem 2rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,.04);
+    }
+
+    .form-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .form-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .form-body {
+        padding: 2rem;
+    }
+
+    /* Form Groups */
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: #0f0e17;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .form-group .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #e4e1d8;
+        border-radius: var(--border-radius);
+        font-size: 0.95rem;
+        transition: var(--transition);
+        background: white;
+    }
+
+    .form-group .form-control:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    /* Counter Section */
+    .counter-group {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .counter-item {
+        flex: 1;
+        background: white;
+        border: 1px solid #e4e1d8;
+        border-radius: var(--border-radius);
+        padding: 1rem;
+        text-align: center;
+    }
+
+    .counter-label {
+        font-weight: 600;
+        color: #6b6b80;
+        font-size: 0.85rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .counter-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .counter-btn {
+        width: 36px;
+        height: 36px;
+        border: none;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: var(--transition);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .counter-btn:hover {
+        transform: scale(1.1);
+        box-shadow: var(--shadow-md);
+    }
+
+    .counter-value {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+        min-width: 40px;
+    }
+
+    /* Total Section */
+    .total-section {
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+        border: 1px solid #e4e1d8;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+    }
+
+    .total-amount {
+        font-family: 'Syne', sans-serif;
+        font-size: 2rem;
+        font-weight: 800;
+        color: var(--primary-color);
+        margin-bottom: 0.5rem;
+    }
+
+    .total-detail {
+        color: #6b6b80;
+        font-size: 0.9rem;
+    }
+
+    /* Buttons */
+    .btn-submit {
+        background: #209cd1;
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: var(--border-radius);
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+        width: 100%;
+        font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .btn-submit:disabled {
+        background: #e4e1d8;
+        color: #6b6b80;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .res-hero {
+            padding: 3rem 0 1.5rem;
+        }
+        
+        .res-hero h1 {
+            font-size: 1.75rem;
+        }
+        
+        .res-wrapper {
+            padding: 0 1rem 2rem;
+        }
+        
+        .event-recap {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .counter-group {
+            flex-direction: column;
+            gap: 1rem;
+        }
+    }
 
     /* ── Form card ── */
     .form-card {
         background: white;
         border: 1px solid var(--line);
+        border-radius: var(--border-radius);
         border-radius: 16px;
         padding: 1.75rem 2rem;
         margin-bottom: 1.25rem;
@@ -163,7 +439,7 @@
     .btn-submit {
         width: 100%;
         padding: 1rem;
-        background: var(--accent);
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         color: white;
         border: none;
         border-radius: 12px;
@@ -173,7 +449,7 @@
         letter-spacing: .04em;
         cursor: pointer;
         transition: all .2s;
-        box-shadow: 0 4px 14px rgba(232,87,42,.3);
+        box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
         margin-top: 1.5rem;
         display: flex;
         align-items: center;
@@ -181,7 +457,7 @@
         gap: .5rem;
         text-decoration: none;
     }
-    .btn-submit:hover { background: #d14820; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,87,42,.4); }
+    .btn-submit:hover { background: linear-gradient(135deg, var(--primary-dark), var(--secondary-color)); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5); }
 
     .btn-back {
         display: flex; align-items: center; justify-content: center; gap: .5rem;
@@ -260,6 +536,13 @@
                     {{ form_errors(form.telephone) }}
                 </div>
             </div>
+
+            {# Demandes spéciales #}
+            <div class="form-group">
+                {{ form_label(form.demandesSpeciales, 'Demandes spéciales (optionnel)') }}
+                {{ form_widget(form.demandesSpeciales, {'attr': {'class': 'form-control', 'placeholder': 'Indiquez ici vos demandes spéciales...'}}) }}
+                {{ form_errors(form.demandesSpeciales) }}
+            </div>
         </div>
 
         {# Participants #}
@@ -280,12 +563,11 @@
                         <span class="counter-value" id="val-adultes">1</span>
                         <button type="button" class="counter-btn" onclick="increment('adultes', {{ event.placesDisponibles }})">+</button>
                     </div>
-                    {{ form_row(form.nombreAdultes, {
+                    {{ form_widget(form.nombreAdultes, {
                         'id': 'input-adultes',
-                        'style': 'display:none',
-                        'label': false,
                         'attr': {
-                            'class': 'form-control'
+                            'class': 'form-control',
+                            'style': 'display:none'
                         }
                     }) }}
                 </div>
@@ -300,12 +582,11 @@
                         <span class="counter-value" id="val-enfants">0</span>
                         <button type="button" class="counter-btn" onclick="increment('enfants', {{ event.placesDisponibles }})">+</button>
                     </div>
-                    {{ form_row(form.nombreEnfants, {
+                    {{ form_widget(form.nombreEnfants, {
                         'id': 'input-enfants',
-                        'style': 'display:none',
-                        'label': false,
                         'attr': {
-                            'class': 'form-control'
+                            'class': 'form-control',
+                            'style': 'display:none'
                         }
                     }) }}
                 </div>
@@ -314,23 +595,6 @@
             {{ form_errors(form.nombreAdultes) }}
             {{ form_errors(form.nombreEnfants) }}
 
-            
-            
-            </div>
-        </div>
-
-        {# Demandes spéciales #}
-        <div class="form-card">
-            <div class="form-section-title">
-                <i class="fas fa-comment-dots"></i> Demandes spéciales
-                <span style="font-size:.75rem;color:var(--mid);font-weight:400;
-                             text-transform:none;letter-spacing:0;margin-left:.25rem;">
-                    — optionnel
-                </span>
-            </div>
-            <div class="form-group" style="margin:0;">
-                {{ form_widget(form.demandesSpeciales, {'attr': {'class': 'form-control'}}) }}
-            </div>
         </div>
 
         <button type="submit" class="btn-submit">
