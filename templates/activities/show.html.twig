@@ -4,6 +4,7 @@
 
 {% block stylesheets %}
 {{ parent() }}
+
 <style>
     :root {
         --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -123,7 +124,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+        background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(44, 62, 80, 0.95) 100%);
         opacity: 0;
         transition: opacity 0.3s ease;
         display: flex;
@@ -137,9 +138,10 @@
 
     .overlay-content {
         text-align: center;
-        color: white;
+        color: #ffffff;
         transform: translateY(20px);
         transition: transform 0.3s ease;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.8);
     }
 
     .activity-show-card:hover .overlay-content {
@@ -155,9 +157,10 @@
         font-weight: 600;
         backdrop-filter: blur(10px);
         background: rgba(255,255,255,0.95);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
         transition: all 0.3s ease;
         margin: 0.5rem;
+        color: #1a1a1a;
     }
 
     .activity-show-card:hover .badge-modern {
@@ -365,6 +368,44 @@
 </div>
 
 <div class="container mb-5">
+    {% set categoryValue = activity.categorie is not null ? activity.categorie.value|lower : '' %}
+    {% set categoryLabel = activity.categorie is not null ? activity.categorie.getLabel() : 'Non classé' %}
+    {% set typeValue = activity.typeActivite is not null ? activity.typeActivite : '' %}
+    {% set typeLabel = activity.typeActivite ?: 'Non défini' %}
+    {% set categoryIcon = '' %}
+    {% if categoryValue == 'desert' %}
+        {% set categoryIcon = '🏜️' %}
+    {% elseif categoryValue == 'mer' %}
+        {% set categoryIcon = '🌊' %}
+    {% elseif categoryValue == 'aerien' %}
+        {% set categoryIcon = '🪂' %}
+    {% elseif categoryValue == 'nature' %}
+        {% set categoryIcon = '🌳' %}
+    {% elseif categoryValue == 'culture' %}
+        {% set categoryIcon = '🏛️' %}
+    {% endif %}
+    {% set typeIcon = 'fas fa-tag' %}
+    {% if 'Pêche' in typeValue or 'Peche' in typeValue %}
+        {% set typeIcon = 'fas fa-fish' %}
+    {% elseif 'Randonnée' in typeValue %}
+        {% set typeIcon = 'fas fa-hiking' %}
+    {% elseif 'Plongée' in typeValue or 'Plongee' in typeValue %}
+        {% set typeIcon = 'fas fa-swimmer' %}
+    {% elseif 'Parapente' in typeValue or 'Parachutisme' in typeValue %}
+        {% set typeIcon = 'fas fa-parachute-box' %}
+    {% elseif 'Kayak' in typeValue or 'Planche' in typeValue %}
+        {% set typeIcon = 'fas fa-ship' %}
+    {% elseif 'VTT' in typeValue or 'Vélo' in typeValue %}
+        {% set typeIcon = 'fas fa-bicycle' %}
+    {% elseif 'Escalade' in typeValue %}
+        {% set typeIcon = 'fas fa-mountain' %}
+    {% elseif 'Camping' in typeValue %}
+        {% set typeIcon = 'fas fa-campground' %}
+    {% elseif 'Visite' in typeValue %}
+        {% set typeIcon = 'fas fa-eye' %}
+    {% elseif 'Photo' in typeValue or 'Photographie' in typeValue %}
+        {% set typeIcon = 'fas fa-camera' %}
+    {% endif %}
     <!-- Messages Flash -->
     {% for message in app.flashes('success') %}
         <div class="alert alert-success alert-modern alert-dismissible fade show mb-4" role="alert">
@@ -417,19 +458,12 @@
                 <div class="image-overlay">
                     <div class="overlay-content">
                         <div class="badge-modern">
-                            <span class="me-2">
-                                {% if activity.categorie.value == 'DESERT' %}🏜️
-                                {% elseif activity.categorie.value == 'MER' %}🌊
-                                {% elseif activity.categorie.value == 'AERIEN' %}🪂
-                                {% elseif activity.categorie.value == 'NATURE' %}🌳
-                                {% else %}🏛️
-                                {% endif %}
-                            </span>
-                            {{ activity.categorie.value|default('Non classé') }}
+                            <span class="me-2">{{ categoryIcon }}</span>
+                            {{ categoryLabel }}
                         </div>
                         <h2 class="display-4 fw-bold mb-3">{{ activity.titre }}</h2>
                         <div class="badge-modern">
-                            {{ activity.typeActivite ?: 'Non défini' }}
+                            <i class="{{ typeIcon }} me-2"></i>{{ typeLabel }}
                         </div>
                     </div>
                 </div>
@@ -439,7 +473,10 @@
                         <i class="fas fa-hiking fa-5x mb-4"></i>
                         <h2 class="display-4 fw-bold mb-3">{{ activity.titre }}</h2>
                         <div class="badge-modern">
-                            {{ activity.categorie.value|default('Non classé') }} - {{ activity.typeActivite ?: 'Non défini' }}
+                            <span class="me-2">{{ categoryIcon }}</span>{{ categoryLabel }}
+                        </div>
+                        <div class="badge-modern mt-3">
+                            <i class="{{ typeIcon }} me-2"></i>{{ typeLabel }}
                         </div>
                     </div>
                 </div>
@@ -462,18 +499,36 @@
             <!-- Catégorie -->
             <div class="info-item">
                 <div class="info-icon">
-                    <i class="fas fa-layer-group"></i>
+                    {% if categoryValue == 'desert' %}
+                        <i class="fas fa-sun"></i>
+                    {% elseif categoryValue == 'mer' %}
+                        <i class="fas fa-water"></i>
+                    {% elseif categoryValue == 'aerien' %}
+                        <i class="fas fa-plane"></i>
+                    {% elseif categoryValue == 'nature' %}
+                        <i class="fas fa-tree"></i>
+                    {% elseif categoryValue == 'culture' %}
+                        <i class="fas fa-landmark"></i>
+                    {% else %}
+                        <i class="fas fa-layer-group"></i>
+                    {% endif %}
                 </div>
                 <div class="info-content">
                     <div class="info-label">Catégorie</div>
                     <div class="info-value">
                         <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill me-2">
-                            {% if activity.categorie.value == 'DESERT' %}🏜️ Désert
-                            {% elseif activity.categorie.value == 'MER' %}🌊 Mer
-                            {% elseif activity.categorie.value == 'AERIEN' %}🪂 Aérien
-                            {% elseif activity.categorie.value == 'NATURE' %}🌳 Nature
-                            {% elseif activity.categorie.value == 'CULTUREL' %}🏛️ Culturel
-                            {% else %}{{ activity.categorie.value }}
+                            {% if categoryValue == 'desert' %}
+                                <i class="fas fa-sun me-1"></i> Désert
+                            {% elseif categoryValue == 'mer' %}
+                                <i class="fas fa-water me-1"></i> Mer
+                            {% elseif categoryValue == 'aerien' %}
+                                <i class="fas fa-plane me-1"></i> Aérien
+                            {% elseif categoryValue == 'nature' %}
+                                <i class="fas fa-tree me-1"></i> Nature
+                            {% elseif categoryValue == 'culture' %}
+                                <i class="fas fa-landmark me-1"></i> Culture
+                            {% else %}
+                                {{ categoryLabel }}
                             {% endif %}
                         </span>
                     </div>
@@ -483,28 +538,81 @@
             <!-- Type d'activité -->
             <div class="info-item">
                 <div class="info-icon">
-                    <i class="fas fa-tag"></i>
+                    {% if 'Randonnée' in activity.typeActivite %}
+                        <i class="fas fa-hiking"></i>
+                    {% elseif 'Plongée' in activity.typeActivite %}
+                        <i class="fas fa-swimmer"></i>
+                    {% elseif 'Parapente' in activity.typeActivite %}
+                        <i class="fas fa-parachute-box"></i>
+                    {% elseif 'Kayak' in activity.typeActivite %}
+                        <i class="fas fa-ship"></i>
+                    {% elseif 'Vélo' in activity.typeActivite %}
+                        <i class="fas fa-bicycle"></i>
+                    {% elseif 'Escalade' in activity.typeActivite %}
+                        <i class="fas fa-mountain"></i>
+                    {% elseif 'Camping' in activity.typeActivite %}
+                        <i class="fas fa-campground"></i>
+                    {% elseif 'Photo' in activity.typeActivite %}
+                        <i class="fas fa-camera"></i>
+                    {% elseif 'Visite' in activity.typeActivite %}
+                        <i class="fas fa-eye"></i>
+                    {% elseif 'Atelier' in activity.typeActivite %}
+                        <i class="fas fa-tools"></i>
+                    {% else %}
+                        <i class="fas fa-tag"></i>
+                    {% endif %}
                 </div>
                 <div class="info-content">
                     <div class="info-label">Type d'activité</div>
-                    <div class="info-value">{{ activity.typeActivite ?: 'Non défini' }}</div>
+                    <div class="info-value">
+                        {% if 'Randonnée' in activity.typeActivite %}
+                            <i class="fas fa-hiking me-1"></i>
+                        {% elseif 'Plongée' in activity.typeActivite %}
+                            <i class="fas fa-swimmer me-1"></i>
+                        {% elseif 'Parapente' in activity.typeActivite %}
+                            <i class="fas fa-parachute-box me-1"></i>
+                        {% elseif 'Kayak' in activity.typeActivite %}
+                            <i class="fas fa-ship me-1"></i>
+                        {% elseif 'Vélo' in activity.typeActivite %}
+                            <i class="fas fa-bicycle me-1"></i>
+                        {% elseif 'Escalade' in activity.typeActivite %}
+                            <i class="fas fa-mountain me-1"></i>
+                        {% elseif 'Camping' in activity.typeActivite %}
+                            <i class="fas fa-campground me-1"></i>
+                        {% elseif 'Photo' in activity.typeActivite %}
+                            <i class="fas fa-camera me-1"></i>
+                        {% elseif 'Visite' in activity.typeActivite %}
+                            <i class="fas fa-eye me-1"></i>
+                        {% elseif 'Atelier' in activity.typeActivite %}
+                            <i class="fas fa-tools me-1"></i>
+                        {% endif %}
+                        {{ activity.typeActivite ?: 'Non défini' }}
+                    </div>
                 </div>
             </div>
 
-            <!-- Image -->
-            {% if activity.image %}
-                <div class="info-item">
-                    <div class="info-icon">
-                        <i class="fas fa-image"></i>
-                    </div>
-                    <div class="info-content">
-                        <div class="info-label">Image</div>
-                        <div class="info-value">
-                            <small class="text-muted d-block">Fichier: {{ activity.image }}</small>
-                        </div>
+            <!-- Âge minimum -->
+            {% if activity.ageMinimum %}
+            <div class="info-item">
+                <div class="info-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <div class="info-content">
+                    <div class="info-label">Âge minimum requis</div>
+                    <div class="info-value">
+                        <span class="badge bg-gradient" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px 16px; font-weight: 500;">
+                            <i class="fas fa-child me-2"></i> {{ activity.ageMinimum }} ans minimum
+                        </span>
+                        <small class="text-muted d-block mt-1">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Cette activité nécessite un âge minimum de {{ activity.ageMinimum }} ans
+                        </small>
                     </div>
                 </div>
+            </div>
             {% endif %}
+
+            
         </div>
 
         <!-- Actions -->

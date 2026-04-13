@@ -1,166 +1,186 @@
 <?php
+// src/Form/EventsType.php
 
 namespace App\Form;
 
-use App\Entity\Events;
 use App\Entity\Activities;
+use App\Entity\Events;
+use Doctrine\ORM\EntityRepository;
+use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
+use Symfony\Component\Form\Extension\Core\Type\EmailType;
+use Symfony\Component\Form\Extension\Core\Type\FileType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
+use Symfony\Component\Form\Extension\Core\Type\MoneyType;
+use Symfony\Component\Form\Extension\Core\Type\NumberType;
+use Symfony\Component\Form\Extension\Core\Type\TextareaType;
+use Symfony\Component\Form\Extension\Core\Type\TextType;
+use Symfony\Component\Form\Extension\Core\Type\UrlType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\Form\Extension\Core\Type\NumberType;
-use Symfony\Component\Form\Extension\Core\Type\DateType;
-use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
-use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
-use Symfony\Component\Form\Extension\Core\Type\TextareaType;
-use Symfony\Component\Form\Extension\Core\Type\EmailType;
-use Symfony\Component\Form\Extension\Core\Type\TelType;
-use Symfony\Component\Form\Extension\Core\Type\MoneyType;
-use Symfony\Component\Form\Extension\Core\Type\FileType;
-use Symfony\Bridge\Doctrine\Form\Type\EntityType;
-use Symfony\Component\Form\Extension\Core\Type\CheckboxType;
+use Symfony\Component\Validator\Constraints\All;
+use Symfony\Component\Validator\Constraints\Email;
+use Symfony\Component\Validator\Constraints\File;
+use Symfony\Component\Validator\Constraints\Length;
+use Symfony\Component\Validator\Constraints\NotBlank;
+use Symfony\Component\Validator\Constraints\Positive;
+use Symfony\Component\Validator\Constraints\Regex;
+use Symfony\Component\Validator\Constraints\Url;
 
 class EventsType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
+            // Activités associées
             ->add('activities', EntityType::class, [
-                'class' => Activities::class,
+                'class'        => Activities::class,
                 'choice_label' => 'titre',
-                'label' => 'Activités associées',
-                'multiple' => true,
-                'expanded' => false,
-                'required' => false,
-                'attr' => [
-                    'class' => 'form-select-modern form-control-modern',
-                    'placeholder' => 'Sélectionnez les activités associées (optionnel)'
+                'multiple'     => true,
+                'expanded'     => false,
+                'label'        => 'Activités associées',
+                'attr'         => [
+                    'class'        => 'form-select-modern',
+                    'placeholder'  => 'Sélectionnez des activités',
                 ],
-                'help' => 'Sélectionnez une ou plusieurs activités pour cet événement (optionnel)'
+                'query_builder' => function (EntityRepository $er) {
+                    return $er->createQueryBuilder('a')
+                        ->orderBy('a.titre', 'ASC');
+                },
+                'required'     => false,
             ])
+            
+            // Lieu + Map
             ->add('lieu', TextType::class, [
-                'label' => 'Lieu *',
-                'required' => true,
-                'attr' => [
-                    'class' => 'form-control',
-                    'placeholder' => 'Entrez le lieu de l\'événement',
-                    'required' => 'required'
-                ]
-            ])
-            ->add('date_debut', DateTimeType::class, [
-                'label' => 'Date et heure de début *',
-                'required' => true,
-                'widget' => 'single_text',
-                'attr' => [
-                    'class' => 'form-control',
-                    'required' => 'required',
-                    'placeholder' => 'JJ/MM/AAAA HH:MM'
+                'label'       => 'Lieu',
+                'attr'        => [
+                    'placeholder'    => 'Entrez une adresse...',
+                    'class'          => 'lieu-input',
+                    'autocomplete'   => 'off',
                 ],
-                'help' => 'Format: JJ/MM/AAAA HH:MM (ex: 25/12/2024 14:30)'
-            ])
-            ->add('date_fin', DateTimeType::class, [
-                'label' => 'Date et heure de fin *',
-                'required' => true,
-                'widget' => 'single_text',
-                'attr' => [
-                    'class' => 'form-control',
-                    'required' => 'required',
-                    'placeholder' => 'JJ/MM/AAAA HH:MM'
+                'constraints' => [
+                    new NotBlank(['message' => 'Le lieu est obligatoire.']),
+                    new Length(['min' => 3, 'max' => 255, 'minMessage' => 'Le lieu doit contenir au moins 3 caractères.', 'maxMessage' => 'Le lieu ne peut pas dépasser 255 caractères.']),
                 ],
-                'help' => 'Format: JJ/MM/AAAA HH:MM (ex: 25/12/2024 16:30)'
             ])
-            ->add('prix', MoneyType::class, [
-                'label' => 'Prix (€) *',
-                'required' => true,
-                'currency' => 'EUR',
-                'attr' => [
-                    'class' => 'form-control',
-                    'placeholder' => '0.00',
-                    'required' => 'required'
-                ]
-            ])
-            ->add('capacite_max', NumberType::class, [
-                'label' => 'Capacité maximale *',
-                'required' => true,
-                'attr' => [
-                    'class' => 'form-control',
-                    'placeholder' => 'Entrez la capacité maximale',
-                    'min' => 1,
-                    'max' => 10000,
-                    'required' => 'required'
-                ]
-            ])
-            ->add('places_disponibles', NumberType::class, [
-                'label' => 'Places disponibles *',
-                'required' => true,
-                'attr' => [
-                    'class' => 'form-control',
-                    'placeholder' => 'Entrez le nombre de places disponibles',
-                    'min' => 1,
-                    'required' => 'required'
-                ]
-            ])
-            ->add('organisateur', TextType::class, [
-                'label' => 'Organisateur *',
-                'required' => true,
-                'attr' => [
-                    'class' => 'form-control',
-                    'placeholder' => 'Entrez le nom de l\'organisateur',
-                    'required' => 'required'
-                ]
-            ])
-            ->add('materiels_necessaires', TextareaType::class, [
-                'label' => 'Matériels nécessaires *',
-                'required' => true,
-                'attr' => [
-                    'class' => 'form-control',
-                    'rows' => 4,
-                    'placeholder' => 'Décrivez les matériels nécessaires pour l\'événement',
-                    'required' => 'required'
-                ]
-            ])
-            ->add('confirmation_organisateur', CheckboxType::class, [
-                'label' => 'Je confirme être l\'organisateur de cet événement *',
-                'required' => true,
-                'attr' => [
-                    'class' => 'form-check-input'
-                ]
-            ])
-            ->add('image', FileType::class, [
-                'label' => 'Image *',
-                'required' => false,
+            // latitude & longitude sont des champs cachés remplis par la map
+            ->add('latitude', TextType::class, [
+                'label'  => false,
                 'mapped' => false,
-                'attr' => [
-                    'class' => 'form-control',
-                    'accept' => 'image/jpeg,image/png,image/gif'
-                ],
-                'help' => 'Formats acceptés: JPG, PNG, GIF (Max 5MB). Une image est obligatoire.'
+                'attr'   => ['id' => 'map-lat', 'class' => 'd-none'],
             ])
-            ->add('telephone', TelType::class, [
-                'label' => 'Téléphone *',
-                'required' => true,
-                'attr' => [
-                    'class' => 'form-control',
-                    'placeholder' => 'Entrez le numéro de téléphone',
-                    'required' => 'required'
-                ]
+            ->add('longitude', TextType::class, [
+                'label'  => false,
+                'mapped' => false,
+                'attr'   => ['id' => 'map-lng', 'class' => 'd-none'],
+            ])
+
+            // Dates
+            ->add('dateDebut', DateTimeType::class, [
+                'label'        => 'Date et heure de début',
+                'widget'       => 'single_text',
+                'attr'         => ['class' => 'datetime-input'],
+                'constraints'  => [new NotBlank(['message' => 'La date de début est obligatoire.'])],
+            ])
+            ->add('dateFin', DateTimeType::class, [
+                'label'        => 'Date et heure de fin',
+                'widget'       => 'single_text',
+                'attr'         => ['class' => 'datetime-input'],
+                'constraints'  => [new NotBlank(['message' => 'La date de fin est obligatoire.'])],
+            ])
+            ->add('dateLimiteInscription', DateTimeType::class, [
+                'label'       => "Date limite d'inscription",
+                'widget'      => 'single_text',
+                'attr'        => ['class' => 'datetime-input'],
+                'constraints' => [new NotBlank(['message' => "La date limite est obligatoire."])],
+            ])
+
+            // Infos pratiques
+            ->add('prix', MoneyType::class, [
+                'label'      => 'Prix (TND)',
+                'currency'   => false,
+                'attr'       => ['placeholder' => '0.00'],
+                'constraints'=> [
+                    new NotBlank(['message' => 'Le prix est obligatoire.']),
+                    new Positive(['message' => 'Le prix doit être positif.']),
+                ],
+            ])
+            ->add('capaciteMax', NumberType::class, [
+                'label'       => 'Capacité maximale',
+                'html5'       => true,
+                'attr'        => ['placeholder' => 'Nombre de places', 'min' => 1],
+                'constraints' => [
+                    new NotBlank(['message' => 'La capacité est obligatoire.']),
+                    new Positive(['message' => 'La capacité doit être positive.']),
+                ],
+            ])
+
+            // Organisateur
+            ->add('organisateur', TextType::class, [
+                'label'       => 'Organisateur',
+                'attr'        => ['placeholder' => 'Nom de l\'organisateur'],
+                'constraints' => [
+                    new NotBlank(['message' => "L'organisateur est obligatoire."]),
+                    new Length(['min' => 2, 'max' => 100, 'minMessage' => "Le nom de l'organisateur doit contenir au moins 2 caractères.", 'maxMessage' => "Le nom de l'organisateur ne peut pas dépasser 100 caractères."]),
+                ],
+            ])
+            ->add('telephone', TextType::class, [
+                'label'       => 'Téléphone',
+                'attr'        => ['placeholder' => '+216 XX XXX XXX'],
+                'constraints' => [
+                    new NotBlank(['message' => 'Le téléphone est obligatoire.']),
+                    new Regex([
+                        'pattern' => '/^\+216\s?\d{2}\s?\d{3}\s?\d{3}$/',
+                        'message' => 'Le numéro de téléphone doit être au format +216 XX XXX XXX.',
+                    ]),
+                ],
             ])
             ->add('email', EmailType::class, [
-                'label' => 'Email *',
-                'required' => true,
-                'attr' => [
-                    'class' => 'form-control',
-                    'placeholder' => 'Entrez l\'adresse email',
-                    'required' => 'required'
-                ]
+                'label'       => 'Email',
+                'attr'        => ['placeholder' => 'contact@exemple.com'],
+                'constraints' => [
+                    new NotBlank(['message' => "L'email est obligatoire."]),
+                    new Email(['message' => "L'email n'est pas valide."]),
+                ],
             ])
-            ->add('video_youtube', TextType::class, [
-                'label' => 'Vidéo YouTube (URL)',
+
+            // Médias
+            ->add('imagesFiles', FileType::class, [
+                'label'       => 'Images',
+                'mapped'      => false,  // Important: ne pas mapper automatiquement
+                'multiple'    => true,
+                'required'    => false,
+                'attr'        => ['accept' => 'image/*', 'class' => 'images-input'],
+                'constraints' => [
+                    new All([
+                        'constraints' => [
+                            new File([
+                                'maxSize'          => '5M',
+                                'mimeTypes'        => ['image/jpeg', 'image/png', 'image/webp'],
+                                'mimeTypesMessage' => 'Format accepté : JPG, PNG, WEBP.',
+                            ]),
+                        ],
+                    ]),
+                ],
+            ])
+            ->add('video', UrlType::class, [
+                'label'    => 'Vidéo (optionnel)',
                 'required' => false,
-                'attr' => [
-                    'class' => 'form-control',
-                    'placeholder' => 'https://www.youtube.com/watch?v=...'
-                ]
+                'attr'     => ['placeholder' => 'https://youtube.com/...'],
+                'constraints' => [
+                    new Url(['message' => 'Le lien vidéo doit être une URL valide.']),
+                ],
+            ])
+
+            // Description
+            ->add('materielsNecessaires', TextareaType::class, [
+                'label' => 'Matériels nécessaires',
+                'attr'  => ['placeholder' => 'Listez les matériels requis...', 'rows' => 4],
+                'constraints' => [
+                    new Length(['max' => 1000, 'maxMessage' => 'La description des matériels ne peut pas dépasser 1000 caractères.']),
+                ],
             ])
         ;
     }
