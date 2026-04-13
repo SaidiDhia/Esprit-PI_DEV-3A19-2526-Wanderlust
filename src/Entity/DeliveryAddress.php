@@ -16,7 +16,7 @@ class DeliveryAddress
     private ?int $id = null;
 
     #[ORM\OneToOne(inversedBy: 'deliveryAddress', targetEntity: Facture::class)]
-    #[ORM\JoinColumn(name: 'facture_id', nullable: false)]
+    #[ORM\JoinColumn(name: 'facture_id', referencedColumnName: 'id_facture', nullable: false)]
     private ?Facture $facture = null;
 
     #[ORM\Column(length: 255, nullable: true)]
