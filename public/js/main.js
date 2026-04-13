@@ -1,93 +1,147 @@
-// WanderLust — Main JS
 
-document.addEventListener('DOMContentLoaded', () => {
+$(document).ready(function(){
+	"use strict";
 
-    // ── Avatar dropdown on click (mobile support) ──
-    const avatarMenu = document.querySelector('.avatar-menu');
-    if (avatarMenu) {
-        avatarMenu.addEventListener('click', (e) => {
-            const dropdown = avatarMenu.querySelector('.dropdown-menu-custom');
-            if (dropdown) {
-                dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
-            }
-            e.stopPropagation();
-        });
-        document.addEventListener('click', () => {
-            const dropdown = avatarMenu.querySelector('.dropdown-menu-custom');
-            if (dropdown) dropdown.style.display = 'none';
-        });
-    }
+	var window_width 	 = $(window).width(),
+	window_height 		 = window.innerHeight,
+	header_height 		 = $(".default-header").height(),
+	header_height_static = $(".site-header.static").outerHeight(),
+	fitscreen 			 = window_height - header_height;
 
-    // ── Active nav highlight (already done in Twig via _route, but double-check) ──
-    const currentPath = window.location.pathname;
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        if (btn.getAttribute('href') !== '/' && currentPath.startsWith(btn.getAttribute('href'))) {
-            btn.classList.add('active');
+
+	$(".fullscreen").css("height", window_height)
+	$(".fitscreen").css("height", fitscreen);
+
+  //-------- Active Sticky Js ----------//
+  $(".default-header").sticky({topSpacing:0});
+
+
+     if(document.getElementById("default-select")){
+          $('select').niceSelect();
+    };
+
+    $('.img-pop-up').magnificPopup({
+        type: 'image',
+        gallery:{
+        enabled:true
         }
     });
 
-    // ── Marketplace filter buttons ──
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-        });
+  // $('.navbar-nav>li>a').on('click', function(){
+  //     $('.navbar-collapse').collapse('hide');
+  // });
+
+
+    //  Counter Js 
+
+    $('.counter').counterUp({
+        delay: 10,
+        time: 1000
     });
 
-    // ── Chat list item highlighting ──
-    document.querySelectorAll('.chat-item').forEach(item => {
-        item.addEventListener('click', function (e) {
-            e.preventDefault();
-            document.querySelectorAll('.chat-item').forEach(i => i.classList.remove('active'));
-            this.classList.add('active');
-        });
+    $('.play-btn').magnificPopup({
+        type: 'iframe',
+        mainClass: 'mfp-fade',
+        removalDelay: 160,
+        preloader: false,
+        fixedContentPos: false
     });
 
-    // ── Chat send button (demo) ──
-    const sendBtn = document.querySelector('.chat-input-bar .btn');
-    const chatInput = document.querySelector('.chat-input');
-    const chatMessages = document.querySelector('.chat-messages');
-
-    if (sendBtn && chatInput && chatMessages) {
-        const doSend = () => {
-            const text = chatInput.value.trim();
-            if (!text) return;
-            const msg = document.createElement('div');
-            msg.className = 'msg msg-sent';
-            msg.textContent = text;
-            chatMessages.appendChild(msg);
-            chatInput.value = '';
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        };
-        sendBtn.addEventListener('click', doSend);
-        chatInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') doSend(); });
-    }
-
-    // ── Settings sidebar nav ──
-    document.querySelectorAll('.settings-nav-item').forEach(item => {
-        item.addEventListener('click', function (e) {
-            if (this.href && this.href !== '#' && !this.href.endsWith('#')) return;
-            e.preventDefault();
-            document.querySelectorAll('.settings-nav-item').forEach(i => i.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
-
-    // ── Entrance animations ──
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.style.opacity = '1';
-                entry.target.style.transform = 'translateY(0)';
+    $('.active-works-carousel').owlCarousel({
+        items:1,
+        loop:true,
+        margin: 100,
+        dots: true,
+        autoplay:true,
+        responsive: {
+            0: {
+                items: 1
+            },
+            480: {
+                items: 1,
+            },
+            768: {
+                items: 1,
             }
-        });
-    }, { threshold: 0.08 });
-
-    document.querySelectorAll('.module-card, .card, .blog-card').forEach((el, i) => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(28px)';
-        el.style.transition = `opacity 0.45s ease ${i * 0.07}s, transform 0.45s ease ${i * 0.07}s`;
-        observer.observe(el);
+        }
     });
 
-});
+    $('.active-gallery').owlCarousel({
+        items:1,
+        loop:true,
+        dots: true,
+        autoplay:true,
+        nav:true,
+        navText: ["<span class='lnr lnr-arrow-up'></span>",
+        "<span class='lnr lnr-arrow-down'></span>"],        
+            responsive: {
+            0: {
+                items: 1
+            },
+            480: {
+                items: 1,
+            },
+            768: {
+                items: 2,
+            },
+            900: {
+                items: 6,
+            }
+
+        }
+    });
+
+
+$('.active-blog-slider').owlCarousel({
+        loop: true,
+        dots: true,
+        items: 1,
+        autoplay: true,
+        autoplayTimeout: 2000,
+        smartSpeed: 1000,
+        animateOut: 'fadeOut',
+      })
+
+
+    // Select all links with hashes
+    $('.navbar-nav a[href*="#"]')
+    // Remove links that don't actually link to anything
+    .not('[href="#"]')
+    .not('[href="#0"]')
+    .on('click',function(event) {
+    // On-page links
+    if (
+      location.pathname.replace(/^\//, '') == this.pathname.replace(/^\//, '') 
+      && 
+      location.hostname == this.hostname
+    ) {
+      // Figure out element to scroll to
+      var target = $(this.hash);
+      target = target.length ? target : $('[name=' + this.hash.slice(1) + ']');
+      // Does a scroll target exist?
+      if (target.length) {
+        // Only prevent default if animation is actually gonna happen
+        event.preventDefault();
+        $('html, body').animate({
+          scrollTop: target.offset().top-50
+        }, 1000, function() {
+          // Callback after animation
+          // Must change focus!
+          var $target = $(target);
+          $target.focus();
+          if ($target.is(":focus")) { // Checking if the target was focused
+            return false;
+          } else {
+            $target.attr('tabindex','-1'); // Adding tabindex for elements not focusable
+            $target.focus(); // Set focus again
+          };
+        });
+      }
+    }
+    });
+
+      $(document).ready(function() {
+          $('#mc_embed_signup').find('form').ajaxChimp();
+      });   
+
+ });

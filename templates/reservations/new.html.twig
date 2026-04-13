@@ -1,442 +1,398 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Nouvelle Réservation - Wanderlust{% endblock %}
+{% block title %}Réserver — {{ event.lieu }}{% endblock %}
 
 {% block stylesheets %}
 {{ parent() }}
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
     :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        --border-radius: 20px;
+        --accent: #e8572a;
+        --ink:    #0f0e17;
+        --mid:    #6b6b80;
+        --line:   #e4e1d8;
+        --paper:  #fffcf5;
     }
 
-    .form-hero {
-        background: var(--primary-gradient);
-        border-radius: 0 0 60px 60px;
-        padding: 3rem 0;
-        margin-bottom: 3rem;
-        position: relative;
-        overflow: hidden;
-    }
+    body { background: var(--paper); font-family: 'DM Sans', sans-serif; }
 
-    .form-hero::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -20%;
-        width: 300px;
-        height: 300px;
-        background: rgba(255,255,255,0.1);
-        border-radius: 50%;
-        animation: float 10s ease-in-out infinite;
+    /* ── Hero ── */
+    .res-hero {
+        background: linear-gradient(135deg, #0f0e17 0%, #2d2b3d 100%);
+        padding: 3rem 0 2rem;
+        text-align: center;
+        color: white;
+        margin-bottom: 2.5rem;
     }
+    .res-hero h1 { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; margin-bottom: .4rem; }
+    .res-hero p  { opacity: .6; font-size: .95rem; }
 
-    @keyframes float {
-        0%, 100% { transform: translate(0, 0) rotate(0deg); }
-        50% { transform: translate(30px, -20px) rotate(10deg); }
-    }
+    .res-wrapper { max-width: 780px; margin: 0 auto; padding: 0 1.5rem 4rem; }
 
-    .hero-title {
-        font-size: 3rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .form-card {
-        border: none;
-        border-radius: var(--border-radius);
-        box-shadow: var(--card-shadow);
-        overflow: hidden;
+    /* ── Event recap ── */
+    .event-recap {
         background: white;
-    }
-
-    .form-header {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 1.5rem 2rem;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-    }
-
-    .form-body {
-        padding: 2rem;
-    }
-
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-
-    .form-label {
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        color: #2d3748;
-    }
-
-    .form-control-custom {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 2px solid #e9ecef;
-        border-radius: 12px;
-        transition: all 0.3s ease;
-    }
-
-    .form-control-custom:focus {
-        border-color: #667eea;
-        outline: none;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-
-    .btn-primary-custom {
-        background: var(--primary-gradient);
-        border: none;
-        padding: 12px 30px;
-        border-radius: 30px;
-        font-weight: 600;
-        color: white;
-        transition: all 0.3s ease;
-    }
-
-    .btn-primary-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-        color: white;
-    }
-
-    .btn-secondary-custom {
-        background: #6c757d;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 30px;
-        font-weight: 600;
-        color: white;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-flex;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 2rem;
+        display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 1rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,.04);
     }
 
-    .btn-secondary-custom:hover {
-        transform: translateY(-2px);
+    .recap-icon {
+        width: 48px; height: 48px;
+        background: linear-gradient(135deg, var(--accent), #f7a278);
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        color: white; font-size: 1.2rem; flex-shrink: 0;
+    }
+
+    .recap-info h3 { font-family: 'Syne',sans-serif; font-size: 1rem; font-weight: 700; margin: 0 0 .2rem; }
+    .recap-info p  { color: var(--mid); font-size: .82rem; margin: 0; }
+
+    .recap-price {
+        margin-left: auto; text-align: right; flex-shrink: 0;
+    }
+    .recap-price .price { font-family: 'Syne',sans-serif; font-size: 1.5rem; font-weight: 800; color: var(--accent); }
+    .recap-price small  { color: var(--mid); font-size: .75rem; display: block; }
+
+    /* ── Form card ── */
+    .form-card {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 1.75rem 2rem;
+        margin-bottom: 1.25rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,.04);
+    }
+
+    .form-section-title {
+        font-family: 'Syne', sans-serif;
+        font-size: .82rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .1em;
+        color: var(--accent);
+        margin-bottom: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: .5rem;
+    }
+    .form-section-title::after { content:''; flex:1; height:1px; background:var(--line); margin-left:.4rem; }
+
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label { display:block; font-size:.84rem; font-weight:500; color:var(--ink); margin-bottom:.4rem; }
+
+    .form-control {
+        width: 100%;
+        padding: .7rem 1rem;
+        border: 1.5px solid var(--line);
+        border-radius: 10px;
+        font-size: .92rem;
+        font-family: 'DM Sans', sans-serif;
+        color: var(--ink);
+        background: var(--paper);
+        transition: border-color .2s, box-shadow .2s;
+        outline: none;
+    }
+    .form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,87,42,.1); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media(max-width:600px) { .two-col { grid-template-columns: 1fr; } }
+
+    /* ── Compteurs adultes/enfants ── */
+    .counter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+    @media(max-width:500px) { .counter-grid { grid-template-columns: 1fr; } }
+
+    .counter-box {
+        border: 1.5px solid var(--line);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--paper);
+        transition: border-color .2s;
+    }
+    .counter-box:focus-within { border-color: var(--accent); }
+
+    .counter-label { font-size: .88rem; font-weight: 500; color: var(--ink); }
+    .counter-label small { display:block; color:var(--mid); font-size:.74rem; font-weight:400; margin-top:.1rem; }
+
+    .counter-controls { display: flex; align-items: center; gap: .5rem; }
+
+    .counter-btn {
+        width: 30px; height: 30px;
+        border-radius: 50%;
+        border: 1.5px solid var(--line);
+        background: white;
+        color: var(--ink);
+        font-size: 1.1rem;
+        display: flex; align-items: center; justify-content: center;
+        cursor: pointer; transition: all .2s; line-height: 1;
+        flex-shrink: 0;
+    }
+    .counter-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(232,87,42,.05); }
+
+    .counter-value {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.2rem; font-weight: 700;
+        min-width: 28px; text-align: center;
+    }
+
+    /* ── Résumé total ── */
+    .total-summary {
+        background: linear-gradient(135deg, #0f0e17 0%, #2d2b3d 100%);
+        border-radius: 14px;
+        padding: 1.25rem 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         color: white;
     }
 
-    .required-star {
-        color: #dc3545;
-    }
+    .total-left .label  { font-size: .82rem; opacity: .6; margin-bottom: .15rem; }
+    .total-left .detail { font-size: .8rem; opacity: .5; }
+    .total-amount { font-family: 'Syne',sans-serif; font-size: 2rem; font-weight: 800; }
 
-    textarea.form-control-custom {
-        resize: vertical;
-        min-height: 100px;
+    /* ── Bouton submit ── */
+    .btn-submit {
+        width: 100%;
+        padding: 1rem;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: .04em;
+        cursor: pointer;
+        transition: all .2s;
+        box-shadow: 0 4px 14px rgba(232,87,42,.3);
+        margin-top: 1.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .5rem;
+        text-decoration: none;
+    }
+    .btn-submit:hover { background: #d14820; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(232,87,42,.4); }
+
+    .btn-back {
+        display: flex; align-items: center; justify-content: center; gap: .5rem;
+        color: var(--mid); font-size: .88rem; text-decoration: none;
+        margin-top: .75rem; transition: color .2s;
+    }
+    .btn-back:hover { color: var(--ink); }
+
+    .flash-error {
+        background: #fee2e2; color: #991b1b;
+        padding: .9rem 1.1rem; border-radius: 10px;
+        margin-bottom: 1.25rem; font-size: .88rem;
+        display: flex; align-items: center; gap: .5rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="form-hero">
-    <div class="container text-center">
-        <h1 class="hero-title mb-3">
-            🎫 Nouvelle Réservation
-        </h1>
-        <p class="text-white-50">Créez une nouvelle réservation pour un événement</p>
+
+<div class="res-hero">
+    <div class="container">
+        <h1><i class="fas fa-calendar-check me-2"></i>Réserver un événement</h1>
+        <p>Complétez le formulaire pour confirmer votre réservation</p>
     </div>
 </div>
 
-<div class="container mb-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8">
-            <div class="form-card animate__animated animate__fadeInUp">
-                <div class="form-header">
-                    <h4 class="mb-0 fw-bold">
-                        <i class="fas fa-ticket-alt me-2 text-primary"></i>
-                        Formulaire de réservation
-                    </h4>
-                    <p class="text-muted mb-0 small">Tous les champs marqués d'un <span class="required-star">*</span> sont obligatoires</p>
+<div class="res-wrapper">
+
+    {# Flash messages #}
+    {% for msg in app.flashes('error') %}
+        <div class="flash-error">
+            <i class="fas fa-exclamation-circle"></i> {{ msg }}
+        </div>
+    {% endfor %}
+
+    {# Récap event #}
+    <div class="event-recap">
+        <div class="recap-icon"><i class="fas fa-map-marker-alt"></i></div>
+        <div class="recap-info">
+            <h3>{{ event.lieu }}</h3>
+            <p>
+                <i class="fas fa-calendar me-1"></i>{{ event.dateDebut|date('d/m/Y à H:i') }}
+                &nbsp;·&nbsp;
+                <i class="fas fa-users me-1"></i>{{ event.placesDisponibles }} place(s) dispo
+            </p>
+        </div>
+        <div class="recap-price">
+            <div class="price">{{ event.prix }} TND</div>
+            <small>par personne</small>
+        </div>
+    </div>
+
+    {{ form_start(form, {'attr': {'id': 'res-form', 'novalidate': 'novalidate'}}) }}
+
+        {# Informations personnelles #}
+        <div class="form-card">
+            <div class="form-section-title">
+                <i class="fas fa-user"></i> Informations personnelles
+            </div>
+
+            <div class="form-group">
+                {{ form_label(form.nomComplet) }}
+                {{ form_widget(form.nomComplet, {'attr': {'class': 'form-control'}}) }}
+                {{ form_errors(form.nomComplet) }}
+            </div>
+
+            <div class="two-col">
+                <div class="form-group">
+                    {{ form_label(form.email) }}
+                    {{ form_widget(form.email, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.email) }}
                 </div>
-
-                <div class="form-body">
-                    {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'reservationForm'}}) }}
-                    
-                    <!-- Event Selection ou Display -->
-                    {% if eventId %}
-                        <!-- Event pré-sélectionné (lecture seule) -->
-                        <div class="form-group">
-                            {{ form_label(form.eventDisplay, 'Événement *', {'label_attr': {'class': 'form-label'}}) }}
-                            {{ form_widget(form.eventDisplay, {'attr': {'class': 'form-control-custom'}}) }}
-                            <small class="text-muted">Événement sélectionné depuis la page précédente</small>
-                            {{ form_errors(form.eventDisplay) }}
-                        </div>
-                    {% else %}
-                        <!-- Sélection d'événement -->
-                        <div class="form-group">
-                            {{ form_label(form.event, 'Événement *', {'label_attr': {'class': 'form-label'}}) }}
-                            {{ form_widget(form.event, {'attr': {'class': 'form-control-custom'}}) }}
-                            <small class="text-muted">Sélectionnez l'événement pour lequel vous souhaitez réserver</small>
-                            {{ form_errors(form.event) }}
-                        </div>
-                    {% endif %}
-
-                    <!-- Nom Complet -->
-                    <div class="form-group">
-                        {{ form_label(form.nomComplet, 'Nom complet *', {'label_attr': {'class': 'form-label'}}) }}
-                        {{ form_widget(form.nomComplet, {'attr': {'class': 'form-control-custom', 'placeholder': 'Ex: Jean Dupont'}}) }}
-                        {{ form_errors(form.nomComplet) }}
-                    </div>
-
-                    <!-- Email -->
-                    <div class="form-group">
-                        {{ form_label(form.email, 'Email *', {'label_attr': {'class': 'form-label'}}) }}
-                        {{ form_widget(form.email, {'attr': {'class': 'form-control-custom', 'placeholder': 'client@exemple.com', 'type': 'email'}}) }}
-                        {{ form_errors(form.email) }}
-                    </div>
-
-                    <!-- Téléphone -->
-                    <div class="form-group">
-                        {{ form_label(form.telephone, 'Téléphone', {'label_attr': {'class': 'form-label'}}) }}
-                        {{ form_widget(form.telephone, {'attr': {'class': 'form-control-custom', 'placeholder': '+216 XX XXX XXX'}}) }}
-                        <small class="text-muted">Optionnel, mais recommandé</small>
-                        {{ form_errors(form.telephone) }}
-                    </div>
-
-                    <!-- Nombre de personnes -->
-                    <div class="form-group">
-                        {{ form_label(form.nombrePersonnes, 'Nombre de personnes *', {'label_attr': {'class': 'form-label'}}) }}
-                        {{ form_widget(form.nombrePersonnes, {'attr': {'class': 'form-control-custom', 'placeholder': 'Ex: 2', 'min': '1'}}) }}
-                        {{ form_errors(form.nombrePersonnes) }}
-                    </div>
-
-                    <!-- Prix Total (calculé automatiquement) -->
-                    <div class="form-group">
-                        <label class="form-label">Prix total (€) *</label>
-                        <div class="form-control-custom bg-light" id="prix-total-affiche">
-                            <span id="prix-calculé">0.00</span> €
-                        </div>
-                        <small class="text-muted">Calculé automatiquement selon le nombre de personnes et le prix de l'événement</small>
-                    </div>
-
-                    <!-- Demandes spéciales -->
-                    <div class="form-group">
-                        {{ form_label(form.demandesSpeciales, 'Demandes spéciales', {'label_attr': {'class': 'form-label'}}) }}
-                        {{ form_widget(form.demandesSpeciales, {'attr': {'class': 'form-control-custom', 'rows': 4, 'placeholder': 'Allergies, besoins spécifiques, etc...'}}) }}
-                        <small class="text-muted">Optionnel - Informations supplémentaires pour l'organisation</small>
-                        {{ form_errors(form.demandesSpeciales) }}
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="d-flex justify-content-between gap-3 mt-4">
-                        <a href="{{ path('app_reservations_index') }}" class="btn-secondary-custom">
-                            <i class="fas fa-arrow-left"></i> Annuler
-                        </a>
-                        <button type="submit" class="btn-primary-custom" id="submitBtn">
-                            <i class="fas fa-save"></i> Créer la réservation
-                        </button>
-                    </div>
-
-                    {{ form_end(form) }}
+                <div class="form-group">
+                    {{ form_label(form.telephone) }}
+                    {{ form_widget(form.telephone, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.telephone) }}
                 </div>
             </div>
         </div>
-    </div>
+
+        {# Participants #}
+        <div class="form-card">
+            <div class="form-section-title">
+                <i class="fas fa-users"></i> Participants
+            </div>
+
+            {# Compteurs visuels #}
+            <div class="counter-grid">
+                <div class="counter-box">
+                    <div class="counter-label">
+                        Adultes
+                        <small>18 ans et plus</small>
+                    </div>
+                    <div class="counter-controls">
+                        <button type="button" class="counter-btn" onclick="decrement('adultes')">−</button>
+                        <span class="counter-value" id="val-adultes">1</span>
+                        <button type="button" class="counter-btn" onclick="increment('adultes', {{ event.placesDisponibles }})">+</button>
+                    </div>
+                    {{ form_widget(form.nombreAdultes, {'attr': {
+                        'id': 'input-adultes',
+                        'style': 'display:none',
+                        'class': 'form-control'
+                    }}) }}
+                </div>
+
+                <div class="counter-box">
+                    <div class="counter-label">
+                        Enfants
+                        <small>Moins de 18 ans</small>
+                    </div>
+                    <div class="counter-controls">
+                        <button type="button" class="counter-btn" onclick="decrement('enfants')">−</button>
+                        <span class="counter-value" id="val-enfants">0</span>
+                        <button type="button" class="counter-btn" onclick="increment('enfants', {{ event.placesDisponibles }})">+</button>
+                    </div>
+                    {{ form_widget(form.nombreEnfants, {'attr': {
+                        'id': 'input-enfants',
+                        'style': 'display:none',
+                        'class': 'form-control'
+                    }}) }}
+                </div>
+            </div>
+
+            {{ form_errors(form.nombreAdultes) }}
+            {{ form_errors(form.nombreEnfants) }}
+
+            {# Résumé total #}
+            <div class="total-summary">
+                <div class="total-left">
+                    <div class="label">Montant total</div>
+                    <div class="detail" id="total-detail">
+                        1 personne × {{ event.prix }} TND
+                    </div>
+                </div>
+                <div class="total-amount" id="total-amount">
+                    {{ event.prix }} TND
+                </div>
+            </div>
+        </div>
+
+        {# Demandes spéciales #}
+        <div class="form-card">
+            <div class="form-section-title">
+                <i class="fas fa-comment-dots"></i> Demandes spéciales
+                <span style="font-size:.75rem;color:var(--mid);font-weight:400;
+                             text-transform:none;letter-spacing:0;margin-left:.25rem;">
+                    — optionnel
+                </span>
+            </div>
+            <div class="form-group" style="margin:0;">
+                {{ form_widget(form.demandesSpeciales, {'attr': {'class': 'form-control'}}) }}
+            </div>
+        </div>
+
+        <button type="submit" class="btn-submit">
+            <i class="fas fa-check-circle"></i> Confirmer la réservation
+        </button>
+
+        <a href="{{ path('app_events_show', {'id': event.id}) }}" class="btn-back">
+            <i class="fas fa-arrow-left"></i> Retour à l'événement
+        </a>
+
+    {{ form_end(form) }}
 </div>
+
 {% endblock %}
 
 {% block javascripts %}
 {{ parent() }}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById('reservationForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const eventField = document.querySelector('[name="reservation[event]"]');
-    const nombrePersonnesField = document.querySelector('[name="reservation[nombrePersonnes]"]');
-    const prixCalculeElement = document.getElementById('prix-calculé');
-    
-    // Stocker les prix des événements pour éviter les requêtes répétées
-    const eventsPrices = {};
-    
-    // Extraire les prix depuis les options du select
-    function extractEventPrices() {
-        if (eventField && eventField.options) {
-            for (let i = 0; i < eventField.options.length; i++) {
-                const option = eventField.options[i];
-                if (option.value) {
-                    // Le prix est généralement stocké dans un attribut data ou extrait du texte
-                    // Pour l'instant, nous allons simuler un prix basé sur l'ID
-                    eventsPrices[option.value] = Math.floor(Math.random() * 100) + 50; // Simulation de prix entre 50-150€
-                }
-            }
-        }
-    }
-    
-    // Fonction pour calculer le prix total
-    function calculerPrixTotal() {
-        const eventId = eventField?.value;
-        const nombrePersonnes = parseInt(nombrePersonnesField?.value) || 0;
-        
-        if (eventId && nombrePersonnes > 0) {
-            const prixUnitaire = eventsPrices[eventId] || 50; // Prix par défaut si non trouvé
-            const prixTotal = prixUnitaire * nombrePersonnes;
-            prixCalculeElement.textContent = prixTotal.toFixed(2);
-            
-            // Mettre à jour le champ caché pour le formulaire
-            const prixTotalHidden = document.querySelector('input[name="reservation[prixTotal]"]');
-            if (prixTotalHidden) {
-                prixTotalHidden.value = prixTotal.toFixed(2);
-            }
-        } else {
-            prixCalculeElement.textContent = '0.00';
-            const prixTotalHidden = document.querySelector('input[name="reservation[prixTotal]"]');
-            if (prixTotalHidden) {
-                prixTotalHidden.value = '0.00';
-            }
-        }
-    }
-    
-    // Validation en temps réel
-    function validateField(field) {
-        const value = field.value.trim();
-        let isValid = true;
-        let errorMessage = '';
-        
-        // Validation du nom
-        if (field.name === 'reservation[nomComplet]') {
-            if (!value) {
-                isValid = false;
-                errorMessage = 'Le nom complet est obligatoire';
-            } else if (value.length < 3) {
-                isValid = false;
-                errorMessage = 'Le nom doit contenir au moins 3 caractères';
-            } else if (value.length > 100) {
-                isValid = false;
-                errorMessage = 'Le nom ne peut pas dépasser 100 caractères';
-            }
-        }
-        
-        // Validation de l'email
-        if (field.name === 'reservation[email]') {
-            if (!value) {
-                isValid = false;
-                errorMessage = 'L\'email est obligatoire';
-            } else {
-                const emailRegex = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
-                if (!emailRegex.test(value)) {
-                    isValid = false;
-                    errorMessage = 'Email invalide';
-                }
-            }
-        }
-        
-        // Validation du téléphone
-        if (field.name === 'reservation[telephone]' && value) {
-            const phoneRegex = /^(\+[0-9]{1,3})?[0-9]{8,15}$/;
-            if (!phoneRegex.test(value.replace(/\s/g, ''))) {
-                isValid = false;
-                errorMessage = 'Numéro de téléphone invalide';
-            }
-        }
-        
-        // Validation du nombre de personnes
-        if (field.name === 'reservation[nombrePersonnes]') {
-            if (!value) {
-                isValid = false;
-                errorMessage = 'Le nombre de personnes est obligatoire';
-            } else if (isNaN(value) || parseInt(value) <= 0) {
-                isValid = false;
-                errorMessage = 'Le nombre de personnes doit être supérieur à 0';
-            } else if (parseInt(value) > 50) {
-                isValid = false;
-                errorMessage = 'Le nombre de personnes ne peut pas dépasser 50';
-            } else {
-                // Recalculer le prix si le nombre de personnes change
-                calculerPrixTotal();
-            }
-        }
-        
-        // Supprimer l'erreur existante
-        const existingError = field.parentElement.querySelector('.invalid-feedback');
-        if (existingError) existingError.remove();
-        
-        if (!isValid && errorMessage) {
-            field.classList.add('is-invalid');
-            field.classList.remove('is-valid');
-            const errorDiv = document.createElement('div');
-            errorDiv.className = 'invalid-feedback';
-            errorDiv.textContent = errorMessage;
-            field.parentElement.appendChild(errorDiv);
-        } else if (value) {
-            field.classList.add('is-valid');
-            field.classList.remove('is-invalid');
-        } else {
-            field.classList.remove('is-valid', 'is-invalid');
-        }
-        
-        return isValid;
-    }
-    
-    // Initialiser les prix des événements
-    extractEventPrices();
-    
-    // Attacher les événements de validation
-    const fields = ['nomComplet', 'email', 'telephone', 'nombrePersonnes'];
-    fields.forEach(fieldName => {
-        const field = document.querySelector(`[name="reservation[${fieldName}]"]`);
-        if (field) {
-            field.addEventListener('input', () => validateField(field));
-            field.addEventListener('blur', () => validateField(field));
-        }
-    });
-    
-    // Écouter les changements sur l'événement et le nombre de personnes
-    if (eventField) {
-        eventField.addEventListener('change', function() {
-            extractEventPrices(); // Extraire les prix à chaque changement
-            calculerPrixTotal();
-            
-            if (!this.value) {
-                this.classList.add('is-invalid');
-                const existingError = this.parentElement.querySelector('.invalid-feedback');
-                if (!existingError) {
-                    const errorDiv = document.createElement('div');
-                    errorDiv.className = 'invalid-feedback';
-                    errorDiv.textContent = 'Veuillez sélectionner un événement';
-                    this.parentElement.appendChild(errorDiv);
-                }
-            } else {
-                this.classList.remove('is-invalid');
-                this.classList.add('is-valid');
-                const existingError = this.parentElement.querySelector('.invalid-feedback');
-                if (existingError) existingError.remove();
-            }
-        });
-    }
-    
-    // Validation à la soumission
-    form.addEventListener('submit', function(e) {
-        if (!validerFormulaire()) {
-            e.preventDefault();
-            return false;
-        }
-        
-        // Si la validation passe, afficher l'état de chargement
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Création en cours...';
-    });
-    
-    // Validation en temps réel
-    document.querySelectorAll('input, textarea').forEach(champ => {
-        champ.addEventListener('blur', function() {
-            if (this.classList.contains('is-invalid')) {
-                validerFormulaire();
-            }
-        });
-    });
-    
-    // Calculer le prix initial si un événement est pré-sélectionné
-    if (eventField?.value) {
-        calculerPrixTotal();
-    }
-});
+const PRIX_UNIT  = parseFloat('{{ event.prix }}');
+const MAX_PLACES = parseInt('{{ event.placesDisponibles }}');
+
+function getAdultes() { return parseInt(document.getElementById('val-adultes').textContent) || 0; }
+function getEnfants() { return parseInt(document.getElementById('val-enfants').textContent) || 0; }
+
+function increment(type, max) {
+    if (getAdultes() + getEnfants() >= max) return;
+    const el    = document.getElementById('val-' + type);
+    const input = document.getElementById('input-' + type);
+    const val   = parseInt(el.textContent) + 1;
+    el.textContent = val;
+    input.value    = val;
+    updateTotal();
+}
+
+function decrement(type) {
+    const el    = document.getElementById('val-' + type);
+    const input = document.getElementById('input-' + type);
+    let   val   = parseInt(el.textContent) - 1;
+
+    // Empêcher adultes < 0 ; empêcher total < 1
+    if (val < 0) return;
+    if (type === 'adultes' && val === 0 && getEnfants() === 0) return;
+
+    el.textContent = val;
+    input.value    = val;
+    updateTotal();
+}
+
+function updateTotal() {
+    const total   = getAdultes() + getEnfants();
+    const montant = (PRIX_UNIT * total).toFixed(2);
+    document.getElementById('total-amount').textContent = montant + ' TND';
+    document.getElementById('total-detail').textContent =
+        `${total} personne${total > 1 ? 's' : ''} × ${PRIX_UNIT} TND`;
+}
+
+// Init
+document.getElementById('input-adultes').value = 1;
+document.getElementById('input-enfants').value = 0;
+updateTotal();
 </script>
 {% endblock %}

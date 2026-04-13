@@ -1,29 +1,35 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Événements{% endblock %}
+{% block title %}Tous les événements{% endblock %}
 
 {% block stylesheets %}
 {{ parent() }}
 <style>
     :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        --hover-shadow: 0 20px 60px 0,0,0,0.15);
-        --border-radius: 20px;
+        --primary-color: #667eea;
+        --primary-dark: #5a67d8;
+        --secondary-color: #764ba2;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --border-radius: 16px;
+        --shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
+        --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
+        --shadow-lg: 0 16px 40px rgba(0,0,0,0.15);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Hero Section */
-    .hero-section {
-        background: var(--success-gradient);
-        border-radius: 0 0 60px 60px;
-        padding: 3rem 0;
+    /* Section Header */
+    .events-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        padding: 4rem 0;
+        border-radius: 0 0 40px 40px;
         margin-bottom: 3rem;
         position: relative;
         overflow: hidden;
     }
 
-    .hero-section::before {
+    .events-header::before {
         content: '';
         position: absolute;
         top: 0;
@@ -32,511 +38,699 @@
         bottom: 0;
         background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
         background-size: cover;
-        opacity: 0.1;
+        opacity: 0.3;
     }
 
-    .hero-title {
+    .header-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .header-title {
         font-size: 3.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        animation: fadeInUp 0.8s ease;
+        color: white;
+        margin-bottom: 1rem;
+        text-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
 
-    .hero-subtitle {
+    .header-subtitle {
+        font-size: 1.3rem;
         color: rgba(255,255,255,0.95);
-        font-size: 1.2rem;
         font-weight: 300;
-        animation: fadeInUp 0.8s ease 0.2s both;
     }
 
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    /* Event Cards Grid */
+    .events-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
     }
 
-    /* Event Cards */
+    /* Event Card */
     .event-card {
-        border: none;
+        background: white;
         border-radius: var(--border-radius);
-        box-shadow: var(--card-shadow);
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: var(--shadow-sm);
         overflow: hidden;
-        position: relative;
+        transition: var(--transition);
         cursor: pointer;
+        display: flex;
+        flex-direction: column;
         height: 100%;
-        max-width: 400px;
-        margin: 0 auto;
-    }
-
-    .event-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--success-gradient);
-        transform: scaleX(0);
-        transition: transform 0.3s ease;
-    }
-
-    .event-card:hover::before {
-        transform: scaleX(1);
+        position: relative;
     }
 
     .event-card:hover {
         transform: translateY(-8px);
-        box-shadow: var(--hover-shadow);
+        box-shadow: var(--shadow-lg);
     }
 
-    /* Image Container */
-    .image-container {
+    /* Card Image */
+    .card-image-container {
         position: relative;
-        height: 220px;
-        overflow: hidden;
-    }
-
-    .image-container img {
         width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.6s ease;
+        padding-top: 56.25%; /* 16:9 aspect ratio */
+        overflow: hidden;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
     }
 
-    .event-card:hover .image-container img {
-        transform: scale(1.1);
-    }
-
-    .image-overlay {
+    .card-image {
         position: absolute;
         top: 0;
         left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(79, 172, 254, 0.8) 0%, rgba(0, 242, 254, 0.8) 100%);
-        opacity: 0;
-        transition: opacity 0.3s ease;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: var(--transition);
+    }
+
+    .event-card:hover .card-image {
+        transform: scale(1.05);
+    }
+
+    /* Status Badge */
+    .status-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(10px);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        box-shadow: var(--shadow-sm);
+        z-index: 10;
         display: flex;
         align-items: center;
-        justify-content: center;
+        gap: 0.5rem;
     }
 
-    .event-card:hover .image-overlay {
-        opacity: 0.9;
+    .status-badge.available {
+        background: rgba(40, 167, 69, 0.95);
+        color: white;
     }
 
-    /* Badge moderne */
-    .badge-modern {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        padding: 8px 16px;
-        border-radius: 25px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        backdrop-filter: blur(10px);
-        background: rgba(255,255,255,0.95);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
-        z-index: 10;
+    .status-badge.full {
+        background: rgba(220, 53, 69, 0.95);
+        color: white;
     }
 
-    .event-card:hover .badge-modern {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    .status-badge.ended {
+        background: rgba(108, 117, 125, 0.95);
+        color: white;
     }
 
     /* Date Badge */
     .date-badge {
         position: absolute;
-        top: 15px;
-        left: 15px;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        backdrop-filter: blur(10px);
+        top: 1rem;
+        left: 1rem;
         background: rgba(255,255,255,0.95);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
+        backdrop-filter: blur(10px);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        box-shadow: var(--shadow-sm);
         z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--primary-color);
     }
 
-    /* Activities Section */
-    .activities-section {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    /* Card Body */
+    .card-body {
         padding: 1.5rem;
-        border-radius: 15px;
-        margin-top: 1rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
     }
 
-    .activities-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 1rem;
-    }
-
-    .activity-mini {
-        background: white;
-        border: 2px solid #e9ecef;
-        border-radius: 10px;
-        padding: 1rem;
-        text-align: center;
-        transition: all 0.3s ease;
-    }
-
-    .activity-mini:hover {
-        border-color: #4facfe;
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.2);
-    }
-
-    .activity-mini h6 {
-        font-size: 0.9rem;
-        margin: 0;
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
         color: #2d3748;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        margin-bottom: 0.75rem;
+        line-height: 1.4;
     }
 
-    /* Boutons Modernes */
-    .btn-modern {
+    .card-location {
+        color: #718096;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-organizer {
+        color: #718096;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .card-description {
+        color: #718096;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+        flex: 1;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* Card Footer */
+    .card-footer {
+        padding: 1rem 1.5rem;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-info {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .price-tag {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .capacity-info {
+        font-size: 0.85rem;
+        color: #718096;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    .btn-primary-custom {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
         border-radius: 25px;
         font-weight: 600;
-        padding: 8px 20px;
+        text-decoration: none;
         transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        border: 2px solid transparent;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
-    .btn-modern::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        transition: left 0.5s ease;
-    }
-
-    .btn-modern:hover::before {
-        left: 100%;
-    }
-
-    .btn-modern:hover {
+    .btn-primary-custom:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
     }
 
-    .btn-primary-modern {
-        background: var(--success-gradient);
-        border-color: transparent;
+    .btn-warning-custom {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
         color: white;
-        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
-    .btn-primary-modern:hover {
-        box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+    .btn-warning-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(245, 158, 11, 0.3);
     }
 
-    .btn-secondary-modern {
-        background: white;
-        border: 2px solid #dee2e6;
-        color: #6c757d;
+    .btn-danger-custom {
+        background: linear-gradient(135deg, #dc3545, #c82333);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
-    .btn-secondary-modern:hover {
-        border-color: #4facfe;
-        color: #4facfe;
+    .btn-danger-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(220, 53, 69, 0.3);
     }
 
     /* Empty State */
     .empty-state {
         text-align: center;
-        padding: 4rem;
+        padding: 4rem 2rem;
         background: white;
         border-radius: var(--border-radius);
-        box-shadow: var(--card-shadow);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .empty-state::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--success-gradient);
-        opacity: 0.05;
+        box-shadow: var(--shadow-sm);
     }
 
     .empty-icon {
-        width: 120px;
-        height: 120px;
-        margin: 0 auto 2rem;
-        background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
-        border-radius: 60px;
+        font-size: 4rem;
+        color: var(--primary-color);
+        margin-bottom: 1.5rem;
+    }
+
+    /* Pagination */
+    .pagination {
         display: flex;
-        align-items: center;
         justify-content: center;
-        animation: float 3s ease-in-out infinite;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        gap: 0.5rem;
+        margin-top: 3rem;
     }
 
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
+    .page-link {
+        padding: 0.75rem 1rem;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        color: #4a5568;
+        text-decoration: none;
+        font-weight: 500;
+        transition: var(--transition);
+        background: white;
     }
 
-    /* Alertes Modernes */
-    .alert-modern {
-        border-radius: 15px;
-        border: none;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        animation: slideInRight 0.5s ease;
-        position: relative;
-        overflow: hidden;
+    .page-link:hover {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
     }
 
-    .alert-modern::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: var(--success-gradient);
+    .page-item.active .page-link {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
     }
 
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
+    .page-item.disabled .page-link {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        color: #a0aec0;
+        cursor: not-allowed;
+    }
+
+    .page-item.disabled .page-link:hover {
+        transform: none;
     }
 
     /* Responsive */
     @media (max-width: 768px) {
-        .hero-title {
+        .header-title {
             font-size: 2.5rem;
         }
         
-        .image-container {
-            height: 180px;
+        .events-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
         }
-
-        .hero-section {
-            padding: 2rem 0;
-            border-radius: 0 0 40px 40px;
+        
+        .card-actions {
+            flex-direction: column;
+            width: 100%;
         }
-
-        .activities-grid {
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        
+        .btn-primary-custom,
+        .btn-warning-custom,
+        .btn-danger-custom {
+            width: 100%;
+            justify-content: center;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="hero-section">
-    <div class="container text-center">
-        <h1 class="hero-title mb-4">
-            🎉 Explorez nos Événements
-        </h1>
-        <p class="hero-subtitle mb-0">
-            Organisez des événements mémorables et créez des souvenirs inoubliables
-        </p>
+<!-- Header Section -->
+<div class="events-header">
+    <div class="container">
+        <div class="header-content text-center">
+            <h1 class="header-title">
+                <i class="fas fa-calendar-alt me-3"></i>
+                Nos Événements
+            </h1>
+            <p class="header-subtitle">
+                Découvrez des expériences uniques pour vos prochaines aventures
+            </p>
+        </div>
     </div>
 </div>
 
+<!-- Main Content -->
 <div class="container mb-5">
-    <div class="row align-items-center mb-4">
-        <div class="col-md-6">
-            <h1 class="display-4 fw-bold text-dark mb-0">
-                <span style="background: var(--success-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Événements</span>
-            </h1>
-            <p class="text-muted mt-2 mb-0">Découvrez et gérez tous vos événements</p>
-        </div>
-        <div class="col-md-6 text-end">
-            <a href="{{ path('app_events_new') }}" class="btn btn-primary-modern btn-lg btn-modern shadow-lg px-4 py-3 rounded-pill">
-                <span class="d-inline-block">🎉 Ajouter un événement</span>
-            </a>
-        </div>
+    <!-- Header with Add Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-calendar-alt me-2 text-primary"></i>
+            Tous les événements
+        </h1>
+        <a href="{{ path('app_events_new') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>
+            Ajouter un événement
+        </a>
     </div>
 
+    <!-- Flash Messages -->
     {% for message in app.flashes('success') %}
-        <div class="alert alert-success alert-modern alert-dismissible fade show mb-4" role="alert">
-            <div class="d-flex align-items-center">
-                <div class="me-3">
-                    <i class="fas fa-check-circle fa-lg"></i>
-                </div>
-                <div class="flex-grow-1">
-                    {{ message }}
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        </div>
+        <div id="success-message" data-message="{{ message|striptags|e('html_attr') }}" style="display: none;"></div>
     {% endfor %}
 
     {% for message in app.flashes('error') %}
-        <div class="alert alert-danger alert-modern alert-dismissible fade show mb-4" role="alert">
-            <div class="d-flex align-items-center">
-                <div class="me-3">
-                    <i class="fas fa-exclamation-circle fa-lg"></i>
-                </div>
-                <div class="flex-grow-1">
-                    {{ message }}
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        </div>
+        <div id="error-message" data-message="{{ message|striptags|e('html_attr') }}" style="display: none;"></div>
     {% endfor %}
 
+    <div id="success-alert" class="custom-success-alert" style="display: none;">
+        <div class="custom-success-card">
+            <div class="custom-success-icon">✓</div>
+            <h2>Succès</h2>
+            <p id="success-alert-text"></p>
+            <button type="button" id="success-alert-close" class="btn btn-primary">Voir l'événement</button>
+        </div>
+    </div>
+
+    <!-- Events Grid -->
     {% if events is empty %}
         <div class="empty-state">
             <div class="empty-icon">
-                <i class="fas fa-calendar-alt fa-4x text-success"></i>
+                <i class="fas fa-calendar-alt"></i>
             </div>
-            <h2 class="mb-3 fw-bold">Aucun événement trouvé</h2>
-            <p class="text-muted mb-4 fs-5">Commencez par créer votre premier événement !</p>
-            <a href="{{ path('app_events_new') }}" class="btn btn-primary-modern btn-modern">
-                <i class="fas fa-plus me-2"></i>Créer un événement
-            </a>
+            <h2 class="mb-3 fw-bold">Aucun événement disponible</h2>
+            <p class="text-muted mb-4 fs-5">
+                Revenez bientôt pour découvrir de nouvelles expériences !
+            </p>
         </div>
     {% else %}
-        <div class="row g-4">
+        <div class="events-grid">
             {% for event in events %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="event-card">
-                        <div class="image-container">
-                            {% if event.image %}
-                                <img src="{{ asset('uploads/events/' ~ event.image) }}" alt="{{ event.lieu }}">
-                                <div class="image-overlay">
-                                    <div class="text-center text-white">
-                                        <i class="fas fa-calendar-alt fa-3x mb-3"></i>
-                                        <h4>{{ event.lieu }}</h4>
-                                        <p>{{ event.dateDebut ? event.dateDebut|date('d/m/Y') : '' }}</p>
-                                    </div>
+                <div class="event-card">
+                    <!-- Card Image -->
+                    <div class="card-image-container">
+                        {% if event.images and event.images|length > 0 %}
+                            {% set first_image = event.images|first %}
+                            <img src="{{ asset('uploads/events/' ~ first_image.imagePath) }}" 
+                                 alt="{{ event.lieu }}" 
+                                 class="card-image">
+                        {% else %}
+                            <div class="card-image d-flex align-items-center justify-content-center" 
+                                 style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);">
+                                <div class="text-center text-white">
+                                    <i class="fas fa-calendar-alt fa-3x mb-2"></i>
+                                    <p class="mb-0">Aucune image</p>
                                 </div>
-                            {% else %}
-                                <div class="image-container bg-gradient d-flex align-items-center justify-content-center" style="background: var(--success-gradient);">
-                                    <div class="text-center text-white">
-                                        <i class="fas fa-calendar-alt fa-4x mb-3"></i>
-                                        <h4>{{ event.lieu }}</h4>
-                                        <p>{{ event.dateDebut ? event.dateDebut|date('d/m/Y') : '' }}</p>
-                                    </div>
-                                </div>
-                            {% endif %}
-                            
-                            <div class="date-badge">
-                                <i class="fas fa-calendar me-1"></i>
-                                {{ event.dateDebut ? event.dateDebut|date('d/m/Y') : 'N/A' }}
                             </div>
+                        {% endif %}
+                        
+                        <!-- Date Badge -->
+                        <div class="date-badge">
+                            <i class="fas fa-calendar"></i>
+                            <span>{{ event.dateDebut ? event.dateDebut|date('d/m') : 'N/A' }}</span>
                         </div>
                         
-                        <div class="card-body d-flex flex-column p-4">
-                            <div class="mb-3">
-                                <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill me-2">
-                                    <i class="fas fa-map-marker-alt me-1"></i>
-                                    {{ event.lieu }}
-                                </span>
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill">
-                                    <i class="fas fa-tag me-1"></i>
-                                    {{ event.prix }} €
-                                </span>
+                        <!-- Status Badge -->
+                        {% set eventDate = event.getDateDebut() %}
+                        {% set now = "now"|date("Y-m-d H:i:s") %}
+                        {% if event.placesDisponibles > 0 and eventDate > now %}
+                            <div class="status-badge available">
+                                <i class="fas fa-check-circle"></i>
+                                Disponible
                             </div>
-                            
-                            <h5 class="card-title fw-bold text-dark mb-3">{{ event.lieu }}</h5>
-                            
-                            <div class="card-text text-muted mb-3">
-                                <strong>Organisateur:</strong> {{ event.organisateur }}<br>
-                                <strong>Date:</strong> {{ event.dateDebut ? event.dateDebut|date('d/m/Y') : '' }} - {{ event.dateFin ? event.dateFin|date('d/m/Y') : '' }}<br>
-                                <strong>Prix:</strong> {{ event.prix }} €<br>
-                                <strong>Places:</strong> {{ event.placesDisponibles }}/{{ event.capaciteMax }}
+                        {% elseif event.placesDisponibles <= 0 %}
+                            <div class="status-badge full">
+                                <i class="fas fa-times-circle"></i>
+                                Complet
                             </div>
-                            
-                            <!-- Boutons d'action - TOUJOURS VISIBLES -->
-                            <div class="d-flex gap-2 mb-3">
-                                <a href="{{ path('app_events_show', {'id': event.id}) }}" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-eye me-1"></i>Voir détails
-                                </a>
-                                <a href="{{ path('app_events_edit', {'id': event.id}) }}" class="btn btn-warning btn-sm">
-                                    <i class="fas fa-edit me-1"></i>Modifier
-                                </a>
-                                <form method="post" action="{{ path('app_events_delete', {'id': event.id}) }}" class="d-inline">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ event.id) }}">
-                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirmEventDeletion({{ event.id }}, '{{ event.lieu|e('js') }}');">
-                                        <i class="fas fa-trash me-1"></i>Supprimer
-                                    </button>
-                                </form>
+                        {% else %}
+                            <div class="status-badge ended">
+                                <i class="fas fa-clock"></i>
+                                Terminé
                             </div>
-                            
-                            <!-- Section Activités associées -->
-                            {% if event.activities|length > 0 %}
-                                <div class="activities-section mt-3">
-                                    <h6 class="mb-3 fw-bold text-success">
-                                        <i class="fas fa-list-ul me-2"></i>
-                                        Activités associées ({{ event.activities|length }})
-                                    </h6>
-                                    <div class="activities-grid">
-                                        {% for activity in event.activities|slice(0, 6) %}
-                                            <div class="activity-mini">
-                                                <h6>{{ activity.titre|slice(0, 20) }}</h6>
-                                            <small class="text-muted">{{ activity.categorie.value }}</small>
-                                            </div>
-                                        {% endfor %}
-                                        {% if event.activities|length > 6 %}
-                                            <div class="activity-mini">
-                                                <h6>+{{ event.activities|length - 6 }}+</h6>
-                                                <small class="text-muted">plus...</small>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Card Body -->
+                    <div class="card-body">
+                        <h3 class="card-title">{{ event.lieu }}</h3>
+                        <div class="card-location">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <span>{{ event.lieu }}</span>
+                        </div>
+                        <div class="card-organizer">
+                            <i class="fas fa-user"></i>
+                            <span>Organisé par {{ event.organisateur }}</span>
+                        </div>
+                        <p class="card-description">
+                            {% if event.materielsNecessaires %}
+                                {{ event.materielsNecessaires|striptags|slice(0, 150) }}{% if event.materielsNecessaires|length > 150 %}...{% endif %}
+                            {% else %}
+                                Rejoignez-nous pour cet événement exceptionnel !
                             {% endif %}
+                        </p>
+                    </div>
+                    
+                    <!-- Card Footer -->
+                    <div class="card-footer">
+                        <div class="card-info">
+                            <div class="price-tag">{{ event.prix }} TND</div>
+                            <div class="capacity-info">
+                                {{ event.placesDisponibles }}/{{ event.capaciteMax }} places
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <a href="{{ path('app_events_show', {'id': event.id}) }}" 
+                               class="btn-primary-custom">
+                                <i class="fas fa-eye"></i>
+                                Voir
+                            </a>
+                            <a href="{{ path('app_events_edit', {'id': event.id}) }}" 
+                               class="btn-warning-custom">
+                                <i class="fas fa-edit"></i>
+                                Modifier
+                            </a>
+                            <form method="post" action="{{ path('app_events_delete', {'id': event.id}) }}" style="display: inline;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ event.id) }}">
+                                <button type="button" class="btn-danger-custom" onclick="confirmDeleteEvent({{ event.id }}, '{{ event.lieu|e('js') }}')">
+                                    <i class="fas fa-trash"></i>
+                                    Supprimer
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
             {% endfor %}
         </div>
+
+        <!-- Pagination -->
+        {% if events is not empty and events|length > 10 %}
+            <nav aria-label="Pagination des événements" class="mt-5">
+                <div class="text-center">
+                    <small class="text-muted">
+                        {{ events|length }} événement{{ events|length > 1 ? 's' : '' }} trouvé{{ events|length > 1 ? 's' : '' }}
+                    </small>
+                </div>
+            </nav>
+        {% endif %}
     {% endif %}
 </div>
-{% endblock %}
 
-{% block javascripts %}
-{{ parent() }}
 <script>
-function confirmEventDeletion(eventId, eventTitle) {
-    const confirmation = confirm(
-        '⚠️ CONFIRMATION DE SUPPRESSION ⚠️\n\n' +
-        'Êtes-vous sûr de vouloir supprimer l\'événement #' + eventId + ' : ' + eventTitle + ' ?\n\n' +
-        'Cette action est IRRÉVERSIBLE et :\n' +
-        '• Supprimera définitivement l\'événement\n' +
-        '• Supprimera toutes les réservations associées\n' +
-        '• Libérera toutes les activités associées\n' +
-        '• Effacera toutes les données associées\n\n' +
-        'Cliquez sur OK pour confirmer ou Annuler pour garder l\'événement.'
-    );
-    
-    return confirmation;
-}
+    // Flash messages
+    window.addEventListener('DOMContentLoaded', function() {
+        const successMessage = document.getElementById('success-message');
+        const errorMessage = document.getElementById('error-message');
+        
+        if (successMessage) {
+            const message = successMessage.getAttribute('data-message');
+            showSuccessModal(message || 'Événement ajouté avec succès !');
+        }
+        
+        if (errorMessage) {
+            const message = errorMessage.getAttribute('data-message');
+            showNotification(message, 'error');
+        }
+    });
+
+    function showSuccessModal(message) {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position: fixed; inset: 0; background: rgba(15, 23, 42, 0.75); display: flex; align-items: center; justify-content: center; z-index: 9999; padding: 1rem;';
+
+        const card = document.createElement('div');
+        card.style.cssText = 'background: white; border-radius: 24px; padding: 2rem; max-width: 420px; width: 100%; text-align: center; box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);';
+        card.innerHTML = `
+            <div style="margin-bottom: 1.25rem;">
+                <div style="width: 72px; height: 72px; margin: 0 auto 1rem; border-radius: 50%; background: #22c55e; display: flex; align-items: center; justify-content: center; color: white; font-size: 2rem;">
+                    ✓
+                </div>
+                <h3 style="margin: 0 0 0.5rem; font-size: 1.75rem; color: #0f172a;">Succès</h3>
+                <p style="margin: 0; color: #475569; font-size: 1rem; line-height: 1.6;">${message}</p>
+            </div>
+            <button type="button" id="success-modal-close" style="background: #1d4ed8; color: white; border: none; padding: 0.85rem 1.5rem; border-radius: 999px; cursor: pointer; font-size: 1rem;">Fermer</button>
+        `;
+
+        overlay.appendChild(card);
+        document.body.appendChild(overlay);
+
+        const closeButton = document.getElementById('success-modal-close');
+        if (closeButton) {
+            closeButton.addEventListener('click', () => overlay.remove());
+        }
+    }
+
+    function showNotification(message, type) {
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.remove();
+        }, 5000);
+    }
+
+    // Fonction pour confirmer la suppression d'un événement
+    function confirmDeleteEvent(eventId, eventTitle) {
+        // Créer une modal personnalisée
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        `;
+        
+        const modalContent = document.createElement('div');
+        modalContent.style.cssText = `
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            animation: slideIn 0.3s ease;
+        `;
+        
+        modalContent.innerHTML = `
+            <div style="margin-bottom: 1.5rem;">
+                <div style="width: 60px; height: 60px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem;">
+                    ⚠️
+                </div>
+                <h3 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.25rem; font-weight: 600;">Confirmer la suppression</h3>
+                <p style="margin: 0; color: #6b7280; line-height: 1.5;">
+                    Êtes-vous sûr de vouloir supprimer l'événement <strong>"${eventTitle}"</strong> ?<br>
+                    Cette action est <strong>irréversible</strong>.
+                </p>
+            </div>
+            <div style="display: flex; gap: 1rem; justify-content: center;">
+                <button onclick="closeDeleteModal()" style="
+                    background: #f3f4f6;
+                    color: #374151;
+                    border: none;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    transition: all 0.2s ease;
+                " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                    Annuler
+                </button>
+                <button onclick="confirmDelete(${eventId})" style="
+                    background: #dc2626;
+                    color: white;
+                    border: none;
+                    padding: 0.75rem 1.5rem;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-weight: 500;
+                    transition: all 0.2s ease;
+                " onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+                    Supprimer
+                </button>
+            </div>
+        `;
+        
+        modal.appendChild(modalContent);
+        document.body.appendChild(modal);
+        
+        // Ajouter l'animation CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: scale(0.9) translateY(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: scale(1) translateY(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
+    // Fonction pour fermer la modal
+    function closeDeleteModal() {
+        const modal = document.querySelector('div[style*="position: fixed"]');
+        if (modal) {
+            modal.remove();
+        }
+    }
+
+    // Fonction pour confirmer la suppression
+    function confirmDelete(eventId) {
+        // Trouver le formulaire et le soumettre
+        const form = document.querySelector(`form[action*="${eventId}"]`);
+        if (form) {
+            form.submit();
+        }
+    }
+
+    // Fermer la modal en cliquant sur l'arrière-plan
+    document.addEventListener('click', function(e) {
+        if (e.target.style && e.target.style.background && e.target.style.background.includes('rgba(0, 0, 0, 0.5)')) {
+            closeDeleteModal();
+        }
+    });
+
+    // Fermer la modal avec la touche Escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeDeleteModal();
+        }
+    });
 </script>
 {% endblock %}

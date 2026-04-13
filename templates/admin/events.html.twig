@@ -176,7 +176,7 @@
                         <tr>
                             <th>ID</th>
                             <th>Image</th>
-                            <th>Titre / Lieu</th>
+                            <th>Lieu</th>
                             <th>Dates</th>
                             <th>Prix</th>
                             <th>Places</th>
@@ -190,7 +190,7 @@
                                 <td>{{ event.id }}</td>
                                 <td>
                                     {% if event.image %}
-                                        <img src="{{ asset('uploads/events/' ~ event.image) }}" class="event-image" alt="{{ event.titre }}">
+                                        <img src="{{ asset('uploads/events/' ~ event.image) }}" class="event-image" alt="{{ event.lieu }}">
                                     {% else %}
                                         <div class="event-image bg-light d-flex align-items-center justify-content-center">
                                             <i class="fas fa-image text-muted"></i>
@@ -198,12 +198,9 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <strong>{{ event.titre }}</strong><br>
+                                    <strong>{{ event.lieu }}</strong><br>
                                     <small class="text-muted">
                                         <i class="fas fa-map-marker-alt me-1"></i>{{ event.lieu }}
-                                    </small><br>
-                                    <small class="text-muted">
-                                        <i class="fas fa-user me-1"></i>{{ event.organisateur }}
                                     </small>
                                 </td>
                                 <td>

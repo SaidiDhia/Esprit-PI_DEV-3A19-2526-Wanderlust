@@ -1,26 +1,26 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}WanderLust — Explore the World{% endblock %}
+{% block title %}WanderLust — Votre Compagnon de Voyage{% endblock %}
 
 {% block content %}
 
 <!-- HERO -->
-<section class="hero-section">
+<section class="hero-section fullscreen">
     <div class="hero-bg-shapes">
         <div class="hero-shape hero-shape-1"></div>
         <div class="hero-shape hero-shape-2"></div>
         <div class="hero-shape hero-shape-3"></div>
     </div>
     <div class="hero-content">
-        <div class="hero-tag">✈️ Your Travel Companion</div>
+        <div class="hero-tag">✈️ Votre Compagnon de Voyage</div>
         <h1 class="hero-title">
-            Discover the World's<br>
-            <em>Hidden Wonders</em>
+            Découvrez les Merveilles<br>
+            <em>Cachées du Monde</em>
         </h1>
-        <p class="hero-subtitle">Plan, book, and experience unforgettable adventures with WanderLust — all your travel needs in one place.</p>
+        <p class="hero-subtitle">Planifiez, réservez et vivez des aventures inoubliables avec WanderLust — tous vos besoins de voyage au même endroit.</p>
         <div class="hero-cta-group">
-            <a href="{{ path('app_activities_index') }}" class="btn-hero-primary">🗺️ Explore Activities</a>
-            <a href="{{ path('app_events_index') }}" class="btn-hero-outline">� Browse Events</a>
+            <a href="{{ path('app_activities_index') }}" class="btn-hero-primary">🗺️ Explorer les Activités</a>
+            <a href="{{ path('app_events_index') }}" class="btn-hero-outline">🎉 Parcourir les Événements</a>
         </div>
     </div>
 </section>
@@ -29,20 +29,20 @@
 <div class="stats-bar">
     <div class="stats-bar-inner">
         <div class="stat-item">
-            <div class="stat-number">12K+</div>
-            <div class="stat-label">Happy Travelers</div>
+            <div class="stat-number counter">12K+</div>
+            <div class="stat-label">Voyageurs Heureux</div>
         </div>
         <div class="stat-item">
-            <div class="stat-number">480+</div>
+            <div class="stat-number counter">480+</div>
             <div class="stat-label">Destinations</div>
         </div>
         <div class="stat-item">
-            <div class="stat-number">98%</div>
-            <div class="stat-label">Satisfaction Rate</div>
+            <div class="stat-number counter">98%</div>
+            <div class="stat-label">Taux de Satisfaction</div>
         </div>
         <div class="stat-item">
-            <div class="stat-number">24/7</div>
-            <div class="stat-label">Customer Support</div>
+            <div class="stat-number counter">24/7</div>
+            <div class="stat-label">Support Client</div>
         </div>
     </div>
 </div>
@@ -50,8 +50,8 @@
 <!-- MODULES GRID -->
 <section class="modules-section">
     <div class="section-header">
-        <div class="section-label">Everything You Need</div>
-        <h2 class="section-title">Your Complete Travel Platform</h2>
+        <div class="section-label">Tout ce dont vous avez besoin</div>
+        <h2 class="section-title">Votre Plateforme de Voyage Complète</h2>
     </div>
 
     <div class="modules-grid">
@@ -62,9 +62,9 @@
                 <span class="card-emoji">📅</span>
             </div>
             <div class="module-card-body">
-                <div class="module-card-title">Activities</div>
-                <p class="module-card-desc">Browse hundreds of curated activities, tours, and local experiences. Filter by date, location, and interest.</p>
-                <span class="module-card-arrow">Explore activities →</span>
+                <div class="module-card-title">Activités</div>
+                <p class="module-card-desc">Parcourez des centaines d'activités organisées, de visites et d'expériences locales. Filtrez par date, lieu et centres d'intérêt.</p>
+                <span class="module-card-arrow">Explorer les activités →</span>
             </div>
         </a>
 
@@ -74,9 +74,9 @@
                 <span class="card-emoji">🎉</span>
             </div>
             <div class="module-card-body">
-                <div class="module-card-title">Events</div>
-                <p class="module-card-desc">Browse and manage events, activities, and experiences. Create new events and track registrations.</p>
-                <span class="module-card-arrow">Explore events →</span>
+                <div class="module-card-title">Événements</div>
+                <p class="module-card-desc">Parcourez et gérez les événements, activités et expériences. Créez de nouveaux événements et suivez les inscriptions.</p>
+                <span class="module-card-arrow">Explorer les événements →</span>
             </div>
         </a>
 
@@ -86,9 +86,9 @@
                 <span class="card-emoji">🏨</span>
             </div>
             <div class="module-card-body">
-                <div class="module-card-title">Hotel Booking</div>
-                <p class="module-card-desc">Find and book hotels, resorts, and unique stays at best prices. Compare reviews and amenities instantly.</p>
-                <span class="module-card-arrow">Book your stay →</span>
+                <div class="module-card-title">Réservation d'Hôtels</div>
+                <p class="module-card-desc">Trouvez et réservez des hôtels, resorts et séjours uniques aux meilleurs prix. Comparez les avis et équipements instantanément.</p>
+                <span class="module-card-arrow">Réserver votre séjour →</span>
             </div>
         </a>
 

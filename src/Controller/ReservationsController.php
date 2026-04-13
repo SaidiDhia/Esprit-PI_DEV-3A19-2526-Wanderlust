@@ -15,6 +15,9 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/reservations')]
 class ReservationsController extends AbstractController
 {
+    // ─────────────────────────────────────────────────────────────────
+    //  INDEX
+    // ─────────────────────────────────────────────────────────────────
     #[Route('/', name: 'app_reservations_index', methods: ['GET'])]
     public function index(ReservationsRepository $repository): Response
     {
@@ -23,159 +26,192 @@ class ReservationsController extends AbstractController
         ]);
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    //  NEW
+    // ─────────────────────────────────────────────────────────────────
     #[Route('/new', name: 'app_reservations_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
+    public function new(Request $request, EntityManagerInterface $em): Response
     {
-        $reservation = new Reservations();
-        
-        // Récupérer l'ID de l'événement depuis la requête
         $eventId = $request->query->get('event_id');
-        $eventName = '';
-        
-        // Si un eventId est fourni, pré-remplir l'événement
-        if ($eventId) {
-            $event = $entityManager->find(Events::class, $eventId);
-            if ($event) {
-                $reservation->setEvent($event);
-                $eventName = $event->getLieu() . ' - ' . $event->getDateDebut()->format('d/m/Y H:i');
-                
-                // Pré-remplir le prix si l'événement est sélectionné
-                $prixUnitaire = $event->getPrix();
-                $prixTotal = bcmul($prixUnitaire, '1', 2); // Par défaut 1 personne
-                $reservation->setPrixTotal($prixTotal);
-                $reservation->setNombrePersonnes(1); // Par défaut 1 personne
-            }
+        $event   = $em->find(Events::class, $eventId);
+
+        if (!$event) {
+            $this->addFlash('error', 'Événement introuvable.');
+            return $this->redirectToRoute('app_events_index');
         }
-        
-        // Créer le formulaire avec les options
+
+        if ($event->getPlacesDisponibles() <= 0) {
+            $this->addFlash('error', 'Cet événement est complet.');
+            return $this->redirectToRoute('app_events_show', ['id' => $event->getId()]);
+        }
+
+        $reservation = new Reservations();
+        $reservation->setEvent($event);
+
         $form = $this->createForm(ReservationsType::class, $reservation, [
-            'event_id' => $eventId,
-            'event_name' => $eventName
+            'max_places' => $event->getPlacesDisponibles(),
         ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            // Définir la date de réservation si nécessaire
-            if (!$reservation->getDateCreation()) {
-                $reservation->setDateCreation(new \DateTime());
-            }
-            
-            // Calculer le prix total automatiquement
-            $event = $reservation->getEvent();
-            if ($event && $reservation->getNombrePersonnes()) {
-                $prixUnitaireFloat = (float) $event->getPrix();
-                $nombrePersonnesInt = (int) $reservation->getNombrePersonnes();
-                $prixTotal = $prixUnitaireFloat * $nombrePersonnesInt;
-                
-                $reservation->setPrixTotal(number_format($prixTotal, 2, '.', ''));
-                
-                // Diminuer les places disponibles dans l'événement
-                $placesDisponibles = $event->getPlacesDisponibles();
-                if ($placesDisponibles !== null) {
-                    $nouvellesPlacesDisponibles = $placesDisponibles - $nombrePersonnesInt;
-                    $event->setPlacesDisponibles($nouvellesPlacesDisponibles);
-                    
-                    // Sauvegarder aussi l'événement modifié
-                    $entityManager->persist($event);
-                }
-            }
-            
-            $entityManager->persist($reservation);
-            $entityManager->flush();
 
-            $this->addFlash('success', 'Réservation créée avec succès !');
-            return $this->redirectToRoute('app_reservations_index');
+            $adultes = $reservation->getNombreAdultes();
+            $enfants = $reservation->getNombreEnfants();
+            $total   = $adultes + $enfants;
+
+            // Validation : au moins 1 personne
+            if ($total <= 0) {
+                $this->addFlash('error', 'Veuillez indiquer au moins 1 adulte ou enfant.');
+                return $this->render('reservations/new.html.twig', [
+                    'form' => $form, 'event' => $event,
+                ]);
+            }
+
+            // Validation : assez de places
+            if ($total > $event->getPlacesDisponibles()) {
+                $this->addFlash('error', sprintf(
+                    'Seulement %d place(s) disponible(s).', $event->getPlacesDisponibles()
+                ));
+                return $this->render('reservations/new.html.twig', [
+                    'form' => $form, 'event' => $event,
+                ]);
+            }
+
+            // ── Calculs automatiques ───────────────────────────────
+            $reservation->setNombrePersonnes($total);
+            $reservation->setPrixTotal(
+                number_format((float) $event->getPrix() * $total, 2, '.', '')
+            );
+            $reservation->setStatut('en_attente');
+            $reservation->setDateCreation(new \DateTime());
+
+            // Décrémenter les places
+            $event->setPlacesDisponibles($event->getPlacesDisponibles() - $total);
+
+            $em->persist($reservation);
+            $em->persist($event);
+            $em->flush();
+
+            $this->addFlash('success', sprintf(
+                'Réservation confirmée ! %d personne(s) — %s TND.',
+                $total, $reservation->getPrixTotal()
+            ));
+
+            return $this->redirectToRoute('app_reservations_show', [
+                'id' => $reservation->getId(),
+            ]);
         }
 
         return $this->render('reservations/new.html.twig', [
-            'form' => $form->createView(),
-            'eventId' => $eventId,
+            'form'  => $form->createView(),
+            'event' => $event,
         ]);
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    //  SHOW
+    // ─────────────────────────────────────────────────────────────────
     #[Route('/{id}', name: 'app_reservations_show', methods: ['GET'])]
     public function show(Reservations $reservation): Response
     {
-        // Récupérer l'événement associé via la relation
-        $event = $reservation->getEvent();
-        
         return $this->render('reservations/show.html.twig', [
             'reservation' => $reservation,
-            'event' => $event,  // Passer l'objet event complet
+            'event'       => $reservation->getEvent(),
         ]);
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    //  EDIT
+    // ─────────────────────────────────────────────────────────────────
     #[Route('/{id}/edit', name: 'app_reservations_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, Reservations $reservation, EntityManagerInterface $entityManager): Response
-    {
-        $form = $this->createForm(ReservationsType::class, $reservation);
+    public function edit(
+        Request $request,
+        Reservations $reservation,
+        EntityManagerInterface $em
+    ): Response {
+        $event = $reservation->getEvent();
+
+        $form = $this->createForm(ReservationsType::class, $reservation, [
+            'max_places' => $event
+                ? $event->getPlacesDisponibles() + $reservation->getNombrePersonnes()
+                : 100,
+        ]);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->flush();
+            $adultes = $reservation->getNombreAdultes();
+            $enfants = $reservation->getNombreEnfants();
+            $total   = $adultes + $enfants;
+
+            $reservation->setNombrePersonnes($total);
+
+            if ($event) {
+                $reservation->setPrixTotal(
+                    number_format((float) $event->getPrix() * $total, 2, '.', '')
+                );
+            }
+
+            $em->flush();
             $this->addFlash('success', 'Réservation modifiée avec succès !');
             return $this->redirectToRoute('app_reservations_index');
         }
 
-        // Récupérer l'événement associé
-        $event = $reservation->getEvent();
-
         return $this->render('reservations/edit.html.twig', [
-            'form' => $form->createView(),
+            'form'        => $form->createView(),
             'reservation' => $reservation,
-            'event' => $event,  // Passer l'objet event complet
+            'event'       => $event,
         ]);
     }
 
+    // ─────────────────────────────────────────────────────────────────
+    //  DELETE
+    // ─────────────────────────────────────────────────────────────────
     #[Route('/{id}', name: 'app_reservations_delete', methods: ['POST'])]
-    public function delete(Request $request, Reservations $reservation, EntityManagerInterface $entityManager): Response
-    {
-        if ($this->isCsrfTokenValid('delete' . $reservation->getId(), $request->request->get('_token'))) {
-            // Libérer les places de l'événement avant de supprimer la réservation
+    public function delete(
+        Request $request,
+        Reservations $reservation,
+        EntityManagerInterface $em
+    ): Response {
+        if ($this->isCsrfTokenValid('delete'.$reservation->getId(), $request->request->get('_token'))) {
             $event = $reservation->getEvent();
-            if ($event && $reservation->getNombrePersonnes()) {
-                $nombrePersonnes = $reservation->getNombrePersonnes();
-                $placesDisponibles = $event->getPlacesDisponibles();
-                if ($placesDisponibles !== null) {
-                    $nouvellesPlacesDisponibles = $placesDisponibles + $nombrePersonnes;
-                    $event->setPlacesDisponibles($nouvellesPlacesDisponibles);
-                    
-                    // Sauvegarder les modifications de l'événement
-                    $entityManager->persist($event);
-                }
+            if ($event) {
+                $event->setPlacesDisponibles(
+                    $event->getPlacesDisponibles() + $reservation->getNombrePersonnes()
+                );
+                $em->persist($event);
             }
-            
-            // Supprimer la réservation
-            $entityManager->remove($reservation);
-            $entityManager->flush();
-            
-            $this->addFlash('success', 'Réservation supprimée avec succès ! Les places ont été libérées.');
+            $em->remove($reservation);
+            $em->flush();
+            $this->addFlash('success', 'Réservation supprimée. Places libérées.');
         }
 
         return $this->redirectToRoute('app_reservations_index');
     }
-    
+
+    // ─────────────────────────────────────────────────────────────────
+    //  CONFIRM / CANCEL
+    // ─────────────────────────────────────────────────────────────────
     #[Route('/{id}/confirm', name: 'app_reservations_confirm', methods: ['POST'])]
-    public function confirm(Request $request, Reservations $reservation, EntityManagerInterface $entityManager): Response
-    {
-        if ($this->isCsrfTokenValid('confirm' . $reservation->getId(), $request->request->get('_token'))) {
+    public function confirm(
+        Request $request, Reservations $reservation, EntityManagerInterface $em
+    ): Response {
+        if ($this->isCsrfTokenValid('confirm'.$reservation->getId(), $request->request->get('_token'))) {
             $reservation->setStatut('confirmee');
-            $entityManager->flush();
-            $this->addFlash('success', 'La réservation a été confirmée.');
+            $em->flush();
+            $this->addFlash('success', 'Réservation confirmée.');
         }
-        
         return $this->redirectToRoute('app_reservations_index');
     }
-    
+
     #[Route('/{id}/cancel', name: 'app_reservations_cancel', methods: ['POST'])]
-    public function cancel(Request $request, Reservations $reservation, EntityManagerInterface $entityManager): Response
-    {
-        if ($this->isCsrfTokenValid('cancel' . $reservation->getId(), $request->request->get('_token'))) {
+    public function cancel(
+        Request $request, Reservations $reservation, EntityManagerInterface $em
+    ): Response {
+        if ($this->isCsrfTokenValid('cancel'.$reservation->getId(), $request->request->get('_token'))) {
             $reservation->setStatut('annulee');
-            $entityManager->flush();
-            $this->addFlash('success', 'La réservation a été annulée.');
+            $em->flush();
+            $this->addFlash('success', 'Réservation annulée.');
         }
-        
         return $this->redirectToRoute('app_reservations_index');
     }
 }

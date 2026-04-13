@@ -419,7 +419,7 @@
                                 }}) }}
                                 {{ form_label(form.titre, 'Titre de l\'activité *', {'label_attr': {'for': 'titre'}}) }}
                             </div>
-                            <small class="text-muted">Minimum 3 caractères, maximum 150 caractères</small>
+                            
                             {{ form_errors(form.titre) }}
                         </div>
 
@@ -434,7 +434,7 @@
                                 }}) }}
                                 {{ form_label(form.description, 'Description *', {'label_attr': {'for': 'description'}}) }}
                             </div>
-                            <small class="text-muted">Minimum 10 caractères</small>
+                            
                             {{ form_errors(form.description) }}
                         </div>
 
@@ -448,7 +448,7 @@
                                     </label>
                                     {{ form_widget(form.categorie, {'attr': {
                                         'class': 'form-control-modern form-select-modern',
-                                        'id': 'categorie'
+                                        'id': 'activite_categorie'
                                     }}) }}
                                     {{ form_errors(form.categorie) }}
                                 </div>
@@ -462,12 +462,31 @@
                                     {{ form_widget(form.type_activite, {'attr': {
                                         'class': 'form-control-modern',
                                         'placeholder': 'Ex: Randonnée, Plongée...',
-                                        'id': 'type_activite'
+                                        'id': 'activite_type'
                                     }}) }}
-                                    <small class="text-muted">Ex: Randonnée, Plongée sous-marine, Parachutisme...</small>
+                        
                                     {{ form_errors(form.type_activite) }}
                                 </div>
                             </div>
+                        </div>
+
+                        <!-- Âge minimum -->
+                        <div class="form-group-modern">
+                            <div class="form-floating-modern">
+                                {{ form_widget(form.ageMinimum, {'attr': {
+                                    'class': 'form-control-modern',
+                                    'placeholder': ' ',
+                                    'id': 'ageMinimum',
+                                    'min': '0',
+                                    'max': '100'
+                                }}) }}
+                                {{ form_label(form.ageMinimum, 'Âge minimum (optionnel)', {'label_attr': {'for': 'ageMinimum'}}) }}
+                            </div>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Laissez vide si aucune restriction d'âge n'est requise
+                            </small>
+                            {{ form_errors(form.ageMinimum) }}
                         </div>
 
                         <!-- Image Upload -->
@@ -549,6 +568,152 @@ document.addEventListener('DOMContentLoaded', function() {
                 previewImage(files[0]);
             }
         });
+        
+        // Gestion de la dépendance catégorie -> type d'activité
+        
+        // DEBUG: Vérifier tous les éléments présents
+        console.log('🔍 DEBUG: Tous les select présents:', document.querySelectorAll('select'));
+        console.log('🔍 DEBUG: Éléments avec ID contenant categorie:', document.querySelectorAll('[id*="categorie"]'));
+        console.log('🔍 DEBUG: Éléments avec ID contenant type:', document.querySelectorAll('[id*="type"]'));
+        console.log('🔍 DEBUG: Éléments avec ID contenant activite:', document.querySelectorAll('[id*="activite"]'));
+        
+        const categorieSelect = document.getElementById('activities_categorie');
+        const typeSelect = document.getElementById('activities_type_activite');
+        
+        console.log('🔍 DEBUG: Recherche par ID exact:', {
+            'activite_categorie': document.getElementById('activite_categorie'),
+            'activite_type': document.getElementById('activite_type'),
+            'categorie': document.getElementById('categorie'),
+            'type_activite': document.getElementById('type_activite')
+        });
+        
+        if (categorieSelect && typeSelect) {
+            categorieSelect.addEventListener('change', function() {
+                let selectedCategorie = this.value;
+                console.log('Catégorie sélectionnée (brute):', selectedCategorie);
+                
+                // Normaliser: supprimer les accents et mettre en minuscules
+                selectedCategorie = selectedCategorie
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, ''); // Supprime les accents
+                
+                console.log('Catégorie normalisée:', selectedCategorie);
+                loadTypesByCategorie(selectedCategorie);
+            });
+            
+            // Charger les types au chargement de la page si une catégorie est déjà sélectionnée
+            if (categorieSelect.value) {
+                let selectedCategorie = categorieSelect.value;
+                console.log('Catégorie déjà sélectionnée au chargement (brute):', selectedCategorie);
+                
+                // Normaliser: supprimer les accents et mettre en minuscules
+                selectedCategorie = selectedCategorie
+                    .toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, ''); // Supprime les accents
+                
+                console.log('Catégorie déjà sélectionnée au chargement (normalisée):', selectedCategorie);
+                loadTypesByCategorie(selectedCategorie);
+            }
+        } else {
+            console.error('❌ Éléments non trouvés:', {
+                categorieSelect: !!categorieSelect,
+                typeSelect: !!typeSelect
+            });
+        }
+        
+        async function loadTypesByCategorie(categorie) {
+            console.log('🚀 loadTypesByCategorie appelé avec:', categorie);
+            
+            if (!categorie) {
+                // Réinitialiser le champ type
+                typeSelect.innerHTML = '<option value="">Choisir d\'abord une catégorie</option>';
+                typeSelect.disabled = true;
+                return;
+            }
+            
+            try {
+                // Afficher un état de chargement
+                typeSelect.innerHTML = '<option value="">Chargement...</option>';
+                typeSelect.disabled = true;
+                
+                const apiUrl = `/api/types-activite/${encodeURIComponent(categorie)}`;
+                console.log('📡 Appel API:', apiUrl);
+                
+                // Appel API
+                const response = await fetch(apiUrl);
+                console.log('📥 Réponse API:', response.status, response.statusText);
+                
+                const data = await response.json();
+                console.log('📊 Données API:', data);
+                
+                if (data.success) {
+                    // Vider et remplir le select
+                    typeSelect.innerHTML = '<option value="">Choisir un type</option>';
+                    
+                    data.data.forEach(type => {
+                        const option = document.createElement('option');
+                        option.value = type.nom;
+                        option.textContent = `${type.nom} ${type.emoji}`;
+                        typeSelect.appendChild(option);
+                    });
+                    
+                    typeSelect.disabled = false;
+                } else {
+                    throw new Error(data.message);
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement des types:', error);
+                
+                // SOLUTION DE SECOURS : Types codés en dur
+                const typesSecours = {
+                    'desert': [
+                        {nom: 'Randonnée dans le Sahara', emoji: '??'},
+                        {nom: 'Trekking dans les dunes', emoji: '??'},
+                        {nom: 'Quad et buggy', emoji: '??'},
+                        {nom: 'Balade à dos de dromadaire', emoji: '??'},
+                        {nom: 'Nuit en campement saharien', emoji: '??'}
+                    ],
+                    'Mer': [
+                        {nom: 'Jet ski', emoji: '??'},
+                        {nom: 'Plongée sous-marine', emoji: '??'},
+                        {nom: 'Kayak', emoji: '??'},
+                        {nom: 'Pêche touristique', emoji: '??'}
+                    ],
+                    'Aérien': [
+                        {nom: 'Parachutisme', emoji: '??'},
+                        {nom: 'Parapente', emoji: '??'},
+                        {nom: 'Montgolfière', emoji: '??'}
+                    ],
+                    'nature': [
+                        {nom: 'Randonnée en forêt', emoji: '??'},
+                        {nom: 'Escalade', emoji: '??'},
+                        {nom: 'Camping', emoji: '??'},
+                        {nom: 'VTT', emoji: '??'}
+                    ],
+                    'Culture': [
+                        {nom: 'Visite des ksour', emoji: '??'},
+                        {nom: 'Décors de films', emoji: '??'},
+                        {nom: 'Visite archéologique', emoji: '??'}
+                    ]
+                };
+                
+                const types = typesSecours[categorie] || [];
+                
+                // Vider et remplir le select avec les types de secours
+                typeSelect.innerHTML = '<option value="">Choisir un type</option>';
+                
+                types.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type.nom;
+                    option.textContent = `${type.nom} ${type.emoji}`;
+                    typeSelect.appendChild(option);
+                });
+                
+                typeSelect.disabled = false;
+            }
+        }
         
         imageInput.addEventListener('change', function() {
             if (this.files.length > 0) {

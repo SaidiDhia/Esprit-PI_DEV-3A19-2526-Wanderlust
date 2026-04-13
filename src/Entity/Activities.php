@@ -3,13 +3,12 @@
 namespace App\Entity;
 
 use App\Enum\CategorieActiviteEnum;
-use App\Enum\TypeActiviteEnum;
+use App\Enum\StatusActiviteEnum;
 use App\Repository\ActivitiesRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
-use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ActivitiesRepository::class)]
 #[ORM\HasLifecycleCallbacks]
@@ -25,43 +24,38 @@ class Activities
     private Collection $events;
 
     #[ORM\Column(length: 150)]
-    #[Assert\NotBlank(message: "Le titre est obligatoire")]
-    #[Assert\Length(
-        min: 3, 
-        max: 150, 
-        minMessage: "Le titre doit faire au moins {{ limit }} caractères",
-        maxMessage: "Le titre ne peut pas dépasser {{ limit }} caractères"
-    )]
     private ?string $titre = null;
 
     #[ORM\Column(type: Types::TEXT)]
-    #[Assert\NotBlank(message: "La description est obligatoire")]
-    #[Assert\Length(min: 10, minMessage: "La description doit faire au moins {{ limit }} caractères")]
     private ?string $description = null;
 
-    #[ORM\Column(type: 'string', enumType: CategorieActiviteEnum::class)]
-    #[Assert\NotBlank(message: "La catégorie est obligatoire")]
+    #[ORM\Column(type: 'string', length: 50, enumType: CategorieActiviteEnum::class)]
     private ?CategorieActiviteEnum $categorie = null;
 
     #[ORM\Column(length: 100)]
-    #[Assert\NotBlank(message: "Le type d'activité est obligatoire")]
-    #[Assert\Length(min: 3, max: 100, minMessage: "Le type doit contenir au moins 3 caractères", maxMessage: "Le type ne peut pas dépasser 100 caractères")]
     private ?string $type_activite = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $image = null;
-
-    public function __construct()
-    {
-        $this->events = new ArrayCollection();
-        $this->date_creation = new \DateTime();
-    }
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $date_creation = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $date_modification = null;
+
+    #[ORM\Column(type: 'string', length: 50, enumType: StatusActiviteEnum::class, options: ['default' => 'en_attente'])]
+    private ?StatusActiviteEnum $status = null;
+
+    #[ORM\Column(type: 'integer', nullable: true)]
+    private ?int $ageMinimum = null;
+
+    public function __construct()
+    {
+        $this->events = new ArrayCollection();
+        $this->date_creation = new \DateTime();
+        $this->status = StatusActiviteEnum::EN_ATTENTE;  // Valeur par défaut
+    }
 
     public function getId(): ?int
     {
@@ -80,7 +74,7 @@ class Activities
     {
         if (!$this->events->contains($event)) {
             $this->events->add($event);
-            $event->addActivity($this);
+            // Pas besoin d'appeler la méthode inverse car Events::addActivity() le fait déjà
         }
 
         return $this;
@@ -89,7 +83,7 @@ class Activities
     public function removeEvent(Events $event): static
     {
         if ($this->events->removeElement($event)) {
-            $event->removeActivity($this);
+            $event->removeActivity($this); // Synchroniser la relation inverse
         }
 
         return $this;
@@ -170,6 +164,46 @@ class Activities
     {
         $this->date_modification = $date_modification;
         return $this;
+    }
+
+    // ✅ AJOUT : Getter et Setter pour status
+    public function getStatus(): ?StatusActiviteEnum
+    {
+        return $this->status;
+    }
+
+    public function setStatus(StatusActiviteEnum $status): static
+    {
+        $this->status = $status;
+        return $this;
+    }
+
+    // ✅ AJOUT : Getter et Setter pour ageMinimum
+    public function getAgeMinimum(): ?int
+    {
+        return $this->ageMinimum;
+    }
+
+    public function setAgeMinimum(?int $ageMinimum): static
+    {
+        $this->ageMinimum = $ageMinimum;
+        return $this;
+    }
+
+    // ✅ AJOUT : Méthodes pratiques pour vérifier le status
+    public function isAccepted(): bool
+    {
+        return $this->status === StatusActiviteEnum::ACCEPTE;
+    }
+
+    public function isRefused(): bool
+    {
+        return $this->status === StatusActiviteEnum::REFUSE;
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === StatusActiviteEnum::EN_ATTENTE;
     }
 
     #[ORM\PrePersist]

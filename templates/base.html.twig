@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
     
     <meta charset="UTF-8">
@@ -9,12 +9,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Owl Carousel CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.theme.default.min.css">
+    <!-- Magnific Popup CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/magnific-popup.js/1.1.0/magnific-popup.min.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     {% block stylesheets %}{% endblock %}
 </head>
 <body>
 
 <!-- HEADER -->
-<header class="site-header">
+<header class="site-header default-header">
     <!-- Top bar: contacts + logo + profile -->
     <div class="header-top">
         <!-- Contact Info -->
@@ -39,26 +46,29 @@
         <div class="logo-wrap">
         <!-- Nav Bar -->
     <nav class="nav-bar">
+        <a href="{{ path('app_home') }}" class="nav-btn {% if app.request.attributes.get('_route') == 'app_home' %}active{% endif %}">
+            <span class="nav-icon">🏠</span> ACCUEIL
+        </a>
         <a href="{{ path('app_activities_index') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_activities' %}active{% endif %}">
             <span class="nav-icon">📅</span> ACTIVITÉS
-        </a>
-        <a href="{{ path('app_events_index') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_events' %}active{% endif %}">
-            <span class="nav-icon">🎉</span> ÉVÉNEMENTS
-        </a>
-        <a href="{{ path('app_booking') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_booking' %}active{% endif %}">
-            <span class="nav-icon">🏨</span> HÔTELS
-        </a>
-        <a href="{{ path('app_messaging') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_messaging' %}active{% endif %}">
-            <span class="nav-icon">💬</span> MESSAGING
         </a>
         <a href="{{ path('app_blog') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_blog' %}active{% endif %}">
             <span class="nav-icon">📝</span> BLOG
         </a>
+        <a href="{{ path('app_booking') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_booking' %}active{% endif %}">
+            <span class="nav-icon">🏨</span> RÉSERVATIONS
+        </a>
+        <a href="{{ path('app_events_index') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_events' %}active{% endif %}">
+            <span class="nav-icon">🎉</span> ÉVÉNEMENTS
+        </a>
         <a href="{{ path('app_marketplace') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_marketplace' %}active{% endif %}">
             <span class="nav-icon">🛒</span> MARKETPLACE
         </a>
+        <a href="{{ path('app_messaging') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_messaging' %}active{% endif %}">
+            <span class="nav-icon">💬</span> MESSAGERIE
+        </a>
         <a href="{{ path('app_reservations_index') }}" class="nav-btn {% if app.request.attributes.get('_route') starts with 'app_reservations' %}active{% endif %}">
-            <span class="nav-icon">🎫</span> RÉSERVATIONS
+            <span class="nav-icon">🎫</span> MES RÉSERVATIONS
         </a>
     </nav>
             
@@ -92,6 +102,16 @@
 </main>
 
 <script src="{{ asset('js/main.js') }}"></script>
+<!-- Owl Carousel JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
+<!-- Magnific Popup JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/magnific-popup.js/1.1.0/jquery.magnific-popup.min.js"></script>
+<!-- Waypoints for Counter Up -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/waypoints/4.0.1/jquery.waypoints.min.js"></script>
+<!-- Counter Up -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Counter-Up/1.0.0/jquery.counterup.min.js"></script>
+<!-- Sticky JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.sticky/1.0.4/jquery.sticky.min.js"></script>
 {% block javascripts %}{% endblock %}
             {% block importmap %}{{ importmap('app') }}{% endblock %}
 </body>
