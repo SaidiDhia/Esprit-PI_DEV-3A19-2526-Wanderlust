@@ -18,10 +18,20 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 class ActivitiesController extends AbstractController
 {
     #[Route('/', name: 'app_activities_index', methods: ['GET'])]
-    public function index(ActivitiesRepository $activitiesRepository): Response
+    public function index(Request $request, ActivitiesRepository $activitiesRepository): Response
     {
+        $page = max(1, $request->query->getInt('page', 1));
+        $limit = 9; // 3x3 grid
+        
+        $activities = $activitiesRepository->findAllWithPagination($page, $limit);
+        $totalActivities = $activitiesRepository->countAll();
+        $totalPages = ceil($totalActivities / $limit);
+        
         return $this->render('activities/index.html.twig', [
-            'activities' => $activitiesRepository->findAll(),
+            'activities' => $activities,
+            'currentPage' => $page,
+            'totalPages' => $totalPages,
+            'totalActivities' => $totalActivities,
         ]);
     }
 
@@ -33,6 +43,77 @@ class ActivitiesController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Contrôle de saisie personnalisé
+            $titre = trim($activity->getTitre());
+            $description = trim($activity->getDescription());
+            $categorie = $activity->getCategorie();
+            $typeActivite = $activity->getTypeActivite();
+            $ageMinimum = $activity->getAgeMinimum();
+            
+            // Validation du titre
+            if (empty($titre)) {
+                $this->addFlash('error', 'Le titre est obligatoire.');
+                return $this->redirectToRoute('app_activities_new');
+            }
+            
+            if (strlen($titre) < 3) {
+                $this->addFlash('error', 'Le titre doit contenir au moins 3 caractères.');
+                return $this->redirectToRoute('app_activities_new');
+            }
+            
+            if (strlen($titre) > 150) {
+                $this->addFlash('error', 'Le titre ne doit pas dépasser 150 caractères.');
+                return $this->redirectToRoute('app_activities_new');
+            }
+            
+            // Validation de la description
+            if (empty($description)) {
+                $this->addFlash('error', 'La description est obligatoire.');
+                return $this->redirectToRoute('app_activities_new');
+            }
+            
+            if (strlen($description) < 10) {
+                $this->addFlash('error', 'La description doit contenir au moins 10 caractères.');
+                return $this->redirectToRoute('app_activities_new');
+            }
+            
+            // Validation de la catégorie
+            if (!$categorie) {
+                $this->addFlash('error', 'La catégorie est obligatoire.');
+                return $this->redirectToRoute('app_activities_new');
+            }
+            
+            // Validation du type d'activité
+            if (empty($typeActivite)) {
+                $this->addFlash('error', 'Le type d\'activité est obligatoire.');
+                return $this->redirectToRoute('app_activities_new');
+            }
+            
+            if (strlen($typeActivite) < 2) {
+                $this->addFlash('error', 'Le type d\'activité doit contenir au moins 2 caractères.');
+                return $this->redirectToRoute('app_activities_new');
+            }
+            
+            if (strlen($typeActivite) > 100) {
+                $this->addFlash('error', 'Le type d\'activité ne doit pas dépasser 100 caractères.');
+                return $this->redirectToRoute('app_activities_new');
+            }
+            
+            // Validation de l'âge minimum
+            if ($ageMinimum !== null && $ageMinimum < 0) {
+                $this->addFlash('error', 'L\'âge minimum ne peut pas être négatif.');
+                return $this->redirectToRoute('app_activities_new');
+            }
+            
+            if ($ageMinimum !== null && $ageMinimum > 100) {
+                $this->addFlash('error', 'L\'âge minimum ne peut pas dépasser 100 ans.');
+                return $this->redirectToRoute('app_activities_new');
+            }
+            
+            // Nettoyage des données
+            $activity->setTitre(ucfirst($titre));
+            $activity->setDescription(ucfirst($description));
+            
             $this->addFlash('info', 'Formulaire soumis et valide');
             
             // Traitement de l'image (une seule image)
@@ -62,14 +143,15 @@ class ActivitiesController extends AbstractController
             $entityManager->persist($activity);
             $entityManager->flush();
 
-            $this->addFlash('success', 'L\'activité a été créée avec succès.');
+            $this->addFlash('success', '🎉 Activité "' . $activity->getTitre() . '" ajoutée avec succès !');
 
-            return $this->redirectToRoute('app_activities_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('app_activities_index');
         } else {
             if ($form->isSubmitted()) {
                 $this->addFlash('error', 'Formulaire soumis mais invalide');
+                // Afficher les erreurs de validation
                 foreach ($form->getErrors(true) as $error) {
-                    $this->addFlash('error', $error->getMessage());
+                    $this->addFlash('error', 'Erreur: ' . $error->getMessage());
                 }
             }
         }
@@ -95,6 +177,77 @@ class ActivitiesController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            // Contrôle de saisie personnalisé
+            $titre = trim($activity->getTitre());
+            $description = trim($activity->getDescription());
+            $categorie = $activity->getCategorie();
+            $typeActivite = $activity->getTypeActivite();
+            $ageMinimum = $activity->getAgeMinimum();
+            
+            // Validation du titre
+            if (empty($titre)) {
+                $this->addFlash('error', 'Le titre est obligatoire.');
+                return $this->redirectToRoute('app_activities_edit', ['id' => $activity->getId()]);
+            }
+            
+            if (strlen($titre) < 3) {
+                $this->addFlash('error', 'Le titre doit contenir au moins 3 caractères.');
+                return $this->redirectToRoute('app_activities_edit', ['id' => $activity->getId()]);
+            }
+            
+            if (strlen($titre) > 150) {
+                $this->addFlash('error', 'Le titre ne doit pas dépasser 150 caractères.');
+                return $this->redirectToRoute('app_activities_edit', ['id' => $activity->getId()]);
+            }
+            
+            // Validation de la description
+            if (empty($description)) {
+                $this->addFlash('error', 'La description est obligatoire.');
+                return $this->redirectToRoute('app_activities_edit', ['id' => $activity->getId()]);
+            }
+            
+            if (strlen($description) < 10) {
+                $this->addFlash('error', 'La description doit contenir au moins 10 caractères.');
+                return $this->redirectToRoute('app_activities_edit', ['id' => $activity->getId()]);
+            }
+            
+            // Validation de la catégorie
+            if (!$categorie) {
+                $this->addFlash('error', 'La catégorie est obligatoire.');
+                return $this->redirectToRoute('app_activities_edit', ['id' => $activity->getId()]);
+            }
+            
+            // Validation du type d'activité
+            if (empty($typeActivite)) {
+                $this->addFlash('error', 'Le type d\'activité est obligatoire.');
+                return $this->redirectToRoute('app_activities_edit', ['id' => $activity->getId()]);
+            }
+            
+            if (strlen($typeActivite) < 2) {
+                $this->addFlash('error', 'Le type d\'activité doit contenir au moins 2 caractères.');
+                return $this->redirectToRoute('app_activities_edit', ['id' => $activity->getId()]);
+            }
+            
+            if (strlen($typeActivite) > 100) {
+                $this->addFlash('error', 'Le type d\'activité ne doit pas dépasser 100 caractères.');
+                return $this->redirectToRoute('app_activities_edit', ['id' => $activity->getId()]);
+            }
+            
+            // Validation de l'âge minimum
+            if ($ageMinimum !== null && $ageMinimum < 0) {
+                $this->addFlash('error', 'L\'âge minimum ne peut pas être négatif.');
+                return $this->redirectToRoute('app_activities_edit', ['id' => $activity->getId()]);
+            }
+            
+            if ($ageMinimum !== null && $ageMinimum > 100) {
+                $this->addFlash('error', 'L\'âge minimum ne peut pas dépasser 100 ans.');
+                return $this->redirectToRoute('app_activities_edit', ['id' => $activity->getId()]);
+            }
+            
+            // Nettoyage des données
+            $activity->setTitre(ucfirst($titre));
+            $activity->setDescription(ucfirst($description));
+            
             /** @var UploadedFile $imageFile */
             $imageFile = $form->get('image')->getData();
 
@@ -116,7 +269,7 @@ class ActivitiesController extends AbstractController
 
             $entityManager->flush();
 
-            $this->addFlash('success', 'L\'activité a été modifiée avec succès.');
+            $this->addFlash('success', '🎉 Activité "' . $activity->getTitre() . '" modifiée avec succès !');
 
             return $this->redirectToRoute('app_activities_index', [], Response::HTTP_SEE_OTHER);
         }

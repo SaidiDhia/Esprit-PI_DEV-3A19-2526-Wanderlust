@@ -6,24 +6,35 @@
 {{ parent() }}
 <style>
     :root {
+        --primary-color: #667eea;
+        --secondary-color: #764ba2;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --light-color: #f8f9fa;
+        --dark-color: #343a40;
         --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        --hover-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        --card-shadow: 0 15px 35px rgba(0,0,0,0.1);
+        --hover-shadow: 0 20px 40px rgba(0,0,0,0.15);
         --border-radius: 20px;
     }
 
-    /* Hero Section */
-    .show-hero {
-        background: var(--primary-gradient);
-        border-radius: 0 0 60px 60px;
-        padding: 3rem 0;
-        margin-bottom: 3rem;
-        position: relative;
-        overflow: hidden;
+    body {
+        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        min-height: 100vh;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     }
 
-    .show-hero::before {
+    /* Hero Section */
+    .hero-section {
+        background: var(--primary-gradient);
+        padding: 4rem 0;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 3rem;
+    }
+
+    .hero-section::before {
         content: '';
         position: absolute;
         top: 0;
@@ -32,7 +43,7 @@
         bottom: 0;
         background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
         background-size: cover;
-        opacity: 0.1;
+        opacity: 0.2;
     }
 
     .hero-content {
@@ -46,230 +57,446 @@
         font-size: 3rem;
         font-weight: 700;
         margin-bottom: 1rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        animation: fadeInUp 0.8s ease;
     }
 
     .hero-content p {
         font-size: 1.2rem;
-        opacity: 0.9;
+        opacity: 0.95;
         margin-bottom: 0;
+        animation: fadeInUp 1s ease;
     }
 
-    /* Show Section */
-    .show-section {
-        padding: 2rem 0;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 60vh;
+    /* Main Container */
+    .main-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 1rem;
     }
 
-    .show-card {
+    /* Cards */
+    .event-card {
         background: white;
         border-radius: var(--border-radius);
         box-shadow: var(--card-shadow);
         overflow: hidden;
-        transition: all 0.3s ease;
-        border: none;
-        width: 100%;
-        max-width: 900px;
-        margin: 0 auto;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        margin-bottom: 2rem;
+        position: relative;
     }
 
-    .show-card:hover {
-        transform: translateY(-5px);
+    .event-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--primary-gradient);
+    }
+
+    .event-card:hover {
+        transform: translateY(-8px);
         box-shadow: var(--hover-shadow);
     }
 
-    .show-header {
+    .card-header-custom {
         background: var(--primary-gradient);
         color: white;
-        padding: 2rem 3rem;
+        padding: 2.5rem;
         text-align: center;
+        position: relative;
     }
 
-    .show-header h2 {
-        margin: 0;
-        font-size: 2rem;
+    .card-header-custom h2 {
+        margin: 0 0 0.5rem 0;
+        font-size: 2.2rem;
         font-weight: 700;
+        letter-spacing: -0.5px;
     }
 
-    .show-body {
-        padding: 3rem;
+    .card-header-custom p {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 1.1rem;
     }
 
-    .event-image {
+    .card-body-custom {
+        padding: 2.5rem;
+    }
+
+    /* Images */
+    .image-gallery {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .gallery-image {
         width: 100%;
-        height: 400px;
+        height: 250px;
         object-fit: cover;
         border-radius: 15px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        transition: all 0.3s ease;
+        cursor: pointer;
     }
 
-    .no-image {
+    .gallery-image:hover {
+        transform: scale(1.05);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.2);
+    }
+
+    .no-image-container {
         width: 100%;
-        height: 400px;
+        height: 250px;
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         border-radius: 15px;
         display: flex;
         align-items: center;
         justify-content: center;
         border: 3px dashed #dee2e6;
+        margin-bottom: 2rem;
     }
 
-    .info-grid {
+    /* Info Grid */
+    .info-grid-modern {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 2rem;
-        margin: 2rem 0;
+        margin-bottom: 2rem;
     }
 
-    .info-item {
-        background: rgba(102, 126, 234, 0.05);
-        border: 2px solid rgba(102, 126, 234, 0.1);
+    .info-card {
+        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+        padding: 2rem;
         border-radius: 15px;
-        padding: 1.5rem;
+        border: 1px solid #e9ecef;
         transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
     }
 
-    .info-item:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.1);
-        border-color: rgba(102, 126, 234, 0.2);
+    .info-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--primary-gradient);
     }
 
-    .info-item h5 {
-        color: #667eea;
-        font-weight: 700;
-        margin-bottom: 1rem;
-        font-size: 0.9rem;
+    .info-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        border-color: var(--primary-color);
+    }
+
+    .info-card h5 {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        font-size: 1.2rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .info-card p {
+        margin-bottom: 0.75rem;
+        color: var(--dark-color);
+        font-size: 1rem;
+    }
+
+    .info-card strong {
+        color: var(--dark-color);
+        font-weight: 600;
+    }
+
+    /* Buttons */
+    .btn-custom {
+        padding: 1rem 2rem;
+        border: none;
+        border-radius: 12px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        font-size: 1rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
 
-    .info-item p {
-        margin: 0.5rem 0;
-        color: #495057;
-        font-size: 1.1rem;
+    .btn-primary-custom {
+        background: var(--primary-gradient);
+        color: white;
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
     }
 
-    .badge-modern {
-        background: var(--primary-gradient);
+    .btn-primary-custom:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-secondary-custom {
+        background: #6c757d;
+        color: white;
+        box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3);
+    }
+
+    .btn-secondary-custom:hover {
+        background: #5a6268;
+        transform: translateY(-3px);
+        box-shadow: 0 12px 25px rgba(108, 117, 125, 0.4);
+    }
+
+    .btn-disabled-custom {
+        background: #e9ecef;
+        color: #6c757d;
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+
+    /* Badges */
+    .badge-custom {
+        background: var(--primary-color);
         color: white;
         padding: 0.5rem 1rem;
-        border-radius: 50px;
-        font-weight: 600;
+        border-radius: 25px;
         font-size: 0.9rem;
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
     }
 
-    .availability-card {
+    /* Carousel */
+    .carousel-card {
         background: white;
-        border-radius: 15px;
-        padding: 2rem;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        border: none;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+        position: sticky;
+        top: 20px;
+        margin-bottom: 2rem;
     }
 
-    .availability-card.success {
-        border-left: 5px solid #28a745;
-    }
-
-    .availability-card.danger {
-        border-left: 5px solid #dc3545;
-    }
-
-    .availability-card h5 {
-        color: #495057;
-        font-weight: 700;
-        margin-bottom: 1rem;
-    }
-
-    .availability-card h3 {
-        font-size: 2.5rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-
-    .availability-card.success h3 {
-        color: #28a745;
-    }
-
-    .availability-card.danger h3 {
-        color: #dc3545;
-    }
-
-    .btn-modern {
+    .carousel-header-custom {
         background: var(--primary-gradient);
-        border: none;
-        border-radius: 50px;
-        padding: 1rem 3rem;
         color: white;
+        padding: 1.5rem;
+        text-align: center;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .carousel-header-custom h4 {
+        margin: 0;
+        font-size: 1.3rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+
+    .carousel-header-custom .badge {
+        background: rgba(255,255,255,0.2);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        margin-left: 0.5rem;
+    }
+
+    .carousel-container {
+        position: relative;
+        width: 100%;
+        height: 450px;
+        overflow: hidden;
+        background: #f8f9fa;
+    }
+
+    .carousel-track {
+        display: flex;
+        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        height: 100%;
+    }
+
+    .carousel-slide {
+        min-width: 100%;
+        height: 100%;
+        position: relative;
+    }
+
+    .carousel-slide img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .slide-info {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 100%);
+        color: white;
+        padding: 1.5rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .carousel-slide:hover .slide-info {
+        opacity: 1;
+    }
+
+    .slide-info h6 {
+        margin: 0 0 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+    }
+
+    .slide-info small {
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
+
+    .carousel-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(255,255,255,0.95);
+        border: none;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 10;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--primary-color);
+        font-size: 1.2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    .carousel-nav:hover {
+        background: white;
+        transform: translateY(-50%) scale(1.1);
+        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+    }
+
+    .carousel-prev {
+        left: 15px;
+    }
+
+    .carousel-next {
+        right: 15px;
+    }
+
+    .carousel-indicators {
+        position: absolute;
+        bottom: 15px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 0.75rem;
+        z-index: 10;
+    }
+
+    .indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        border: 2px solid var(--primary-color);
+        background: rgba(255,255,255,0.5);
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .indicator.active {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        transform: scale(1.3);
+    }
+
+    /* Status Cards */
+    .status-card {
+        padding: 2rem;
+        border-radius: 15px;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .status-card.success {
+        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+
+    .status-card.danger {
+        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+
+    .status-card h5 {
+        margin-bottom: 1rem;
         font-weight: 600;
         font-size: 1.1rem;
-        transition: all 0.3s ease;
-        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
-        text-decoration: none;
-        display: inline-block;
     }
 
-    .btn-modern:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
-        color: white;
+    .status-card h3 {
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+        font-size: 2rem;
     }
 
-    .btn-secondary-modern {
-        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-        box-shadow: 0 10px 25px rgba(108, 117, 125, 0.3);
-    }
-
-    .btn-secondary-modern:hover {
-        box-shadow: 0 15px 35px rgba(108, 117, 125, 0.4);
-    }
-
+    /* Activities */
     .activities-section {
         margin-top: 2rem;
     }
 
-    .activity-badge {
+    .activity-card {
         background: white;
         border: 2px solid #e9ecef;
         border-radius: 15px;
         padding: 1.5rem;
-        margin: 0.5rem;
-        display: block;
+        margin-bottom: 1rem;
         transition: all 0.3s ease;
-        height: 100%;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
     }
 
-    .activity-badge:hover {
+    .activity-card:hover {
         transform: translateY(-3px);
-        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
-        border-color: #667eea;
-    }
-
-    .activity-badge strong {
-        color: #495057;
-        font-weight: 700;
-        font-size: 1.1rem;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        border-color: var(--primary-color);
     }
 
     .activity-header {
         display: flex;
         align-items: center;
         margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
+        padding-bottom: 1rem;
         border-bottom: 2px solid #f8f9fa;
     }
 
     .activity-header i {
-        color: #667eea;
+        color: var(--primary-color);
         font-size: 1.2rem;
         margin-right: 0.75rem;
+    }
+
+    .activity-header strong {
+        color: var(--dark-color);
+        font-weight: 600;
+        font-size: 1.1rem;
     }
 
     .activity-content {
@@ -282,11 +509,12 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        font-size: 0.95rem;
     }
 
     .activity-category {
-        background: rgba(102, 126, 234, 0.1);
-        color: #667eea;
+        background: var(--primary-color);
+        color: white;
         padding: 0.25rem 0.75rem;
         border-radius: 20px;
         font-size: 0.8rem;
@@ -295,49 +523,48 @@
         letter-spacing: 0.5px;
     }
 
-    .difficulty-stars {
-        font-size: 0.9rem;
-    }
-
-    .difficulty-stars i {
-        margin-left: 2px;
-    }
-
-    .activity-meta {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        font-size: 0.9rem;
-        color: #6c757d;
-    }
-
-    .activity-meta i {
-        color: #667eea;
-        margin-right: 0.25rem;
+    /* Animations */
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 
     /* Responsive */
     @media (max-width: 768px) {
-        .show-hero h1 {
+        .hero-content h1 {
             font-size: 2rem;
         }
         
-        .show-section {
-            padding: 1rem 0;
+        .main-container {
+            padding: 0 0.5rem;
         }
         
-        .show-body {
-            padding: 2rem;
+        .card-body-custom {
+            padding: 1.5rem;
         }
         
-        .info-grid {
+        .info-grid-modern {
             grid-template-columns: 1fr;
             gap: 1rem;
         }
         
-        .btn-modern {
-            padding: 0.8rem 2rem;
-            font-size: 1rem;
+        .carousel-container {
+            height: 300px;
+        }
+        
+        .gallery-image {
+            height: 200px;
+        }
+        
+        .btn-custom {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.9rem;
         }
     }
 </style>
@@ -345,7 +572,7 @@
 
 {% block content %}
 <!-- Hero Section -->
-<section class="show-hero">
+<section class="hero-section">
     <div class="container">
         <div class="hero-content">
             <h1>Détails de l'événement</h1>
@@ -354,329 +581,299 @@
     </div>
 </section>
 
-<!-- Show Section -->
-<section class="show-section">
-    <div class="container">
-        <div class="show-card">
-            <div class="show-header">
-                <h2><i class="fas fa-calendar-alt me-2"></i>{{ event.lieu }}</h2>
-                <p>Organisé par {{ event.organisateur }}</p>
-            </div>
-            
-            <div class="show-body">
-                <!-- Image -->
-                {% if event.image %}
-                    <img src="{{ asset('uploads/events/' ~ event.image) }}" class="event-image" alt="{{ event.lieu }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="no-image" style="display: none;">
-                        <i class="fas fa-calendar-alt fa-5x text-muted"></i>
-                    </div>
-                {% else %}
-                    <div class="no-image">
-                        <i class="fas fa-calendar-alt fa-5x text-muted"></i>
-                    </div>
-                {% endif %}
-                
-                <!-- Informations Grid -->
-                <div class="info-grid">
-                    <div class="info-item">
-                        <h5><i class="fas fa-clock me-2"></i>Dates</h5>
-                        <p><strong>Début:</strong> {{ event.dateDebut ? event.dateDebut|date('d/m/Y H:i') : 'Non défini' }}</p>
-                        <p><strong>Fin:</strong> {{ event.dateFin ? event.dateFin|date('d/m/Y H:i') : 'Non défini' }}</p>
-                    </div>
-                    
-                    <div class="info-item">
-                        <h5><i class="fas fa-euro-sign me-2"></i>Prix & Capacité</h5>
-                        <p><strong>Prix:</strong> <span class="badge-modern">{{ event.prix }} €</span></p>
-                        <p><strong>Capacité:</strong> {{ event.placesDisponibles }}/{{ event.capaciteMax }} places</p>
-                    </div>
-                    
-                    <div class="info-item">
-                        <h5><i class="fas fa-phone me-2"></i>Contact</h5>
-                        <p><strong>Téléphone:</strong> {{ event.telephone }}</p>
-                        <p><strong>Email:</strong> <a href="mailto:{{ event.email }}">{{ event.email }}</a></p>
-                    </div>
-                    
-                    <!-- Bouton Réserver -->
-                    <div class="info-item">
-                        <h5><i class="fas fa-calendar-plus me-2"></i>Réservation</h5>
-                        {% set eventDate = event.getDateDebut() %}
-                        {% set now = "now"|date("Y-m-d H:i:s") %}
-                        {% if event.placesDisponibles > 0 and eventDate > now %}
-                            <a href="{{ path('app_reservations_new', {'event_id': event.id}) }}" class="btn-modern btn-primary-modern w-100">
-                                <i class="fas fa-calendar-plus me-2"></i>Réserver cet événement
-                            </a>
-                            <p class="text-success mt-2 mb-0">
-                                <i class="fas fa-check-circle me-1"></i>
-                                {{ event.placesDisponibles }} places disponibles
-                            </p>
-                        {% else %}
-                            {% if event.placesDisponibles <= 0 %}
-                                <button class="btn-modern btn-disabled-modern w-100" disabled>
-                                    <i class="fas fa-times-circle me-2"></i>Plus de places disponibles
-                                </button>
-                                <p class="text-danger mt-2 mb-0">
-                                    <i class="fas fa-times-circle me-1"></i>
-                                    Événement complet
-                                </p>
-                            {% else %}
-                                <button class="btn-modern btn-disabled-modern w-100" disabled>
-                                    <i class="fas fa-clock me-2"></i>Événement terminé
-                                </button>
-                                <p class="text-warning mt-2 mb-0">
-                                    <i class="fas fa-clock me-1"></i>
-                                    Événement terminé
-                                </p>
-                            {% endif %}
-                        {% endif %}
-                    </div>
+<!-- Main Content -->
+<div class="main-container">
+    <div class="row">
+        <!-- Colonne gauche : Informations principales -->
+        <div class="col-lg-8">
+            <div class="event-card">
+                <div class="card-header-custom">
+                    <h2>{{ event.lieu }}</h2>
+                    <p>Organisé par {{ event.organisateur }}</p>
                 </div>
                 
-                <!-- Matériels nécessaires -->
-                {% if event.materielsNecessaires %}
-                <div class="info-item">
-                    <h5><i class="fas fa-tools me-2"></i>Matériels nécessaires</h5>
-                    <p>{{ event.materielsNecessaires }}</p>
-                </div>
-                {% endif %}
-                
-                <!-- Vidéo YouTube -->
-                {% if event.videoYoutube %}
-                <div class="info-item">
-                    <h5><i class="fab fa-youtube me-2"></i>Vidéo</h5>
-                    <a href="{{ event.videoYoutube }}" target="_blank" class="btn-modern">
-                        <i class="fab fa-youtube me-2"></i>Voir la vidéo
-                    </a>
-                </div>
-                {% endif %}
-                
-                <!-- Activités associées -->
-                {% if event.activities|length > 0 %}
-                <div class="activities-section">
-                    <div class="info-item">
-                        <h5><i class="fas fa-running me-2"></i>Activités associées</h5>
-                        <div class="row">
-                            {% for activity in event.activities %}
-                                <div class="col-md-6 col-lg-4 mb-3">
-                                    <div class="activity-badge">
-                                        <div class="activity-header">
-                                            <i class="fas fa-star"></i>
-                                            <strong>{{ activity.titre }}</strong>
-                                        </div>
-                                        <div class="activity-content">
-                                            <div class="activity-info">
-                                                <span class="activity-category">{{ activity.categorie.value }}</span>
-                                            </div>
-                                            <div class="activity-meta">
-                                                <span>
-                                                    <i class="fas fa-tag"></i>
-                                                    {{ activity.typeActivite }}
-                                                </span>
-                                            </div>
-                                            {% if activity.image %}
-                                                <div class="activity-meta">
-                                                    <span>
-                                                        <i class="fas fa-image"></i>
-                                                        Image disponible
-                                                    </span>
-                                                </div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
+                <div class="col-lg-4">
+            {% if event.images is not empty %}
+                <div class="carousel-card">
+                    
+                    
+                    <div class="carousel-container">
+                        <!-- Navigation Controls -->
+                        <button class="carousel-nav carousel-prev" onclick="changeSlide(-1)">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <button class="carousel-nav carousel-next" onclick="changeSlide(1)">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        
+                        <!-- Carousel Track -->
+                        <div class="carousel-track" id="carousel-track">
+                            {% for image in event.images %}
+                                <div class="carousel-slide" data-index="{{ loop.index0 }}">
+                                    <img src="{{ asset('uploads/events/' ~ image.imagePath) }}" 
+                                         alt="{{ image.originalName ?: event.lieu }}"
+                                         onclick="openLightbox('{{ asset('uploads/events/' ~ image.imagePath) }}')">
+                                
                                 </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <!-- Indicators -->
+                        <div class="carousel-indicators">
+                            {% for image in event.images %}
+                                <button class="indicator" onclick="goToSlide({{ loop.index0 }})" data-index="{{ loop.index0 }}"></button>
                             {% endfor %}
                         </div>
                     </div>
                 </div>
-                {% endif %}
-                
-                <!-- Disponibilité -->
-                <div class="row mt-4">
-                    <div class="col-md-6">
-                        {% if event.placesDisponibles > 0 %}
-                            <div class="availability-card success">
-                                <h5><i class="fas fa-check-circle me-2"></i>Disponibilité</h5>
-                                <h3>{{ event.placesDisponibles }}</h3>
-                                <p>places encore disponibles</p>
-                                <div class="progress mt-3">
-                                    <div class="progress-bar bg-success" role="progressbar" 
-                                         style="width: {{ (event.placesDisponibles / event.capaciteMax) * 100 }}%"
-                                         aria-valuenow="{{ event.placesDisponibles }}" 
-                                         aria-valuemin="0" 
-                                         aria-valuemax="{{ event.capaciteMax }}">
-                                    </div>
-                                </div>
-                            </div>
-                        {% else %}
-                            <div class="availability-card danger">
-                                <h5><i class="fas fa-times-circle me-2"></i>Disponibilité</h5>
-                                <h3>Complet</h3>
-                                <p>Aucune place disponible</p>
-                            </div>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="row mt-4">
-                        <div class="col-12 d-flex align-items-center justify-content-center">
-                            <a href="{{ path('app_events_index') }}" class="btn-modern btn-secondary-modern">
-                                <i class="fas fa-arrow-left me-2"></i>Retour à la liste
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Date de création -->
-                <div class="text-center mt-4">
-                    <small class="text-muted">
-                        Date de création: {{ event.dateCreation ? event.dateCreation|date('d/m/Y H:i') : '' }}
-                    </small>
-                </div>
-            </div>
+            {% endif %}
         </div>
-    </div>
-</section>
-
-<!-- Section Publicitaire -->
-<section class="ad-section py-5">
-    <div class="container">
-        <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="ad-card text-center">
-                    <div class="ad-header">
-                        <h4><i class="fas fa-bullhorn me-2"></i>Espace Publicitaire</h4>
-                        <p class="text-muted mb-0">Découvrez nos partenaires et offres exclusives</p>
-                    </div>
-                    <div class="ad-body">
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <div class="ad-item">
-                                    <div class="ad-logo">
-                                        <i class="fas fa-calendar-alt fa-3x text-primary"></i>
-                                    </div>
-                                    <h6>Événements Premium</h6>
-                                    <p class="small text-muted">Accédez à des événements exclusifs avec des avantages spéciaux</p>
-                                    <a href="#" class="btn btn-outline-primary btn-sm mt-2">En savoir plus</a>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="ad-item">
-                                    <div class="ad-logo">
-                                        <i class="fas fa-ticket-alt fa-3x text-success"></i>
-                                    </div>
-                                    <h6>Billets Priorité</h6>
-                                    <p class="small text-muted">Achetez vos billets en avance et bénéficiez de réductions exceptionnelles</p>
-                                    <a href="#" class="btn btn-outline-success btn-sm mt-2">Voir les offres</a>
-                                </div>
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <div class="ad-item">
-                                    <div class="ad-logo">
-                                        <i class="fas fa-users fa-3x text-info"></i>
-                                    </div>
-                                    <h6>Abonnement VIP</h6>
-                                    <p class="small text-muted">Devenez membre VIP pour profiter de tous nos événements sans limitation</p>
-                                    <a href="#" class="btn btn-outline-info btn-sm mt-2">S'abonner</a>
-                                </div>
-                            </div>
+                    
+                    
+                    <!-- Informations Grid -->
+                    <div class="info-grid-modern">
+                        <div class="info-card">
+                            <h5><i class="fas fa-clock"></i>Dates</h5>
+                            <p><strong>Début:</strong> {{ event.dateDebut ? event.dateDebut|date('d/m/Y H:i') : 'Non défini' }}</p>
+                            <p><strong>Fin:</strong> {{ event.dateFin ? event.dateFin|date('d/m/Y H:i') : 'Non défini' }}</p>
                         </div>
                         
-                        <div class="ad-disclaimer mt-4">
-                            <p class="small text-muted mb-0">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Cet espace publicitaire est réservé à nos partenaires. Les publicités affichées sont sélectionnées pour leur pertinence et qualité.
-                            </p>
+                        <div class="info-card">
+                            <h5>Prix & Capacité</h5>
+                            <p><strong>Prix:</strong> <span class="badge-custom">{{ event.prix }} TND</span></p>
+                            <p><strong>Capacité:</strong> {{ event.placesDisponibles }}/{{ event.capaciteMax }} places</p>
+                        </div>
+                        
+                        <div class="info-card">
+                            <h5><i class="fas fa-phone"></i>Contact</h5>
+                            <p><strong>Téléphone:</strong> {{ event.telephone }}</p>
+                            <p><strong>Email:</strong> <a href="mailto:{{ event.email }}">{{ event.email }}</a></p>
+                        </div>
+                        
+                        <!-- Bouton Réserver -->
+                        <div class="info-card">
+                            <h5><i class="fas fa-calendar-plus"></i>Réservation</h5>
+                            {% set eventDate = event.getDateDebut() %}
+                            {% set now = "now"|date("Y-m-d H:i:s") %}
+                            {% if event.placesDisponibles > 0 and eventDate > now %}
+                                <a href="{{ path('app_reservations_new', {'event_id': event.id}) }}" class="btn-custom btn-primary-custom w-100">
+                                    <i class="fas fa-calendar-plus"></i>Réserver cet événement
+                                </a>
+                                <p class="text-success mt-3 mb-0">
+                                    <i class="fas fa-check-circle me-1"></i>
+                                    {{ event.placesDisponibles }} places disponibles
+                                </p>
+                            {% else %}
+                                {% if event.placesDisponibles <= 0 %}
+                                    <button class="btn-custom btn-disabled-custom w-100" disabled>
+                                        <i class="fas fa-times-circle"></i>Plus de places disponibles
+                                    </button>
+                                    <p class="text-danger mt-3 mb-0">
+                                        <i class="fas fa-times-circle me-1"></i>
+                                        Événement complet
+                                    </p>
+                                {% else %}
+                                    <button class="btn-custom btn-disabled-custom w-100" disabled>
+                                        <i class="fas fa-clock"></i>Événement terminé
+                                    </button>
+                                    <p class="text-warning mt-3 mb-0">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Événement terminé
+                                    </p>
+                                {% endif %}
+                            {% endif %}
                         </div>
                     </div>
+                    
+                    <!-- Matériels nécessaires -->
+                    {% if event.materielsNecessaires %}
+                    <div class="info-card">
+                        <h5><i class="fas fa-tools"></i>Matériels nécessaires</h5>
+                        <p>{{ event.materielsNecessaires }}</p>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Vidéo -->
+                    {% if event.video %}
+                    <div class="info-card">
+                        <h5><i class="fas fa-video"></i>Vidéo</h5>
+                        <a href="{{ event.video }}" target="_blank" class="btn-custom btn-primary-custom">
+                            <i class="fas fa-play"></i>Voir la vidéo
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Activités associées -->
+                    {% if event.activities|length > 0 %}
+                    <div class="activities-section">
+                        <div class="info-card">
+                            <h5><i class="fas fa-running"></i>Activités associées</h5>
+                            <div class="row">
+                                {% for activity in event.activities %}
+                                    <div class="col-md-6 mb-3">
+                                        <div class="activity-card">
+                                            <div class="activity-header">
+                                                <i class="fas fa-star"></i>
+                                                <strong>{{ activity.titre }}</strong>
+                                            </div>
+                                            <div class="activity-content">
+                                                <div class="activity-info">
+                                                    <span class="activity-category">{{ activity.categorie.value }}</span>
+                                                    <span>
+                                                        <i class="fas fa-tag"></i>
+                                                        {{ activity.typeActivite }}
+                                                    </span>
+                                                </div>
+                                                {% if activity.image %}
+                                                    <div class="activity-info">
+                                                        <span>
+                                                            
+                                                            
+                                                        </span>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Disponibilité -->
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            {% if event.placesDisponibles > 0 %}
+                                <div class="status-card success">
+                                    <h5><i class="fas fa-check-circle me-2"></i>Disponibilité</h5>
+                                    <h3>{{ event.placesDisponibles }}</h3>
+                                    <p>places encore disponibles</p>
+                                    <div class="progress mt-3">
+                                        <div class="progress-bar bg-success" role="progressbar" 
+                                             style="width: {{ (event.placesDisponibles / event.capaciteMax) * 100 }}%"
+                                             aria-valuenow="{{ event.placesDisponibles }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="{{ event.capaciteMax }}">
+                                        </div>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="status-card danger">
+                                    <h5><i class="fas fa-times-circle me-2"></i>Disponibilité</h5>
+                                    <h3>Complet</h3>
+                                    <p>Aucune place disponible</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="text-center mt-4">
+                                <a href="{{ path('app_events_index') }}" class="btn-custom btn-secondary-custom">
+                                    <i class="fas fa-arrow-left"></i>Retour à la liste
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
                 </div>
             </div>
         </div>
+        
+        
+        
     </div>
-</section>
+</div>
 
-<style>
-.ad-section {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-top: 1px solid #dee2e6;
-}
+<!-- Lightbox -->
+<div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.9);z-index:9999;align-items:center;justify-content:center;">
+    <img id="lightbox-img" src="" style="max-width:90%;max-height:90%;border-radius:15px;box-shadow:0 20px 60px rgba(0,0,0,0.5);">
+</div>
 
-.ad-card {
-    background: white;
-    border-radius: 15px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-    padding: 2rem;
-    transition: all 0.3s ease;
-    border: 1px solid #e9ecef;
-}
+<script>
+    // Carousel JavaScript
+    let currentSlide = 0;
+    const totalSlides = {{ event.images|length }};
 
-.ad-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-}
+    function changeSlide(direction) {
+        const track = document.getElementById('carousel-track');
+        
+        currentSlide += direction;
+        
+        if (currentSlide < 0) currentSlide = 0;
+        if (currentSlide >= totalSlides) currentSlide = totalSlides - 1;
+        
+        track.style.transform = `translateX(-${currentSlide * 100}%)`;
+        updateIndicators();
+    }
 
-.ad-header {
-    margin-bottom: 2rem;
-}
+    function goToSlide(index) {
+        currentSlide = index;
+        const track = document.getElementById('carousel-track');
+        track.style.transform = `translateX(-${index * 100}%)`;
+        updateIndicators();
+    }
 
-.ad-header h4 {
-    color: #495057;
-    font-weight: 700;
-    margin-bottom: 0.5rem;
-}
+    function updateIndicators() {
+        const indicators = document.querySelectorAll('.indicator');
+        indicators.forEach((indicator, index) => {
+            if (index === currentSlide) {
+                indicator.classList.add('active');
+            } else {
+                indicator.classList.remove('active');
+            }
+        });
+    }
 
-.ad-header p {
-    color: #6c757d;
-}
+    function openLightbox(src) {
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightbox-img');
+        
+        lightbox.style.display = 'flex';
+        lightboxImg.src = src;
+        document.body.style.overflow = 'hidden';
+    }
 
-.ad-item {
-    background: rgba(102, 126, 234, 0.05);
-    border: 2px solid rgba(102, 126, 234, 0.1);
-    border-radius: 15px;
-    padding: 1.5rem;
-    transition: all 0.3s ease;
-    height: 100%;
-}
+    function closeLightbox() {
+        const lightbox = document.getElementById('lightbox');
+        lightbox.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
 
-.ad-item:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
-    border-color: rgba(102, 126, 234, 0.2);
-}
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') changeSlide(-1);
+        if (e.key === 'ArrowRight') changeSlide(1);
+        if (e.key === 'Escape') closeLightbox();
+    });
 
-.ad-logo {
-    margin-bottom: 1rem;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+    // Touch navigation for mobile
+    let touchStartX = 0;
+    let touchEndX = 0;
 
-.ad-logo i {
-    font-size: 2rem;
-}
+    const carousel = document.querySelector('.carousel-container');
+    
+    if (carousel) {
+        carousel.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+        });
 
-.ad-item h6 {
-    color: #495057;
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-}
+        carousel.addEventListener('touchend', (e) => {
+            touchEndX = e.changedTouches[0].clientX;
+            const diff = touchStartX - touchEndX;
+            
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) {
+                    changeSlide(1);
+                } else {
+                    changeSlide(-1);
+                }
+            }
+        });
+    }
 
-.ad-item p {
-    color: #6c757d;
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
-}
-
-.ad-disclaimer {
-    background: rgba(108, 117, 125, 0.05);
-    border-top: 1px solid #dee2e6;
-    border-radius: 10px;
-    padding: 1rem;
-    margin-top: 2rem;
-}
-
-.ad-disclaimer p {
-    color: #6c757d;
-    font-size: 0.8rem;
-    line-height: 1.4;
-}
-</style>
+    // Initialize first indicator
+    updateIndicators();
+</script>
 {% endblock %}

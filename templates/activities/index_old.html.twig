@@ -1,0 +1,473 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Activités{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        --hover-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        --border-radius: 20px;
+    }
+
+    /* Hero Section */
+    .hero-section {
+        background: var(--primary-gradient);
+        border-radius: 0 0 60px 60px;
+        padding: 3rem 0;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+        background-size: cover;
+        opacity: 0.1;
+    }
+
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: fadeInUp 0.8s ease;
+    }
+
+    .hero-subtitle {
+        color: rgba(255,255,255,0.95);
+        font-size: 1.2rem;
+        font-weight: 300;
+        animation: fadeInUp 0.8s ease 0.2s both;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Activity Cards */
+    .activity-card {
+        border: none;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        overflow: hidden;
+        position: relative;
+        cursor: pointer;
+        height: 100%;
+        width: 100%;
+    }
+
+    .activity-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--primary-gradient);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .activity-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .activity-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--hover-shadow);
+    }
+
+    /* Image Container */
+    .image-container {
+        position: relative;
+        height: 220px;
+        overflow: hidden;
+    }
+
+    .image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s ease;
+    }
+
+    .activity-card:hover .image-container img {
+        transform: scale(1.1);
+    }
+
+    .image-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .activity-card:hover .image-overlay {
+        opacity: 0.9;
+    }
+
+    /* Badges Modernes */
+    .badge-modern {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        background: rgba(255,255,255,0.95);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        z-index: 10;
+    }
+
+    .activity-card:hover .badge-modern {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    /* Boutons Modernes */
+    .btn-modern {
+        border-radius: 25px;
+        font-weight: 600;
+        padding: 8px 20px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        border: 2px solid transparent;
+    }
+
+    .btn-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .btn-modern:hover::before {
+        left: 100%;
+    }
+
+    .btn-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .btn-primary-modern {
+        background: var(--primary-gradient);
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-primary-modern:hover {
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem;
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .empty-state::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--primary-gradient);
+        opacity: 0.05;
+    }
+
+    .empty-icon {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 2rem;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+        border-radius: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: float 3s ease-in-out infinite;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+
+    /* Alertes Modernes */
+    .alert-modern {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        animation: slideInRight 0.5s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .alert-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--primary-gradient);
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    .btn-success-modern {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    }
+
+    .btn-success-modern:hover {
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+        
+        .image-container {
+            height: 180px;
+        }
+
+        .hero-section {
+            padding: 2rem 0;
+            border-radius: 0 0 40px 40px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-lg-8 mx-auto text-center">
+                <h1 class="hero-title mb-4">
+                    🌟 Explorez nos Activités
+                </h1>
+                <p class="hero-subtitle mb-0">
+                    Découvrez des expériences uniques et créez des souvenirs inoubliables
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-6">
+            <h1 class="display-4 fw-bold text-dark mb-0">
+                <span style="background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Activités</span>
+            </h1>
+            <p class="text-muted mt-2 mb-0">Découvrez et gérez toutes vos activités</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{{ path('app_activities_new') }}" class="btn btn-primary-modern btn-lg btn-modern shadow-lg px-4 py-3 rounded-pill me-2">
+                <span class="d-inline-block">➕ Ajouter une activité</span>
+            </a>
+            <a href="{{ path('app_events_new') }}" class="btn btn-success-modern btn-lg btn-modern shadow-lg px-4 py-3 rounded-pill">
+                <span class="d-inline-block">🎉 Organiser un événement</span>
+            </a>
+        </div>
+    </div>
+
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-modern alert-dismissible fade show mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-check-circle fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    {{ message }}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger alert-modern alert-dismissible fade show mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-exclamation-circle fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    {{ message }}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('info') %}
+        <div class="alert alert-info alert-modern alert-dismissible fade show mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-info-circle fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    {{ message }}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        </div>
+    {% endfor %}
+
+    {% if activities is empty %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-compass fa-4x text-primary"></i>
+            </div>
+            <h2 class="mb-3 fw-bold">Aucune activité trouvée</h2>
+            <p class="text-muted mb-4 fs-5">Commencez votre aventure en créant votre première activité !</p>
+            <a href="{{ path('app_activities_new') }}" class="btn btn-primary-modern btn-modern">
+                <i class="fas fa-plus me-2"></i>Créer une activité
+            </a>
+        </div>
+    {% else %}
+        <div class="container-xl">
+            <div class="row g-4">
+                {% for activity in activities %}
+                    <div class="col-12 col-sm-6 col-lg-4">
+                        <div class="activity-card">
+                        <div class="image-container">
+                            {% if activity.image %}
+                                <img src="{{ asset('uploads/activities/' ~ activity.image) }}" alt="{{ activity.titre }}">
+                                <div class="image-overlay"></div>
+                            {% else %}
+                                <div class="image-container bg-gradient d-flex align-items-center justify-content-center" style="background: var(--primary-gradient);">
+                                    <div class="text-center text-white">
+                                        <i class="fas fa-hiking fa-4x mb-3"></i>
+                                        <p class="mb-0">Aucune image</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            <!-- Badge moderne -->
+                            <div class="badge-modern">
+                                <span class="me-1">
+                                    {% if activity.categorie.value == 'DESERT' %}🏜️
+                                    {% elseif activity.categorie.value == 'MER' %}🌊
+                                    {% elseif activity.categorie.value == 'AERIEN' %}🪂
+                                    {% elseif activity.categorie.value == 'NATURE' %}🌳
+                                    {% else %}🏛️
+                                    {% endif %}
+                                </span>
+                                {{ activity.categorie.value|default('Non classé') }}
+                            </div>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column p-4">
+                            <div class="mb-3">
+                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary rounded-pill me-2">
+                                    {{ activity.categorie ? activity.categorie.value : 'N/A' }}
+                                </span>
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill">
+                                    {{ activity.typeActivite ?: 'N/A' }}
+                                </span>
+                            </div>
+                            
+                            <h5 class="card-title fw-bold text-dark mb-3">{{ activity.titre }}</h5>
+                            
+                            <p class="card-text text-muted flex-grow-1">{{ activity.description|slice(0, 120) }}{% if activity.description|length > 120 %}...{% endif %}</p>
+                            
+                            <div class="mt-auto">
+                                <div class="d-flex gap-2">
+                                    <a href="{{ path('app_activities_show', {'id': activity.id}) }}" class="btn btn-outline-primary btn-modern btn-sm rounded-pill flex-fill">
+                                        <i class="fas fa-eye me-1"></i>Voir
+                                    </a>
+                                    <a href="{{ path('app_activities_edit', {'id': activity.id}) }}" class="btn btn-outline-warning btn-modern btn-sm rounded-pill flex-fill">
+                                        <i class="fas fa-edit me-1"></i>Modifier
+                                    </a>
+                                    <form method="post" action="{{ path('app_activities_delete', {'id': activity.id}) }}" onsubmit="return confirmActivityDeletion({{ activity.id }}, '{{ activity.titre|e('js') }}');" class="d-inline">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ activity.id) }}">
+                                        <button type="submit" class="btn btn-outline-danger btn-modern btn-sm rounded-pill">
+                                            <i class="fas fa-trash me-1"></i>Supprimer
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+function confirmActivityDeletion(activityId, activityTitle) {
+    const confirmation = confirm(
+        '⚠️ CONFIRMATION DE SUPPRESSION ⚠️\n\n' +
+        'Êtes-vous sûr de vouloir supprimer l\'activité #' + activityId + ' : ' + activityTitle + ' ?\n\n' +
+        'Cette action est IRRÉVERSIBLE et :\n' +
+        '• Supprimera définitivement l\'activité\n' +
+        '• Retirera l\'activité de tous les événements associés\n' +
+        '• Effacera toutes les données associées\n\n' +
+        'Cliquez sur OK pour confirmer ou Annuler pour garder l\'activité.'
+    );
+    
+    return confirmation;
+}
+</script>
+{% endblock %}

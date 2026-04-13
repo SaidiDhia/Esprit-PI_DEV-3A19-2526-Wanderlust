@@ -1,28 +1,32 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Activités{% endblock %}
+{% block title %}Toutes les activités{% endblock %}
 
 {% block stylesheets %}
 {{ parent() }}
 <style>
     :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        --hover-shadow: 0 20px 60px rgba(0,0,0,0.15);
-        --border-radius: 20px;
+        --primary-color: #667eea;
+        --primary-dark: #5a67d8;
+        --secondary-color: #764ba2;
+        --border-radius: 16px;
+        --shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
+        --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
+        --shadow-lg: 0 16px 40px rgba(0,0,0,0.15);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* Hero Section */
-    .hero-section {
-        background: var(--primary-gradient);
-        border-radius: 0 0 60px 60px;
-        padding: 3rem 0;
+    /* Section Header */
+    .activities-header {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        padding: 4rem 0;
+        border-radius: 0 0 40px 40px;
         margin-bottom: 3rem;
         position: relative;
         overflow: hidden;
     }
 
-    .hero-section::before {
+    .activities-header::before {
         content: '';
         position: absolute;
         top: 0;
@@ -31,414 +35,911 @@
         bottom: 0;
         background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
         background-size: cover;
-        opacity: 0.1;
+        opacity: 0.3;
     }
 
-    .hero-title {
+    .header-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .header-title {
         font-size: 3.5rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        animation: fadeInUp 0.8s ease;
+        color: white;
+        margin-bottom: 1rem;
+        text-shadow: 0 4px 12px rgba(0,0,0,0.2);
     }
 
-    .hero-subtitle {
+    .header-subtitle {
+        font-size: 1.3rem;
         color: rgba(255,255,255,0.95);
-        font-size: 1.2rem;
         font-weight: 300;
-        animation: fadeInUp 0.8s ease 0.2s both;
     }
 
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    /* Activity Cards Grid */
+    .activities-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
     }
 
-    /* Activity Cards */
+    /* Activity Card */
     .activity-card {
-        border: none;
+        background: white;
         border-radius: var(--border-radius);
-        box-shadow: var(--card-shadow);
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: var(--shadow-sm);
         overflow: hidden;
-        position: relative;
+        transition: var(--transition);
         cursor: pointer;
+        display: flex;
+        flex-direction: column;
         height: 100%;
-        max-width: 400px;
-        margin: 0 auto;
-    }
-
-    .activity-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--primary-gradient);
-        transform: scaleX(0);
-        transition: transform 0.3s ease;
-    }
-
-    .activity-card:hover::before {
-        transform: scaleX(1);
+        position: relative;
     }
 
     .activity-card:hover {
         transform: translateY(-8px);
-        box-shadow: var(--hover-shadow);
+        box-shadow: var(--shadow-lg);
     }
 
-    /* Image Container */
-    .image-container {
+    /* Card Image */
+    .card-image-container {
         position: relative;
-        height: 220px;
-        overflow: hidden;
-    }
-
-    .image-container img {
         width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.6s ease;
+        padding-top: 56.25%; /* 16:9 aspect ratio */
+        overflow: hidden;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
     }
 
-    .activity-card:hover .image-container img {
-        transform: scale(1.1);
-    }
-
-    .image-overlay {
+    .card-image {
         position: absolute;
         top: 0;
         left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%);
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-
-    .activity-card:hover .image-overlay {
-        opacity: 0.9;
-    }
-
-    /* Badges Modernes */
-    .badge-modern {
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        padding: 8px 16px;
-        border-radius: 25px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        backdrop-filter: blur(10px);
-        background: rgba(255,255,255,0.95);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
-        z-index: 10;
-    }
-
-    .activity-card:hover .badge-modern {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-
-    /* Boutons Modernes */
-    .btn-modern {
-        border-radius: 25px;
-        font-weight: 600;
-        padding: 8px 20px;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        border: 2px solid transparent;
-    }
-
-    .btn-modern::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        transition: left 0.5s ease;
+        object-fit: cover;
+        transition: var(--transition);
     }
 
-    .btn-modern:hover::before {
-        left: 100%;
+    .activity-card:hover .card-image {
+        transform: scale(1.05);
     }
 
-    .btn-modern:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    /* Category Badge */
+    .category-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(10px);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        box-shadow: var(--shadow-sm);
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
-    .btn-primary-modern {
-        background: var(--primary-gradient);
-        border-color: transparent;
+    .category-badge .emoji {
+        font-size: 1rem;
+    }
+
+    /* Card Body */
+    .card-body {
+        padding: 1.5rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #2d3748;
+        margin-bottom: 0.75rem;
+        line-height: 1.4;
+    }
+
+    .card-description {
+        color: #718096;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+        flex: 1;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    /* Card Footer */
+    .card-footer {
+        padding: 1rem 1.5rem;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    /* Buttons */
+    .btn-primary-custom {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
         color: white;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
     }
 
-    .btn-primary-modern:hover {
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    .btn-warning-custom {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-danger-custom {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+
+    .btn-warning-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
+    }
+
+    .btn-danger-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+    }
+
+    .status-en_attente {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-accepte {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-refuse {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Buttons */
+    .btn-primary-custom {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: var(--transition);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-outline-custom {
+        background: transparent;
+        color: var(--primary-color);
+        border: 2px solid var(--primary-color);
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: var(--transition);
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .btn-outline-custom:hover {
+        background: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        text-decoration: none;
+    }
+
+    /* Status Badge */
+    .status-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-accepte {
+        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+        color: white;
     }
 
     /* Empty State */
     .empty-state {
         text-align: center;
-        padding: 4rem;
+        padding: 4rem 2rem;
         background: white;
         border-radius: var(--border-radius);
-        box-shadow: var(--card-shadow);
-        position: relative;
-        overflow: hidden;
-    }
-
-    .empty-state::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--primary-gradient);
-        opacity: 0.05;
+        box-shadow: var(--shadow-md);
+        max-width: 600px;
+        margin: 0 auto;
     }
 
     .empty-icon {
-        width: 120px;
-        height: 120px;
+        width: 100px;
+        height: 100px;
         margin: 0 auto 2rem;
-        background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
-        border-radius: 60px;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+        border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        animation: float 3s ease-in-out infinite;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        font-size: 2.5rem;
+        color: var(--primary-color);
     }
 
-    @keyframes float {
-        0%, 100% { transform: translateY(0px); }
-        50% { transform: translateY(-10px); }
-    }
-
-    /* Alertes Modernes */
-    .alert-modern {
-        border-radius: 15px;
-        border: none;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        animation: slideInRight 0.5s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .alert-modern::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: var(--primary-gradient);
-    }
-
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    .btn-success-modern {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        border-color: transparent;
-        color: white;
-        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
-    }
-
-    .btn-success-modern:hover {
-        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
-    }
-
-    /* Responsive */
+    /* Responsive Design */
     @media (max-width: 768px) {
-        .hero-title {
+        .header-title {
             font-size: 2.5rem;
         }
         
-        .image-container {
-            height: 180px;
+        .header-subtitle {
+            font-size: 1.1rem;
         }
+        
+        .activities-grid {
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+        
+        .activities-header {
+            padding: 3rem 0;
+            border-radius: 0 0 30px 30px;
+        }
+    }
 
-        .hero-section {
-            padding: 2rem 0;
-            border-radius: 0 0 40px 40px;
+    @media (min-width: 769px) and (max-width: 1024px) {
+        .activities-grid {
+            grid-template-columns: repeat(2, 1fr);
         }
+    }
+
+    @media (min-width: 1025px) {
+        .activities-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    /* Pagination */
+    .pagination {
+        display: flex;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        gap: 0.5rem;
+    }
+
+    .page-item {
+        display: flex;
+    }
+
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 40px;
+        height: 40px;
+        padding: 0 0.75rem;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        color: #4a5568;
+        text-decoration: none;
+        font-weight: 500;
+        transition: var(--transition);
+        background: white;
+    }
+
+    .page-link:hover {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+        transform: translateY(-2px);
+    }
+
+    .page-item.active .page-link {
+        background: var(--primary-color);
+        border-color: var(--primary-color);
+        color: white;
+    }
+
+    .page-item.disabled .page-link {
+        background: #f8fafc;
+        border-color: #e2e8f0;
+        color: #a0aec0;
+        cursor: not-allowed;
+    }
+
+    .page-item.disabled .page-link:hover {
+        transform: none;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-
-<div class="bg-primary/5 border-b border-border py-12 px-4">
-    <div class="container mx-auto text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4 text-primary text-3xl">📅</div>
-        <h1 class="text-3xl md:text-5xl font-heading font-bold text-foreground mb-4">Activités & Events</h1>
-        <p class="text-muted-foreground max-w-2xl mx-auto">Discover unforgettable experiences, tours, and events tailored for every type of traveler.</p>
-    </div>
-</div>
-
-<div class="container mx-auto px-4 py-12">
-    <!-- Search Filters -->
-    <div class="glass-strong rounded-2xl p-6 mb-12 shadow-sm">
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Destination</label>
-                <input type="text" class="bg-secondary/50 border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Where? (e.g. Tunis, Paris...)">
-            </div>
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Category</label>
-                <select class="bg-secondary/50 border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
-                    <option>All Categories</option>
-                    <option>Adventure</option>
-                    <option>Cultural</option>
-                    <option>Gastronomy</option>
-                    <option>Nature</option>
-                    <option>Sports</option>
-                </select>
-            </div>
-            <div class="flex flex-col gap-2">
-                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Date</label>
-                <input type="date" class="bg-secondary/50 border border-border rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20">
-            </div>
-            <div class="flex items-end">
-                <button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-2.5 rounded-xl transition-all shadow-sm flex items-center justify-center gap-2">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    Search
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Cards Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <!-- Activity 1 -->
-        <div class="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all">
-            <div class="relative h-56 overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center text-6xl">🧗</div>
-                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground">Adventure</div>
-            </div>
-            <div class="p-6">
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-heading font-bold text-xl group-hover:text-primary transition-colors">Rock Climbing Adventure</h3>
-                    <div class="flex items-center gap-1 text-sm font-bold">
-                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <span>4.9</span>
-                    </div>
-                </div>
-                <p class="text-muted-foreground text-sm mb-4">Guided half-day rock climbing session with certified instructors. All equipment provided.</p>
-                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-6">
-                    <span>📍 Cap Bon, Tunisia</span>
-                    <span>•</span>
-                    <span>🗓️ Apr 15</span>
-                </div>
-                <div class="flex items-center justify-between border-t border-border pt-4">
-                    <p class="text-foreground font-bold text-xl">79 TND</p>
-                    <a href="#" class="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-6 py-2 rounded-lg transition-all">Book Now</a>
-                </div>
-            </div>
-        </div>
-    {% endfor %}
-
-        <!-- Activity 2 -->
-        <div class="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all">
-            <div class="relative h-56 overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-blue-500/20 flex items-center justify-center text-6xl">🏛️</div>
-                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground">Cultural</div>
-            </div>
-            <div class="p-6">
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-heading font-bold text-xl group-hover:text-primary transition-colors">Ancient Ruins Tour</h3>
-                    <div class="flex items-center gap-1 text-sm font-bold">
-                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <span>4.8</span>
-                    </div>
-                </div>
-                <p class="text-muted-foreground text-sm mb-4">Walk through 3,000 years of history with an expert archaeologist guide. Museum entry included.</p>
-                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-6">
-                    <span>📍 Carthage, Tunisia</span>
-                    <span>•</span>
-                    <span>🗓️ Apr 18</span>
-                </div>
-                <div class="flex items-center justify-between border-t border-border pt-4">
-                    <p class="text-foreground font-bold text-xl">45 TND</p>
-                    <a href="#" class="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-6 py-2 rounded-lg transition-all">Book Now</a>
-                </div>
-            </div>
-        </div>
-    {% endfor %}
-
-        <!-- Activity 3 -->
-        <div class="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all">
-            <div class="relative h-56 overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-br from-amber-500/20 to-red-500/20 flex items-center justify-center text-6xl">🍽️</div>
-                <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground">Gastronomy</div>
-            </div>
-            <div class="p-6">
-                <div class="flex justify-between items-start mb-2">
-                    <h3 class="font-heading font-bold text-xl group-hover:text-primary transition-colors">Tunisian Cooking Class</h3>
-                    <div class="flex items-center gap-1 text-sm font-bold">
-                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <span>5.0</span>
-                    </div>
-                </div>
-                <p class="text-muted-foreground text-sm mb-4">Learn to prepare traditional Tunisian dishes with a local chef in the heart of the Medina.</p>
-                <div class="flex items-center gap-2 text-xs text-muted-foreground mb-6">
-                    <span>📍 Tunis Medina</span>
-                    <span>•</span>
-                    <span>🗓️ Apr 20</span>
-                </div>
-                <div class="flex items-center justify-between border-t border-border pt-4">
-                    <p class="text-foreground font-bold text-xl">120 TND</p>
-                    <a href="#" class="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-6 py-2 rounded-lg transition-all">Book Now</a>
-                </div>
-            </div>
+<!-- Header Section -->
+<div class="activities-header">
+    <div class="container">
+        <div class="header-content text-center">
+            <h1 class="header-title">
+                🌟 Nos Activités
+            </h1>
+            <p class="header-subtitle">
+                Découvrez des expériences uniques pour votre prochaine aventure
+            </p>
         </div>
     </div>
 </div>
 
+<!-- Main Content -->
+<div class="container mb-5">
+    <!-- Header with Add Button -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">
+            <i class="fas fa-hiking me-2 text-primary"></i>
+            Toutes les activités
+        </h1>
+        <a href="{{ path('app_activities_new') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>
+            Ajouter une activité
+        </a>
+    </div>
+
+    <!-- Flash Messages -->
+    {% for message in app.flashes('success') %}
+        <div id="success-message" data-message="{{ message|striptags|e('html_attr') }}" style="display: none;"></div>
+    {% endfor %}
+
+    {% for message in app.flashes('error') %}
+        <div id="error-message" data-message="{{ message|striptags|e('html_attr') }}" style="display: none;"></div>
+    {% endfor %}
+
+    <!-- Activities Grid -->
+    {% if activities is empty %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-hiking"></i>
+            </div>
+            <h2 class="mb-3 fw-bold">Aucune activité disponible</h2>
+            <p class="text-muted mb-4 fs-5">
+                Revenez bientôt pour découvrir de nouvelles aventures !
+            </p>
+        </div>
+    {% else %}
+        <div class="activities-grid">
+            {% for activity in activities %}
+                <div class="activity-card">
+                    <!-- Card Image -->
+                    <div class="card-image-container">
+                        {% if activity.image %}
+                            <img src="{{ asset('uploads/activities/' ~ activity.image) }}" 
+                                 alt="{{ activity.titre }}" 
+                                 class="card-image">
+                        {% else %}
+                            <div class="card-image d-flex align-items-center justify-content-center" 
+                                 style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);">
+                                <div class="text-center text-white">
+                                    <i class="fas fa-hiking fa-3x mb-2"></i>
+                                    <p class="mb-0">Aucune image</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                        
+                        <!-- Category Badge -->
+                        <div class="category-badge">
+                            <span class="emoji">
+                                {% if activity.categorie.value == 'DESERT' %}🏜️
+                                {% elseif activity.categorie.value == 'MER' %}🌊
+                                {% elseif activity.categorie.value == 'AERIEN' %}🪂
+                                {% elseif activity.categorie.value == 'NATURE' %}🌳
+                                {% else %}📌
+                                {% endif %}
+                            </span>
+                            <span>{{ activity.categorie.value|default('Non classé') }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Card Body -->
+                    <div class="card-body">
+                        <h3 class="card-title">{{ activity.titre }}</h3>
+                        <p class="card-description">
+                            {{ activity.description|striptags|slice(0, 150) }}{% if activity.description|length > 150 %}...{% endif %}
+                        </p>
+                    </div>
+                    
+                    <!-- Card Footer -->
+                    <div class="card-footer">
+                        {% if activity.status.value == 'en_attente' %}
+                            <div class="status-badge status-en_attente">
+                                <i class="fas fa-clock me-1"></i>
+                                En attente
+                            </div>
+                        {% elseif activity.status.value == 'accepte' %}
+                            <div class="status-badge status-accepte">
+                                <i class="fas fa-check me-1"></i>
+                                Acceptée
+                            </div>
+                        {% elseif activity.status.value == 'refuse' %}
+                            <div class="status-badge status-refuse">
+                                <i class="fas fa-times me-1"></i>
+                                Refusée
+                            </div>
+                        {% endif %}
+                        <div class="card-actions">
+                            <a href="{{ path('app_activities_show', {'id': activity.id}) }}" 
+                               class="btn-primary-custom">
+                                <i class="fas fa-eye"></i>
+                                Voir
+                            </a>
+                            <a href="{{ path('app_activities_edit', {'id': activity.id}) }}" 
+                               class="btn-warning-custom">
+                                <i class="fas fa-edit"></i>
+                                Modifier
+                            </a>
+                            <form method="post" action="{{ path('app_activities_delete', {'id': activity.id}) }}" style="display: inline;">
+                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ activity.id) }}">
+                                <button type="button" class="btn-danger-custom" onclick="confirmDeleteActivity({{ activity.id }}, '{{ activity.titre|e('js') }}')">
+                                    <i class="fas fa-trash"></i>
+                                    Supprimer
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if totalPages > 1 %}
+            <nav aria-label="Pagination des activités" class="mt-5">
+                <ul class="pagination justify-content-center">
+                    <!-- Page précédente -->
+                    {% if currentPage > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ path('app_activities_index', {'page': currentPage - 1}) }}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <!-- Pages numérotées -->
+                    {% set startPage = max(1, currentPage - 2) %}
+                    {% set endPage = min(totalPages, currentPage + 2) %}
+                    
+                    {% if startPage > 1 %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ path('app_activities_index', {'page': 1}) }}">1</a>
+                        </li>
+                        {% if startPage > 2 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+
+                    {% for page in range(startPage, endPage) %}
+                        <li class="page-item {% if page == currentPage %}active{% endif %}">
+                            {% if page == currentPage %}
+                                <span class="page-link">{{ page }}</span>
+                            {% else %}
+                                <a class="page-link" href="{{ path('app_activities_index', {'page': page}) }}">{{ page }}</a>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+
+                    {% if endPage < totalPages %}
+                        {% if endPage < totalPages - 1 %}
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        {% endif %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ path('app_activities_index', {'page': totalPages}) }}">{{ totalPages }}</a>
+                        </li>
+                    {% endif %}
+
+                    <!-- Page suivante -->
+                    {% if currentPage < totalPages %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ path('app_activities_index', {'page': currentPage + 1}) }}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% endif %}
+</div>
 {% endblock %}
 
 {% block javascripts %}
 {{ parent() }}
 <script>
-function confirmActivityDeletion(activityId, activityTitle) {
-    const confirmation = confirm(
-        '⚠️ CONFIRMATION DE SUPPRESSION ⚠️\n\n' +
-        'Êtes-vous sûr de vouloir supprimer l\'activité #' + activityId + ' : ' + activityTitle + ' ?\n\n' +
-        'Cette action est IRRÉVERSIBLE et :\n' +
-        '• Supprimera définitivement l\'activité\n' +
-        '• Retirera l\'activité de tous les événements associés\n' +
-        '• Effacera toutes les données associées\n\n' +
-        'Cliquez sur OK pour confirmer ou Annuler pour garder l\'activité.'
-    );
+// Fonction pour confirmer la suppression d'une activité
+function confirmDeleteActivity(activityId, activityTitle) {
+    // Créer une modal personnalisée
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
     
-    return confirmation;
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    modalContent.innerHTML = `
+        <div style="margin-bottom: 1.5rem;">
+            <div style="width: 60px; height: 60px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem;">
+                ⚠️
+            </div>
+            <h3 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.25rem; font-weight: 600;">Confirmer la suppression</h3>
+            <p style="margin: 0; color: #6b7280; line-height: 1.5;">
+                Êtes-vous sûr de vouloir supprimer l'activité <strong>"${activityTitle}"</strong> ?<br>
+                Cette action est <strong>irréversible</strong>.
+            </p>
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <button onclick="closeDeleteModal()" style="
+                background: #f3f4f6;
+                color: #374151;
+                border: none;
+                padding: 0.75rem 1.5rem;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
+                Annuler
+            </button>
+            <button onclick="confirmDelete(${activityId})" style="
+                background: #dc2626;
+                color: white;
+                border: none;
+                padding: 0.75rem 1.5rem;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+                Supprimer
+            </button>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // Ajouter l'animation CSS
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+    `;
+    document.head.appendChild(style);
 }
+
+// Fonction pour fermer la modal
+function closeDeleteModal() {
+    const modal = document.querySelector('div[style*="position: fixed"]');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Fonction pour afficher une alerte de succès
+function showSuccessModal(message) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    modalContent.innerHTML = `
+        <div style="margin-bottom: 1.5rem;">
+            <div style="width: 60px; height: 60px; background: #dcfce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem;">
+                🎉
+            </div>
+            <h3 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.25rem; font-weight: 600;">Succès !</h3>
+            <p style="margin: 0; color: #6b7280; line-height: 1.5;">
+                ${message}
+            </p>
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <button onclick="closeSuccessModal()" style="
+                background: #10b981;
+                color: white;
+                border: none;
+                padding: 0.75rem 1.5rem;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
+                OK
+            </button>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// Fonction pour afficher une alerte d'erreur
+function showErrorModal(message) {
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    modalContent.innerHTML = `
+        <div style="margin-bottom: 1.5rem;">
+            <div style="width: 60px; height: 60px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem;">
+                ❌
+            </div>
+            <h3 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.25rem; font-weight: 600;">Erreur !</h3>
+            <p style="margin: 0; color: #6b7280; line-height: 1.5;">
+                ${message}
+            </p>
+        </div>
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+            <button onclick="closeErrorModal()" style="
+                background: #dc2626;
+                color: white;
+                border: none;
+                padding: 0.75rem 1.5rem;
+                border-radius: 8px;
+                cursor: pointer;
+                font-weight: 500;
+                transition: all 0.2s ease;
+            " onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
+                OK
+            </button>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9) translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function closeSuccessModal() {
+    const modal = document.querySelector('div[style*="position: fixed"]');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function closeErrorModal() {
+    const modal = document.querySelector('div[style*="position: fixed"]');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Fonction pour confirmer la suppression
+function confirmDelete(activityId) {
+    // Trouver le formulaire et le soumettre
+    const form = document.querySelector(`form[action*="${activityId}"]`);
+    if (form) {
+        form.submit();
+    }
+}
+
+// Animation au chargement
+document.addEventListener('DOMContentLoaded', function() {
+    // Afficher les alertes de succès
+    const successMessages = document.querySelectorAll('#success-message');
+    successMessages.forEach(element => {
+        const message = element.getAttribute('data-message');
+        if (message) {
+            setTimeout(() => {
+                showSuccessModal(message);
+            }, 500);
+        }
+    });
+    
+    // Afficher les alertes d'erreur
+    const errorMessages = document.querySelectorAll('#error-message');
+    errorMessages.forEach(element => {
+        const message = element.getAttribute('data-message');
+        if (message) {
+            setTimeout(() => {
+                showErrorModal(message);
+            }, 500);
+        }
+    });
+    
+    const cards = document.querySelectorAll('.activity-card');
+    cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, index * 100);
+    });
+});
 </script>
 {% endblock %}
