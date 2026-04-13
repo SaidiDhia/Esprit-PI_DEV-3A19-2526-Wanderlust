@@ -2,52 +2,350 @@
 
 {% block title %}Modifier Réservation{% endblock %}
 
-{% block body %}
-<div class="container mt-4">
-    <h1 class="mb-4">Modifier la réservation</h1>
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    :root {
+        --accent: #e8572a;
+        --ink:    #0f0e17;
+        --mid:    #6b6b80;
+        --line:   #e4e1d8;
+        --paper:  #fffcf5;
+    }
 
-    <div class="row">
-        <div class="col-md-10">
-            {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': 'novalidate'}}) }}
+    body { background: var(--paper); font-family: 'DM Sans', sans-serif; }
 
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    {{ form_label(form.id_event, 'ID Événement', {'label_attr': {'class': 'form-label'}}) }}
-                    {{ form_widget(form.id_event, {'attr': {'class': 'form-control'}}) }}
-                    {{ form_errors(form.id_event, {'attr': {'class': 'text-danger'}}) }}
-                </div>
-                <div class="col-md-6 mb-3">
-                    {{ form_label(form.id_client, 'ID Client', {'label_attr': {'class': 'form-label'}}) }}
-                    {{ form_widget(form.id_client, {'attr': {'class': 'form-control'}}) }}
-                    {{ form_errors(form.id_client, {'attr': {'class': 'text-danger'}}) }}
-                </div>
+    .edit-hero {
+        background: linear-gradient(135deg, #0f0e17 0%, #2d2b3d 100%);
+        padding: 3rem 0 2rem;
+        text-align: center;
+        color: white;
+        margin-bottom: 3rem;
+    }
+    .edit-hero h1 { font-family: 'Syne', sans-serif; font-size: 2.5rem; font-weight: 800; margin-bottom: .5rem; }
+    .edit-hero p  { opacity: .8; font-size: 1.1rem; }
+
+    .container { max-width: 800px; margin: 0 auto; padding: 0 2rem; }
+
+    .edit-card {
+        background: white;
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.08);
+        margin-bottom: 2rem;
+        overflow: hidden;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, var(--accent), #f7a278);
+        color: white;
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .card-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0;
+    }
+    .reservation-id {
+        background: rgba(255,255,255,0.2);
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .form-section {
+        margin-bottom: 2rem;
+    }
+    .section-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--line);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-label {
+        display: block;
+        font-weight: 600;
+        color: var(--ink);
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    .form-control {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1.5px solid var(--line);
+        border-radius: 10px;
+        font-size: 1rem;
+        font-family: 'DM Sans', sans-serif;
+        color: var(--ink);
+        background: var(--paper);
+        transition: all 0.2s;
+    }
+    .form-control:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(232,87,42,0.1);
+    }
+    .form-control.is-invalid {
+        border-color: #ef4444;
+    }
+    .invalid-feedback {
+        color: #ef4444;
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    @media (max-width: 768px) {
+        .form-row {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .counter-container {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    .counter-box {
+        border: 1.5px solid var(--line);
+        border-radius: 12px;
+        padding: 1rem 1.25rem;
+        text-align: center;
+        background: var(--paper);
+    }
+    .counter-label {
+        font-weight: 600;
+        color: var(--ink);
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    .counter-value {
+        font-family: 'Syne', sans-serif;
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 0.5rem;
+    }
+
+    .help-text {
+        font-size: 0.875rem;
+        color: var(--mid);
+        margin-top: 0.25rem;
+    }
+
+    .actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-primary {
+        background: var(--accent);
+        color: white;
+    }
+    .btn-primary:hover {
+        background: #d14820;
+        transform: translateY(-1px);
+    }
+    .btn-secondary {
+        background: var(--paper);
+        color: var(--ink);
+        border: 1px solid var(--line);
+    }
+    .btn-secondary:hover {
+        background: var(--mid);
+        color: white;
+    }
+
+    .event-info {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 1rem 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .event-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 0.5rem;
+    }
+    .event-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .event-detail {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--ink);
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-hero">
+    <div class="container">
+        <h1><i class="fas fa-edit me-3"></i>Modifier la réservation</h1>
+        <p>Mettez à jour les informations de réservation</p>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Informations événement -->
+    {% if reservation.event %}
+    <div class="event-info">
+        <h3 class="event-title">
+            <i class="fas fa-calendar-alt me-2"></i>Événement associé
+        </h3>
+        <div class="event-details">
+            <div class="event-detail">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ reservation.event.lieu }}</span>
             </div>
-
-            <div class="row">
-                <div class="col-md-6 mb-3">
-                    {{ form_label(form.date_reservation, 'Date de réservation', {'label_attr': {'class': 'form-label'}}) }}
-                    {{ form_widget(form.date_reservation, {'attr': {'class': 'form-control'}}) }}
-                    {{ form_errors(form.date_reservation, {'attr': {'class': 'text-danger'}}) }}
-                </div>
-                <div class="col-md-6 mb-3">
-                    {{ form_label(form.date_evenement, 'Date de l\'événement', {'label_attr': {'class': 'form-label'}}) }}
-                    {{ form_widget(form.date_evenement, {'attr': {'class': 'form-control'}}) }}
-                    {{ form_errors(form.date_evenement, {'attr': {'class': 'text-danger'}}) }}
-                </div>
+            <div class="event-detail">
+                <i class="fas fa-clock"></i>
+                <span>{{ reservation.event.dateDebut|date('d/m/Y H:i') }}</span>
             </div>
+            <div class="event-detail">
+                <i class="fas fa-tag"></i>
+                <span>{{ reservation.event.prix }} TND / personne</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
-            <div class="row">
-                <div class="col-md-4 mb-3">
-                    {{ form_label(form.nombre_places, 'Nombre de places', {'label_attr': {'class': 'form-label'}}) }}
-                    {{ form_widget(form.nombre_places, {'attr': {'class': 'form-control'}}) }}
-                    {{ form_errors(form.nombre_places, {'attr': {'class': 'text-danger'}}) }}
+    <div class="edit-card">
+        <div class="card-header">
+            <h3 class="card-title">
+                <i class="fas fa-user-edit me-2"></i>Informations réservation
+            </h3>
+            <span class="reservation-id">#{{ reservation.id }}</span>
+        </div>
+        
+        <div class="card-body">
+            {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
+
+                <!-- Informations personnelles -->
+                <div class="form-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-user"></i>Informations personnelles
+                    </h4>
+                    
+                    <div class="form-group">
+                        {{ form_label(form.nomComplet, 'Nom complet') }}
+                        {{ form_widget(form.nomComplet, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_errors(form.nomComplet) }}
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            {{ form_label(form.email, 'Email') }}
+                            {{ form_widget(form.email, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(form.email) }}
+                        </div>
+                        <div class="form-group">
+                            {{ form_label(form.telephone, 'Téléphone') }}
+                            {{ form_widget(form.telephone, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(form.telephone) }}
+                            <small class="help-text">Optionnel</small>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-4 mb-3">
-                    {{ form_label(form.prix_total, 'Prix total (€)', {'label_attr': {'class': 'form-label'}}) }}
-                    {{ form_widget(form.prix_total, {'attr': {'class': 'form-control'}}) }}
-                    {{ form_errors(form.prix_total, {'attr': {'class': 'text-danger'}}) }}
+
+                <!-- Participants -->
+                <div class="form-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-users"></i>Participants
+                    </h4>
+                    
+                    <div class="counter-container">
+                        <div class="counter-box">
+                            <div class="counter-label">Adultes</div>
+                            <div class="counter-value">{{ reservation.nombreAdultes }}</div>
+                            {{ form_widget(form.nombreAdultes, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(form.nombreAdultes) }}
+                        </div>
+                        <div class="counter-box">
+                            <div class="counter-label">Enfants</div>
+                            <div class="counter-value">{{ reservation.nombreEnfants }}</div>
+                            {{ form_widget(form.nombreEnfants, {'attr': {'class': 'form-control'}}) }}
+                            {{ form_errors(form.nombreEnfants) }}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <div class="counter-label">Total personnes</div>
+                        <div class="counter-value">{{ reservation.nombreAdultes + reservation.nombreEnfants }}</div>
+                    </div>
                 </div>
-                <div class="col-md-4 mb-3">
+
+                <!-- Demandes spéciales -->
+                <div class="form-section">
+                    <h4 class="section-title">
+                        <i class="fas fa-comment-dots"></i>Demandes spéciales
+                    </h4>
+                    
+                    <div class="form-group">
+                        {{ form_widget(form.demandesSpeciales, {'attr': {'class': 'form-control', 'rows': 4}}) }}
+                        {{ form_errors(form.demandesSpeciales) }}
+                        <small class="help-text">Optionnel - Indiquez vos besoins particuliers</small>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Enregistrer les modifications
+                    </button>
+                    <a href="{{ path('app_reservations_show', {'id': reservation.id}) }}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Annuler
+                    </a>
+                </div>
+
+            {{ form_end(form) }}
+        </div>
+    </div>
+</div>
+{% endblock %}
                     {{ form_label(form.statut, 'Statut', {'label_attr': {'class': 'form-label'}}) }}
                     {{ form_widget(form.statut, {'attr': {'class': 'form-control'}}) }}
                     {{ form_errors(form.statut, {'attr': {'class': 'text-danger'}}) }}

@@ -280,11 +280,14 @@
                         <span class="counter-value" id="val-adultes">1</span>
                         <button type="button" class="counter-btn" onclick="increment('adultes', {{ event.placesDisponibles }})">+</button>
                     </div>
-                    {{ form_widget(form.nombreAdultes, {'attr': {
+                    {{ form_row(form.nombreAdultes, {
                         'id': 'input-adultes',
                         'style': 'display:none',
-                        'class': 'form-control'
-                    }}) }}
+                        'label': false,
+                        'attr': {
+                            'class': 'form-control'
+                        }
+                    }) }}
                 </div>
 
                 <div class="counter-box">
@@ -297,28 +300,22 @@
                         <span class="counter-value" id="val-enfants">0</span>
                         <button type="button" class="counter-btn" onclick="increment('enfants', {{ event.placesDisponibles }})">+</button>
                     </div>
-                    {{ form_widget(form.nombreEnfants, {'attr': {
+                    {{ form_row(form.nombreEnfants, {
                         'id': 'input-enfants',
                         'style': 'display:none',
-                        'class': 'form-control'
-                    }}) }}
+                        'label': false,
+                        'attr': {
+                            'class': 'form-control'
+                        }
+                    }) }}
                 </div>
             </div>
 
             {{ form_errors(form.nombreAdultes) }}
             {{ form_errors(form.nombreEnfants) }}
 
-            {# Résumé total #}
-            <div class="total-summary">
-                <div class="total-left">
-                    <div class="label">Montant total</div>
-                    <div class="detail" id="total-detail">
-                        1 personne × {{ event.prix }} TND
-                    </div>
-                </div>
-                <div class="total-amount" id="total-amount">
-                    {{ event.prix }} TND
-                </div>
+            
+            
             </div>
         </div>
 
@@ -355,44 +352,90 @@
 const PRIX_UNIT  = parseFloat('{{ event.prix }}');
 const MAX_PLACES = parseInt('{{ event.placesDisponibles }}');
 
-function getAdultes() { return parseInt(document.getElementById('val-adultes').textContent) || 0; }
-function getEnfants() { return parseInt(document.getElementById('val-enfants').textContent) || 0; }
+function getAdultes() { 
+    const el = document.getElementById('val-adultes');
+    return el ? parseInt(el.textContent) || 0 : 0; 
+}
+
+function getEnfants() { 
+    const el = document.getElementById('val-enfants');
+    return el ? parseInt(el.textContent) || 0 : 0; 
+}
 
 function increment(type, max) {
-    if (getAdultes() + getEnfants() >= max) return;
-    const el    = document.getElementById('val-' + type);
+    console.log('increment called with type:', type);
+    
+    if (getAdultes() + getEnfants() >= max) {
+        console.log('max reached');
+        return;
+    }
+    
+    const el = document.getElementById('val-' + type);
     const input = document.getElementById('input-' + type);
-    const val   = parseInt(el.textContent) + 1;
-    el.textContent = val;
-    input.value    = val;
-    updateTotal();
+    
+    console.log('el:', el);
+    console.log('input:', input);
+    
+    if (el && input) {
+        const val = parseInt(el.textContent) + 1;
+        console.log('new val:', val);
+        el.textContent = val;
+        input.value = val;
+        updateTotal();
+    } else {
+        console.log('elements not found');
+    }
 }
 
 function decrement(type) {
-    const el    = document.getElementById('val-' + type);
+    const el = document.getElementById('val-' + type);
     const input = document.getElementById('input-' + type);
-    let   val   = parseInt(el.textContent) - 1;
-
-    // Empêcher adultes < 0 ; empêcher total < 1
-    if (val < 0) return;
+    
+    console.log('el:', el);
+    console.log('input:', input);
+    
+    if (!el || !input) {
+        console.log('elements not found');
+        return;
+    }
+    
+    let val = parseInt(el.textContent) - 1;
+    
     if (type === 'adultes' && val === 0 && getEnfants() === 0) return;
+    if (val < 0) return;
 
+    console.log('new val:', val);
     el.textContent = val;
-    input.value    = val;
+    input.value = val;
     updateTotal();
 }
 
 function updateTotal() {
-    const total   = getAdultes() + getEnfants();
+    const total = getAdultes() + getEnfants();
     const montant = (PRIX_UNIT * total).toFixed(2);
-    document.getElementById('total-amount').textContent = montant + ' TND';
-    document.getElementById('total-detail').textContent =
-        `${total} personne${total > 1 ? 's' : ''} × ${PRIX_UNIT} TND`;
+    
+    // Mettre à jour seulement si les éléments existent
+    const totalAmount = document.getElementById('total-amount');
+    const totalDetail = document.getElementById('total-detail');
+    
+    if (totalAmount) {
+        totalAmount.textContent = montant + ' TND';
+    }
+    
+    if (totalDetail) {
+        totalDetail.textContent = `${total} personne${total > 1 ? 's' : ''} × ${PRIX_UNIT} TND`;
+    }
 }
 
 // Init
-document.getElementById('input-adultes').value = 1;
-document.getElementById('input-enfants').value = 0;
-updateTotal();
+document.addEventListener('DOMContentLoaded', function() {
+    const adultesInput = document.getElementById('input-adultes');
+    const enfantsInput = document.getElementById('input-enfants');
+    
+    if (adultesInput) adultesInput.value = 1;
+    if (enfantsInput) enfantsInput.value = 0;
+    
+    updateTotal();
+});
 </script>
 {% endblock %}
