@@ -19,9 +19,9 @@ class MarketplaceController extends AbstractController
     public function __construct()
     {
         $this->pdo = new PDO(
-            'mysql:host=localhost;dbname=wonderlust_db;charset=utf8mb4',
+            'mysql:host=127.0.0.1;dbname=wonderlust_db;charset=utf8mb4',
             'root',
-            '',
+            'saididhia',
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
         );
     }
