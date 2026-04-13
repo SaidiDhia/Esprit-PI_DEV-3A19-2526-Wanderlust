@@ -1,0 +1,542 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Événements{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        --hover-shadow: 0 20px 60px 0,0,0,0.15);
+        --border-radius: 20px;
+    }
+
+    /* Hero Section */
+    .hero-section {
+        background: var(--success-gradient);
+        border-radius: 0 0 60px 60px;
+        padding: 3rem 0;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .hero-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+        background-size: cover;
+        opacity: 0.1;
+    }
+
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: fadeInUp 0.8s ease;
+    }
+
+    .hero-subtitle {
+        color: rgba(255,255,255,0.95);
+        font-size: 1.2rem;
+        font-weight: 300;
+        animation: fadeInUp 0.8s ease 0.2s both;
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(30px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Event Cards */
+    .event-card {
+        border: none;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        overflow: hidden;
+        position: relative;
+        cursor: pointer;
+        height: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .event-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: var(--success-gradient);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .event-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .event-card:hover {
+        transform: translateY(-8px);
+        box-shadow: var(--hover-shadow);
+    }
+
+    /* Image Container */
+    .image-container {
+        position: relative;
+        height: 220px;
+        overflow: hidden;
+    }
+
+    .image-container img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.6s ease;
+    }
+
+    .event-card:hover .image-container img {
+        transform: scale(1.1);
+    }
+
+    .image-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(79, 172, 254, 0.8) 0%, rgba(0, 242, 254, 0.8) 100%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .event-card:hover .image-overlay {
+        opacity: 0.9;
+    }
+
+    /* Badge moderne */
+    .badge-modern {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        padding: 8px 16px;
+        border-radius: 25px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        background: rgba(255,255,255,0.95);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        z-index: 10;
+    }
+
+    .event-card:hover .badge-modern {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    /* Date Badge */
+    .date-badge {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        background: rgba(255,255,255,0.95);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        z-index: 10;
+    }
+
+    /* Activities Section */
+    .activities-section {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1.5rem;
+        border-radius: 15px;
+        margin-top: 1rem;
+    }
+
+    .activities-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 1rem;
+    }
+
+    .activity-mini {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 1rem;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+
+    .activity-mini:hover {
+        border-color: #4facfe;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.2);
+    }
+
+    .activity-mini h6 {
+        font-size: 0.9rem;
+        margin: 0;
+        color: #2d3748;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Boutons Modernes */
+    .btn-modern {
+        border-radius: 25px;
+        font-weight: 600;
+        padding: 8px 20px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        border: 2px solid transparent;
+    }
+
+    .btn-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s ease;
+    }
+
+    .btn-modern:hover::before {
+        left: 100%;
+    }
+
+    .btn-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+
+    .btn-primary-modern {
+        background: var(--success-gradient);
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+    }
+
+    .btn-primary-modern:hover {
+        box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+    }
+
+    .btn-secondary-modern {
+        background: white;
+        border: 2px solid #dee2e6;
+        color: #6c757d;
+    }
+
+    .btn-secondary-modern:hover {
+        border-color: #4facfe;
+        color: #4facfe;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 4rem;
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .empty-state::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: var(--success-gradient);
+        opacity: 0.05;
+    }
+
+    .empty-icon {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 2rem;
+        background: linear-gradient(135deg, #f5f7fa 0%, #e8eef5 100%);
+        border-radius: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: float 3s ease-in-out infinite;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0px); }
+        50% { transform: translateY(-10px); }
+    }
+
+    /* Alertes Modernes */
+    .alert-modern {
+        border-radius: 15px;
+        border: none;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+        animation: slideInRight 0.5s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .alert-modern::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--success-gradient);
+    }
+
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+        
+        .image-container {
+            height: 180px;
+        }
+
+        .hero-section {
+            padding: 2rem 0;
+            border-radius: 0 0 40px 40px;
+        }
+
+        .activities-grid {
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hero-section">
+    <div class="container text-center">
+        <h1 class="hero-title mb-4">
+            🎉 Explorez nos Événements
+        </h1>
+        <p class="hero-subtitle mb-0">
+            Organisez des événements mémorables et créez des souvenirs inoubliables
+        </p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-6">
+            <h1 class="display-4 fw-bold text-dark mb-0">
+                <span style="background: var(--success-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Événements</span>
+            </h1>
+            <p class="text-muted mt-2 mb-0">Découvrez et gérez tous vos événements</p>
+        </div>
+        <div class="col-md-6 text-end">
+            <a href="{{ path('app_events_new') }}" class="btn btn-primary-modern btn-lg btn-modern shadow-lg px-4 py-3 rounded-pill">
+                <span class="d-inline-block">🎉 Ajouter un événement</span>
+            </a>
+        </div>
+    </div>
+
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success alert-modern alert-dismissible fade show mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-check-circle fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    {{ message }}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    {% endfor %}
+
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger alert-modern alert-dismissible fade show mb-4" role="alert">
+            <div class="d-flex align-items-center">
+                <div class="me-3">
+                    <i class="fas fa-exclamation-circle fa-lg"></i>
+                </div>
+                <div class="flex-grow-1">
+                    {{ message }}
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        </div>
+    {% endfor %}
+
+    {% if events is empty %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-calendar-alt fa-4x text-success"></i>
+            </div>
+            <h2 class="mb-3 fw-bold">Aucun événement trouvé</h2>
+            <p class="text-muted mb-4 fs-5">Commencez par créer votre premier événement !</p>
+            <a href="{{ path('app_events_new') }}" class="btn btn-primary-modern btn-modern">
+                <i class="fas fa-plus me-2"></i>Créer un événement
+            </a>
+        </div>
+    {% else %}
+        <div class="row g-4">
+            {% for event in events %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="event-card">
+                        <div class="image-container">
+                            {% if event.image %}
+                                <img src="{{ asset('uploads/events/' ~ event.image) }}" alt="{{ event.lieu }}">
+                                <div class="image-overlay">
+                                    <div class="text-center text-white">
+                                        <i class="fas fa-calendar-alt fa-3x mb-3"></i>
+                                        <h4>{{ event.lieu }}</h4>
+                                        <p>{{ event.dateDebut ? event.dateDebut|date('d/m/Y') : '' }}</p>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="image-container bg-gradient d-flex align-items-center justify-content-center" style="background: var(--success-gradient);">
+                                    <div class="text-center text-white">
+                                        <i class="fas fa-calendar-alt fa-4x mb-3"></i>
+                                        <h4>{{ event.lieu }}</h4>
+                                        <p>{{ event.dateDebut ? event.dateDebut|date('d/m/Y') : '' }}</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            
+                            <div class="date-badge">
+                                <i class="fas fa-calendar me-1"></i>
+                                {{ event.dateDebut ? event.dateDebut|date('d/m/Y') : 'N/A' }}
+                            </div>
+                        </div>
+                        
+                        <div class="card-body d-flex flex-column p-4">
+                            <div class="mb-3">
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill me-2">
+                                    <i class="fas fa-map-marker-alt me-1"></i>
+                                    {{ event.lieu }}
+                                </span>
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill">
+                                    <i class="fas fa-tag me-1"></i>
+                                    {{ event.prix }} €
+                                </span>
+                            </div>
+                            
+                            <h5 class="card-title fw-bold text-dark mb-3">{{ event.lieu }}</h5>
+                            
+                            <div class="card-text text-muted mb-3">
+                                <strong>Organisateur:</strong> {{ event.organisateur }}<br>
+                                <strong>Date:</strong> {{ event.dateDebut ? event.dateDebut|date('d/m/Y') : '' }} - {{ event.dateFin ? event.dateFin|date('d/m/Y') : '' }}<br>
+                                <strong>Prix:</strong> {{ event.prix }} €<br>
+                                <strong>Places:</strong> {{ event.placesDisponibles }}/{{ event.capaciteMax }}
+                            </div>
+                            
+                            <!-- Boutons d'action - TOUJOURS VISIBLES -->
+                            <div class="d-flex gap-2 mb-3">
+                                <a href="{{ path('app_events_show', {'id': event.id}) }}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-eye me-1"></i>Voir détails
+                                </a>
+                                <a href="{{ path('app_events_edit', {'id': event.id}) }}" class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit me-1"></i>Modifier
+                                </a>
+                                <form method="post" action="{{ path('app_events_delete', {'id': event.id}) }}" class="d-inline">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ event.id) }}">
+                                    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirmEventDeletion({{ event.id }}, '{{ event.lieu|e('js') }}');">
+                                        <i class="fas fa-trash me-1"></i>Supprimer
+                                    </button>
+                                </form>
+                            </div>
+                            
+                            <!-- Section Activités associées -->
+                            {% if event.activities|length > 0 %}
+                                <div class="activities-section mt-3">
+                                    <h6 class="mb-3 fw-bold text-success">
+                                        <i class="fas fa-list-ul me-2"></i>
+                                        Activités associées ({{ event.activities|length }})
+                                    </h6>
+                                    <div class="activities-grid">
+                                        {% for activity in event.activities|slice(0, 6) %}
+                                            <div class="activity-mini">
+                                                <h6>{{ activity.titre|slice(0, 20) }}</h6>
+                                            <small class="text-muted">{{ activity.categorie.value }}</small>
+                                            </div>
+                                        {% endfor %}
+                                        {% if event.activities|length > 6 %}
+                                            <div class="activity-mini">
+                                                <h6>+{{ event.activities|length - 6 }}+</h6>
+                                                <small class="text-muted">plus...</small>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+function confirmEventDeletion(eventId, eventTitle) {
+    const confirmation = confirm(
+        '⚠️ CONFIRMATION DE SUPPRESSION ⚠️\n\n' +
+        'Êtes-vous sûr de vouloir supprimer l\'événement #' + eventId + ' : ' + eventTitle + ' ?\n\n' +
+        'Cette action est IRRÉVERSIBLE et :\n' +
+        '• Supprimera définitivement l\'événement\n' +
+        '• Supprimera toutes les réservations associées\n' +
+        '• Libérera toutes les activités associées\n' +
+        '• Effacera toutes les données associées\n\n' +
+        'Cliquez sur OK pour confirmer ou Annuler pour garder l\'événement.'
+    );
+    
+    return confirmation;
+}
+</script>
+{% endblock %}

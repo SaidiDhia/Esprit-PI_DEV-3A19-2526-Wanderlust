@@ -1,0 +1,141 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Modifier Réservation{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <h1 class="mb-4">Modifier la réservation</h1>
+
+    <div class="row">
+        <div class="col-md-10">
+            {{ form_start(form, {'attr': {'class': 'needs-validation', 'novalidate': 'novalidate'}}) }}
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ form_label(form.id_event, 'ID Événement', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.id_event, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.id_event, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form_label(form.id_client, 'ID Client', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.id_client, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.id_client, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ form_label(form.date_reservation, 'Date de réservation', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.date_reservation, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.date_reservation, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form_label(form.date_evenement, 'Date de l\'événement', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.date_evenement, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.date_evenement, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    {{ form_label(form.nombre_places, 'Nombre de places', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.nombre_places, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.nombre_places, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    {{ form_label(form.prix_total, 'Prix total (€)', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.prix_total, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.prix_total, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    {{ form_label(form.statut, 'Statut', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.statut, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.statut, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    {{ form_label(form.montant_paye, 'Montant payé (€)', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.montant_paye, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.montant_paye, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    {{ form_label(form.methode_paiement, 'Méthode de paiement', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.methode_paiement, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.methode_paiement, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+                <div class="col-md-4 mb-3">
+                    {{ form_label(form.date_paiement, 'Date de paiement', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.date_paiement, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.date_paiement, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    {{ form_label(form.email_client, 'Email du client', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.email_client, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.email_client, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+                <div class="col-md-6 mb-3">
+                    {{ form_label(form.telephone_client, 'Téléphone du client', {'label_attr': {'class': 'form-label'}}) }}
+                    {{ form_widget(form.telephone_client, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_errors(form.telephone_client, {'attr': {'class': 'text-danger'}}) }}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                {{ form_label(form.notes, 'Notes', {'label_attr': {'class': 'form-label'}}) }}
+                {{ form_widget(form.notes, {'attr': {'class': 'form-control', 'rows': 3}}) }}
+                {{ form_errors(form.notes, {'attr': {'class': 'text-danger'}}) }}
+                <small class="form-text text-muted">Notes additionnelles sur la réservation (optionnel)</small>
+            </div>
+
+            <div class="mb-3">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Enregistrer les modifications
+                </button>
+                <a href="{{ path('app_reservations_show', {'id': reservation.id}) }}" class="btn btn-info ms-2">
+                    <i class="fas fa-eye"></i> Voir
+                </a>
+                <a href="{{ path('app_reservations_index') }}" class="btn btn-secondary ms-2">
+                    <i class="fas fa-arrow-left"></i> Retour à la liste
+                </a>
+            </div>
+
+            {{ form_end(form) }}
+        </div>
+        
+        <div class="col-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Informations actuelles</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>ID:</strong> {{ reservation.id }}</p>
+                    <p><strong>Date de création:</strong> {{ reservation.dateCreation ? reservation.dateCreation|date('d/m/Y H:i') : '' }}</p>
+                    
+                    <p><strong>Statut actuel:</strong></p>
+                    {% if reservation.statut == 'confirmee' %}
+                        <span class="badge bg-success">Confirmée</span>
+                    {% elseif reservation.statut == 'en_attente' %}
+                        <span class="badge bg-warning">En attente</span>
+                    {% elseif reservation.statut == 'annulee' %}
+                        <span class="badge bg-danger">Annulée</span>
+                    {% else %}
+                        <span class="badge bg-info">Terminée</span>
+                    {% endif %}
+                    
+                    <p class="mt-3"><strong>Paiement:</strong></p>
+                    {% if reservation.isPayeComplet %}
+                        <span class="badge bg-success">Payé</span>
+                    {% else %}
+                        <span class="badge bg-warning">En cours</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

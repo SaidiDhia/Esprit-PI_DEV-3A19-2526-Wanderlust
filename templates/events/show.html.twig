@@ -1,0 +1,682 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Détails Événement{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        --hover-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        --border-radius: 20px;
+    }
+
+    /* Hero Section */
+    .show-hero {
+        background: var(--primary-gradient);
+        border-radius: 0 0 60px 60px;
+        padding: 3rem 0;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .show-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+        background-size: cover;
+        opacity: 0.1;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        color: white;
+    }
+
+    .hero-content h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .hero-content p {
+        font-size: 1.2rem;
+        opacity: 0.9;
+        margin-bottom: 0;
+    }
+
+    /* Show Section */
+    .show-section {
+        padding: 2rem 0;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 60vh;
+    }
+
+    .show-card {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border: none;
+        width: 100%;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+
+    .show-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--hover-shadow);
+    }
+
+    .show-header {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 2rem 3rem;
+        text-align: center;
+    }
+
+    .show-header h2 {
+        margin: 0;
+        font-size: 2rem;
+        font-weight: 700;
+    }
+
+    .show-body {
+        padding: 3rem;
+    }
+
+    .event-image {
+        width: 100%;
+        height: 400px;
+        object-fit: cover;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+
+    .no-image {
+        width: 100%;
+        height: 400px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px dashed #dee2e6;
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+        margin: 2rem 0;
+    }
+
+    .info-item {
+        background: rgba(102, 126, 234, 0.05);
+        border: 2px solid rgba(102, 126, 234, 0.1);
+        border-radius: 15px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .info-item:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.1);
+        border-color: rgba(102, 126, 234, 0.2);
+    }
+
+    .info-item h5 {
+        color: #667eea;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .info-item p {
+        margin: 0.5rem 0;
+        color: #495057;
+        font-size: 1.1rem;
+    }
+
+    .badge-modern {
+        background: var(--primary-gradient);
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 50px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .availability-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: none;
+    }
+
+    .availability-card.success {
+        border-left: 5px solid #28a745;
+    }
+
+    .availability-card.danger {
+        border-left: 5px solid #dc3545;
+    }
+
+    .availability-card h5 {
+        color: #495057;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+
+    .availability-card h3 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .availability-card.success h3 {
+        color: #28a745;
+    }
+
+    .availability-card.danger h3 {
+        color: #dc3545;
+    }
+
+    .btn-modern {
+        background: var(--primary-gradient);
+        border: none;
+        border-radius: 50px;
+        padding: 1rem 3rem;
+        color: white;
+        font-weight: 600;
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .btn-modern:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-secondary-modern {
+        background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+        box-shadow: 0 10px 25px rgba(108, 117, 125, 0.3);
+    }
+
+    .btn-secondary-modern:hover {
+        box-shadow: 0 15px 35px rgba(108, 117, 125, 0.4);
+    }
+
+    .activities-section {
+        margin-top: 2rem;
+    }
+
+    .activity-badge {
+        background: white;
+        border: 2px solid #e9ecef;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin: 0.5rem;
+        display: block;
+        transition: all 0.3s ease;
+        height: 100%;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+
+    .activity-badge:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+        border-color: #667eea;
+    }
+
+    .activity-badge strong {
+        color: #495057;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .activity-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid #f8f9fa;
+    }
+
+    .activity-header i {
+        color: #667eea;
+        font-size: 1.2rem;
+        margin-right: 0.75rem;
+    }
+
+    .activity-content {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .activity-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .activity-category {
+        background: rgba(102, 126, 234, 0.1);
+        color: #667eea;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .difficulty-stars {
+        font-size: 0.9rem;
+    }
+
+    .difficulty-stars i {
+        margin-left: 2px;
+    }
+
+    .activity-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+
+    .activity-meta i {
+        color: #667eea;
+        margin-right: 0.25rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .show-hero h1 {
+            font-size: 2rem;
+        }
+        
+        .show-section {
+            padding: 1rem 0;
+        }
+        
+        .show-body {
+            padding: 2rem;
+        }
+        
+        .info-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .btn-modern {
+            padding: 0.8rem 2rem;
+            font-size: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="show-hero">
+    <div class="container">
+        <div class="hero-content">
+            <h1>Détails de l'événement</h1>
+            <p>Découvrez toutes les informations sur cet événement</p>
+        </div>
+    </div>
+</section>
+
+<!-- Show Section -->
+<section class="show-section">
+    <div class="container">
+        <div class="show-card">
+            <div class="show-header">
+                <h2><i class="fas fa-calendar-alt me-2"></i>{{ event.lieu }}</h2>
+                <p>Organisé par {{ event.organisateur }}</p>
+            </div>
+            
+            <div class="show-body">
+                <!-- Image -->
+                {% if event.image %}
+                    <img src="{{ asset('uploads/events/' ~ event.image) }}" class="event-image" alt="{{ event.lieu }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="no-image" style="display: none;">
+                        <i class="fas fa-calendar-alt fa-5x text-muted"></i>
+                    </div>
+                {% else %}
+                    <div class="no-image">
+                        <i class="fas fa-calendar-alt fa-5x text-muted"></i>
+                    </div>
+                {% endif %}
+                
+                <!-- Informations Grid -->
+                <div class="info-grid">
+                    <div class="info-item">
+                        <h5><i class="fas fa-clock me-2"></i>Dates</h5>
+                        <p><strong>Début:</strong> {{ event.dateDebut ? event.dateDebut|date('d/m/Y H:i') : 'Non défini' }}</p>
+                        <p><strong>Fin:</strong> {{ event.dateFin ? event.dateFin|date('d/m/Y H:i') : 'Non défini' }}</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <h5><i class="fas fa-euro-sign me-2"></i>Prix & Capacité</h5>
+                        <p><strong>Prix:</strong> <span class="badge-modern">{{ event.prix }} €</span></p>
+                        <p><strong>Capacité:</strong> {{ event.placesDisponibles }}/{{ event.capaciteMax }} places</p>
+                    </div>
+                    
+                    <div class="info-item">
+                        <h5><i class="fas fa-phone me-2"></i>Contact</h5>
+                        <p><strong>Téléphone:</strong> {{ event.telephone }}</p>
+                        <p><strong>Email:</strong> <a href="mailto:{{ event.email }}">{{ event.email }}</a></p>
+                    </div>
+                    
+                    <!-- Bouton Réserver -->
+                    <div class="info-item">
+                        <h5><i class="fas fa-calendar-plus me-2"></i>Réservation</h5>
+                        {% set eventDate = event.getDateDebut() %}
+                        {% set now = "now"|date("Y-m-d H:i:s") %}
+                        {% if event.placesDisponibles > 0 and eventDate > now %}
+                            <a href="{{ path('app_reservations_new', {'event_id': event.id}) }}" class="btn-modern btn-primary-modern w-100">
+                                <i class="fas fa-calendar-plus me-2"></i>Réserver cet événement
+                            </a>
+                            <p class="text-success mt-2 mb-0">
+                                <i class="fas fa-check-circle me-1"></i>
+                                {{ event.placesDisponibles }} places disponibles
+                            </p>
+                        {% else %}
+                            {% if event.placesDisponibles <= 0 %}
+                                <button class="btn-modern btn-disabled-modern w-100" disabled>
+                                    <i class="fas fa-times-circle me-2"></i>Plus de places disponibles
+                                </button>
+                                <p class="text-danger mt-2 mb-0">
+                                    <i class="fas fa-times-circle me-1"></i>
+                                    Événement complet
+                                </p>
+                            {% else %}
+                                <button class="btn-modern btn-disabled-modern w-100" disabled>
+                                    <i class="fas fa-clock me-2"></i>Événement terminé
+                                </button>
+                                <p class="text-warning mt-2 mb-0">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Événement terminé
+                                </p>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Matériels nécessaires -->
+                {% if event.materielsNecessaires %}
+                <div class="info-item">
+                    <h5><i class="fas fa-tools me-2"></i>Matériels nécessaires</h5>
+                    <p>{{ event.materielsNecessaires }}</p>
+                </div>
+                {% endif %}
+                
+                <!-- Vidéo YouTube -->
+                {% if event.videoYoutube %}
+                <div class="info-item">
+                    <h5><i class="fab fa-youtube me-2"></i>Vidéo</h5>
+                    <a href="{{ event.videoYoutube }}" target="_blank" class="btn-modern">
+                        <i class="fab fa-youtube me-2"></i>Voir la vidéo
+                    </a>
+                </div>
+                {% endif %}
+                
+                <!-- Activités associées -->
+                {% if event.activities|length > 0 %}
+                <div class="activities-section">
+                    <div class="info-item">
+                        <h5><i class="fas fa-running me-2"></i>Activités associées</h5>
+                        <div class="row">
+                            {% for activity in event.activities %}
+                                <div class="col-md-6 col-lg-4 mb-3">
+                                    <div class="activity-badge">
+                                        <div class="activity-header">
+                                            <i class="fas fa-star"></i>
+                                            <strong>{{ activity.titre }}</strong>
+                                        </div>
+                                        <div class="activity-content">
+                                            <div class="activity-info">
+                                                <span class="activity-category">{{ activity.categorie.value }}</span>
+                                            </div>
+                                            <div class="activity-meta">
+                                                <span>
+                                                    <i class="fas fa-tag"></i>
+                                                    {{ activity.typeActivite }}
+                                                </span>
+                                            </div>
+                                            {% if activity.image %}
+                                                <div class="activity-meta">
+                                                    <span>
+                                                        <i class="fas fa-image"></i>
+                                                        Image disponible
+                                                    </span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <!-- Disponibilité -->
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        {% if event.placesDisponibles > 0 %}
+                            <div class="availability-card success">
+                                <h5><i class="fas fa-check-circle me-2"></i>Disponibilité</h5>
+                                <h3>{{ event.placesDisponibles }}</h3>
+                                <p>places encore disponibles</p>
+                                <div class="progress mt-3">
+                                    <div class="progress-bar bg-success" role="progressbar" 
+                                         style="width: {{ (event.placesDisponibles / event.capaciteMax) * 100 }}%"
+                                         aria-valuenow="{{ event.placesDisponibles }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="{{ event.capaciteMax }}">
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="availability-card danger">
+                                <h5><i class="fas fa-times-circle me-2"></i>Disponibilité</h5>
+                                <h3>Complet</h3>
+                                <p>Aucune place disponible</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-12 d-flex align-items-center justify-content-center">
+                            <a href="{{ path('app_events_index') }}" class="btn-modern btn-secondary-modern">
+                                <i class="fas fa-arrow-left me-2"></i>Retour à la liste
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Date de création -->
+                <div class="text-center mt-4">
+                    <small class="text-muted">
+                        Date de création: {{ event.dateCreation ? event.dateCreation|date('d/m/Y H:i') : '' }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Section Publicitaire -->
+<section class="ad-section py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="ad-card text-center">
+                    <div class="ad-header">
+                        <h4><i class="fas fa-bullhorn me-2"></i>Espace Publicitaire</h4>
+                        <p class="text-muted mb-0">Découvrez nos partenaires et offres exclusives</p>
+                    </div>
+                    <div class="ad-body">
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <div class="ad-item">
+                                    <div class="ad-logo">
+                                        <i class="fas fa-calendar-alt fa-3x text-primary"></i>
+                                    </div>
+                                    <h6>Événements Premium</h6>
+                                    <p class="small text-muted">Accédez à des événements exclusifs avec des avantages spéciaux</p>
+                                    <a href="#" class="btn btn-outline-primary btn-sm mt-2">En savoir plus</a>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="ad-item">
+                                    <div class="ad-logo">
+                                        <i class="fas fa-ticket-alt fa-3x text-success"></i>
+                                    </div>
+                                    <h6>Billets Priorité</h6>
+                                    <p class="small text-muted">Achetez vos billets en avance et bénéficiez de réductions exceptionnelles</p>
+                                    <a href="#" class="btn btn-outline-success btn-sm mt-2">Voir les offres</a>
+                                </div>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <div class="ad-item">
+                                    <div class="ad-logo">
+                                        <i class="fas fa-users fa-3x text-info"></i>
+                                    </div>
+                                    <h6>Abonnement VIP</h6>
+                                    <p class="small text-muted">Devenez membre VIP pour profiter de tous nos événements sans limitation</p>
+                                    <a href="#" class="btn btn-outline-info btn-sm mt-2">S'abonner</a>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ad-disclaimer mt-4">
+                            <p class="small text-muted mb-0">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Cet espace publicitaire est réservé à nos partenaires. Les publicités affichées sont sélectionnées pour leur pertinence et qualité.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<style>
+.ad-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-top: 1px solid #dee2e6;
+}
+
+.ad-card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    padding: 2rem;
+    transition: all 0.3s ease;
+    border: 1px solid #e9ecef;
+}
+
+.ad-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.ad-header {
+    margin-bottom: 2rem;
+}
+
+.ad-header h4 {
+    color: #495057;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.ad-header p {
+    color: #6c757d;
+}
+
+.ad-item {
+    background: rgba(102, 126, 234, 0.05);
+    border: 2px solid rgba(102, 126, 234, 0.1);
+    border-radius: 15px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    height: 100%;
+}
+
+.ad-item:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.15);
+    border-color: rgba(102, 126, 234, 0.2);
+}
+
+.ad-logo {
+    margin-bottom: 1rem;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ad-logo i {
+    font-size: 2rem;
+}
+
+.ad-item h6 {
+    color: #495057;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.ad-item p {
+    color: #6c757d;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.ad-disclaimer {
+    background: rgba(108, 117, 125, 0.05);
+    border-top: 1px solid #dee2e6;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-top: 2rem;
+}
+
+.ad-disclaimer p {
+    color: #6c757d;
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+</style>
+{% endblock %}

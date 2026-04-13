@@ -1,0 +1,136 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Détails Réservation{% endblock %}
+
+{% block body %}
+<div class="container mt-4">
+    <h1 class="mb-4">Détails de la réservation</h1>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Réservation #{{ reservation.id }}</h5>
+                        {% if reservation.statut == 'confirmee' %}
+                            <span class="badge bg-success">Confirmée</span>
+                        {% elseif reservation.statut == 'en_attente' %}
+                            <span class="badge bg-warning">En attente</span>
+                        {% elseif reservation.statut == 'annulee' %}
+                            <span class="badge bg-danger">Annulée</span>
+                        {% else %}
+                            <span class="badge bg-info">Terminée</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <p><strong>Événement ID:</strong> {{ reservation.idEvent }}</p>
+                            <p><strong>Client ID:</strong> {{ reservation.idClient }}</p>
+                            <p><strong>Date de réservation:</strong> {{ reservation.dateCreation ? reservation.dateCreation|date('d/m/Y H:i') : '' }}</p>
+                            <p><strong>Date de l'événement:</strong> {{ reservation.dateEvenement ? reservation.dateEvenement|date('d/m/Y H:i') : '' }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Nombre de places:</strong> {{ reservation.nombrePersonnes }}</p>
+                            <p><strong>Prix total:</strong> <span class="badge bg-primary">{{ reservation.prixTotal }} €</span></p>
+                        </div>
+                    </div>
+
+                    {% if reservation.emailClient or reservation.telephoneClient %}
+                    <div class="mb-3">
+                        <h6>Coordonnées client</h6>
+                        {% if reservation.emailClient %}
+                            <p><i class="fas fa-envelope"></i> {{ reservation.emailClient }}</p>
+                        {% endif %}
+                        {% if reservation.telephoneClient %}
+                            <p><i class="fas fa-phone"></i> {{ reservation.telephoneClient }}</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if reservation.methodePaiement %}
+                    <div class="mb-3">
+                        <h6>Informations de paiement</h6>
+                        <p><strong>Méthode de paiement:</strong> {{ reservation.methodePaiement|replace({'_': ' '})|title }}</p>
+                        <p><strong>Date de paiement:</strong> {{ reservation.datePaiement ? reservation.datePaiement|date('d/m/Y H:i') : '' }}</p>
+                    </div>
+                    {% endif %}
+
+                    {% if reservation.notes %}
+                    <div class="mb-3">
+                        <h6>Notes</h6>
+                        <p>{{ reservation.notes }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <small class="text-muted">
+                            Date de création: {{ reservation.dateCreation ? reservation.dateCreation|date('d/m/Y H:i') : '' }}
+                        </small>
+                    </div>
+
+                    <div class="btn-group" role="group">
+                        <a href="{{ path('app_reservations_edit', {'id': reservation.id}) }}" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Modifier
+                        </a>
+                        <a href="{{ path('app_reservations_index') }}" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Retour à la liste
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Actions rapides</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ path('app_reservations_edit', {'id': reservation.id}) }}" class="btn btn-warning">
+                            <i class="fas fa-edit"></i> Modifier la réservation
+                        </a>
+                        
+                        <form method="post" action="{{ path('app_reservations_delete', {'id': reservation.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette réservation ?');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ reservation.id) }}">
+                            <button type="submit" class="btn btn-danger w-100">
+                                <i class="fas fa-trash"></i> Supprimer la réservation
+                            </button>
+                        </form>
+                        
+                        <a href="{{ path('app_reservations_index') }}" class="btn btn-secondary">
+                            <i class="fas fa-list"></i> Voir toutes les réservations
+                        </a>
+                        
+                        <a href="{{ path('app_reservations_new') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Ajouter une réservation
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5>Statut du paiement</h5>
+                </div>
+                <div class="card-body">
+                                        
+                    <div class="mb-3">
+                        <h6>Statut final</h6>
+                        {% if reservation.isPayeComplet %}
+                            <span class="badge bg-success">Payé complètement</span>
+                        {% else %}
+                            <span class="badge bg-warning">Paiement en cours</span>
+                            <p class="mt-2 mb-0">
+                                <strong>Reste à payer:</strong> {{ reservation.getResteAPayer() }} €
+                            </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

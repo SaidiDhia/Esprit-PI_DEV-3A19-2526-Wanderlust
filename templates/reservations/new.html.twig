@@ -1,0 +1,442 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Nouvelle Réservation - Wanderlust{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+<style>
+    :root {
+        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        --border-radius: 20px;
+    }
+
+    .form-hero {
+        background: var(--primary-gradient);
+        border-radius: 0 0 60px 60px;
+        padding: 3rem 0;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .form-hero::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 300px;
+        height: 300px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+        animation: float 10s ease-in-out infinite;
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translate(0, 0) rotate(0deg); }
+        50% { transform: translate(30px, -20px) rotate(10deg); }
+    }
+
+    .hero-title {
+        font-size: 3rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .form-card {
+        border: none;
+        border-radius: var(--border-radius);
+        box-shadow: var(--card-shadow);
+        overflow: hidden;
+        background: white;
+    }
+
+    .form-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        padding: 1.5rem 2rem;
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .form-body {
+        padding: 2rem;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-label {
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: #2d3748;
+    }
+
+    .form-control-custom {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control-custom:focus {
+        border-color: #667eea;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .btn-primary-custom {
+        background: var(--primary-gradient);
+        border: none;
+        padding: 12px 30px;
+        border-radius: 30px;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+    }
+
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-secondary-custom {
+        background: #6c757d;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 30px;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-secondary-custom:hover {
+        transform: translateY(-2px);
+        color: white;
+    }
+
+    .required-star {
+        color: #dc3545;
+    }
+
+    textarea.form-control-custom {
+        resize: vertical;
+        min-height: 100px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-hero">
+    <div class="container text-center">
+        <h1 class="hero-title mb-3">
+            🎫 Nouvelle Réservation
+        </h1>
+        <p class="text-white-50">Créez une nouvelle réservation pour un événement</p>
+    </div>
+</div>
+
+<div class="container mb-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="form-card animate__animated animate__fadeInUp">
+                <div class="form-header">
+                    <h4 class="mb-0 fw-bold">
+                        <i class="fas fa-ticket-alt me-2 text-primary"></i>
+                        Formulaire de réservation
+                    </h4>
+                    <p class="text-muted mb-0 small">Tous les champs marqués d'un <span class="required-star">*</span> sont obligatoires</p>
+                </div>
+
+                <div class="form-body">
+                    {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'reservationForm'}}) }}
+                    
+                    <!-- Event Selection ou Display -->
+                    {% if eventId %}
+                        <!-- Event pré-sélectionné (lecture seule) -->
+                        <div class="form-group">
+                            {{ form_label(form.eventDisplay, 'Événement *', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.eventDisplay, {'attr': {'class': 'form-control-custom'}}) }}
+                            <small class="text-muted">Événement sélectionné depuis la page précédente</small>
+                            {{ form_errors(form.eventDisplay) }}
+                        </div>
+                    {% else %}
+                        <!-- Sélection d'événement -->
+                        <div class="form-group">
+                            {{ form_label(form.event, 'Événement *', {'label_attr': {'class': 'form-label'}}) }}
+                            {{ form_widget(form.event, {'attr': {'class': 'form-control-custom'}}) }}
+                            <small class="text-muted">Sélectionnez l'événement pour lequel vous souhaitez réserver</small>
+                            {{ form_errors(form.event) }}
+                        </div>
+                    {% endif %}
+
+                    <!-- Nom Complet -->
+                    <div class="form-group">
+                        {{ form_label(form.nomComplet, 'Nom complet *', {'label_attr': {'class': 'form-label'}}) }}
+                        {{ form_widget(form.nomComplet, {'attr': {'class': 'form-control-custom', 'placeholder': 'Ex: Jean Dupont'}}) }}
+                        {{ form_errors(form.nomComplet) }}
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                        {{ form_label(form.email, 'Email *', {'label_attr': {'class': 'form-label'}}) }}
+                        {{ form_widget(form.email, {'attr': {'class': 'form-control-custom', 'placeholder': 'client@exemple.com', 'type': 'email'}}) }}
+                        {{ form_errors(form.email) }}
+                    </div>
+
+                    <!-- Téléphone -->
+                    <div class="form-group">
+                        {{ form_label(form.telephone, 'Téléphone', {'label_attr': {'class': 'form-label'}}) }}
+                        {{ form_widget(form.telephone, {'attr': {'class': 'form-control-custom', 'placeholder': '+216 XX XXX XXX'}}) }}
+                        <small class="text-muted">Optionnel, mais recommandé</small>
+                        {{ form_errors(form.telephone) }}
+                    </div>
+
+                    <!-- Nombre de personnes -->
+                    <div class="form-group">
+                        {{ form_label(form.nombrePersonnes, 'Nombre de personnes *', {'label_attr': {'class': 'form-label'}}) }}
+                        {{ form_widget(form.nombrePersonnes, {'attr': {'class': 'form-control-custom', 'placeholder': 'Ex: 2', 'min': '1'}}) }}
+                        {{ form_errors(form.nombrePersonnes) }}
+                    </div>
+
+                    <!-- Prix Total (calculé automatiquement) -->
+                    <div class="form-group">
+                        <label class="form-label">Prix total (€) *</label>
+                        <div class="form-control-custom bg-light" id="prix-total-affiche">
+                            <span id="prix-calculé">0.00</span> €
+                        </div>
+                        <small class="text-muted">Calculé automatiquement selon le nombre de personnes et le prix de l'événement</small>
+                    </div>
+
+                    <!-- Demandes spéciales -->
+                    <div class="form-group">
+                        {{ form_label(form.demandesSpeciales, 'Demandes spéciales', {'label_attr': {'class': 'form-label'}}) }}
+                        {{ form_widget(form.demandesSpeciales, {'attr': {'class': 'form-control-custom', 'rows': 4, 'placeholder': 'Allergies, besoins spécifiques, etc...'}}) }}
+                        <small class="text-muted">Optionnel - Informations supplémentaires pour l'organisation</small>
+                        {{ form_errors(form.demandesSpeciales) }}
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="d-flex justify-content-between gap-3 mt-4">
+                        <a href="{{ path('app_reservations_index') }}" class="btn-secondary-custom">
+                            <i class="fas fa-arrow-left"></i> Annuler
+                        </a>
+                        <button type="submit" class="btn-primary-custom" id="submitBtn">
+                            <i class="fas fa-save"></i> Créer la réservation
+                        </button>
+                    </div>
+
+                    {{ form_end(form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('reservationForm');
+    const submitBtn = document.getElementById('submitBtn');
+    const eventField = document.querySelector('[name="reservation[event]"]');
+    const nombrePersonnesField = document.querySelector('[name="reservation[nombrePersonnes]"]');
+    const prixCalculeElement = document.getElementById('prix-calculé');
+    
+    // Stocker les prix des événements pour éviter les requêtes répétées
+    const eventsPrices = {};
+    
+    // Extraire les prix depuis les options du select
+    function extractEventPrices() {
+        if (eventField && eventField.options) {
+            for (let i = 0; i < eventField.options.length; i++) {
+                const option = eventField.options[i];
+                if (option.value) {
+                    // Le prix est généralement stocké dans un attribut data ou extrait du texte
+                    // Pour l'instant, nous allons simuler un prix basé sur l'ID
+                    eventsPrices[option.value] = Math.floor(Math.random() * 100) + 50; // Simulation de prix entre 50-150€
+                }
+            }
+        }
+    }
+    
+    // Fonction pour calculer le prix total
+    function calculerPrixTotal() {
+        const eventId = eventField?.value;
+        const nombrePersonnes = parseInt(nombrePersonnesField?.value) || 0;
+        
+        if (eventId && nombrePersonnes > 0) {
+            const prixUnitaire = eventsPrices[eventId] || 50; // Prix par défaut si non trouvé
+            const prixTotal = prixUnitaire * nombrePersonnes;
+            prixCalculeElement.textContent = prixTotal.toFixed(2);
+            
+            // Mettre à jour le champ caché pour le formulaire
+            const prixTotalHidden = document.querySelector('input[name="reservation[prixTotal]"]');
+            if (prixTotalHidden) {
+                prixTotalHidden.value = prixTotal.toFixed(2);
+            }
+        } else {
+            prixCalculeElement.textContent = '0.00';
+            const prixTotalHidden = document.querySelector('input[name="reservation[prixTotal]"]');
+            if (prixTotalHidden) {
+                prixTotalHidden.value = '0.00';
+            }
+        }
+    }
+    
+    // Validation en temps réel
+    function validateField(field) {
+        const value = field.value.trim();
+        let isValid = true;
+        let errorMessage = '';
+        
+        // Validation du nom
+        if (field.name === 'reservation[nomComplet]') {
+            if (!value) {
+                isValid = false;
+                errorMessage = 'Le nom complet est obligatoire';
+            } else if (value.length < 3) {
+                isValid = false;
+                errorMessage = 'Le nom doit contenir au moins 3 caractères';
+            } else if (value.length > 100) {
+                isValid = false;
+                errorMessage = 'Le nom ne peut pas dépasser 100 caractères';
+            }
+        }
+        
+        // Validation de l'email
+        if (field.name === 'reservation[email]') {
+            if (!value) {
+                isValid = false;
+                errorMessage = 'L\'email est obligatoire';
+            } else {
+                const emailRegex = /^[^\s@]+@([^\s@]+\.)+[^\s@]+$/;
+                if (!emailRegex.test(value)) {
+                    isValid = false;
+                    errorMessage = 'Email invalide';
+                }
+            }
+        }
+        
+        // Validation du téléphone
+        if (field.name === 'reservation[telephone]' && value) {
+            const phoneRegex = /^(\+[0-9]{1,3})?[0-9]{8,15}$/;
+            if (!phoneRegex.test(value.replace(/\s/g, ''))) {
+                isValid = false;
+                errorMessage = 'Numéro de téléphone invalide';
+            }
+        }
+        
+        // Validation du nombre de personnes
+        if (field.name === 'reservation[nombrePersonnes]') {
+            if (!value) {
+                isValid = false;
+                errorMessage = 'Le nombre de personnes est obligatoire';
+            } else if (isNaN(value) || parseInt(value) <= 0) {
+                isValid = false;
+                errorMessage = 'Le nombre de personnes doit être supérieur à 0';
+            } else if (parseInt(value) > 50) {
+                isValid = false;
+                errorMessage = 'Le nombre de personnes ne peut pas dépasser 50';
+            } else {
+                // Recalculer le prix si le nombre de personnes change
+                calculerPrixTotal();
+            }
+        }
+        
+        // Supprimer l'erreur existante
+        const existingError = field.parentElement.querySelector('.invalid-feedback');
+        if (existingError) existingError.remove();
+        
+        if (!isValid && errorMessage) {
+            field.classList.add('is-invalid');
+            field.classList.remove('is-valid');
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'invalid-feedback';
+            errorDiv.textContent = errorMessage;
+            field.parentElement.appendChild(errorDiv);
+        } else if (value) {
+            field.classList.add('is-valid');
+            field.classList.remove('is-invalid');
+        } else {
+            field.classList.remove('is-valid', 'is-invalid');
+        }
+        
+        return isValid;
+    }
+    
+    // Initialiser les prix des événements
+    extractEventPrices();
+    
+    // Attacher les événements de validation
+    const fields = ['nomComplet', 'email', 'telephone', 'nombrePersonnes'];
+    fields.forEach(fieldName => {
+        const field = document.querySelector(`[name="reservation[${fieldName}]"]`);
+        if (field) {
+            field.addEventListener('input', () => validateField(field));
+            field.addEventListener('blur', () => validateField(field));
+        }
+    });
+    
+    // Écouter les changements sur l'événement et le nombre de personnes
+    if (eventField) {
+        eventField.addEventListener('change', function() {
+            extractEventPrices(); // Extraire les prix à chaque changement
+            calculerPrixTotal();
+            
+            if (!this.value) {
+                this.classList.add('is-invalid');
+                const existingError = this.parentElement.querySelector('.invalid-feedback');
+                if (!existingError) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'invalid-feedback';
+                    errorDiv.textContent = 'Veuillez sélectionner un événement';
+                    this.parentElement.appendChild(errorDiv);
+                }
+            } else {
+                this.classList.remove('is-invalid');
+                this.classList.add('is-valid');
+                const existingError = this.parentElement.querySelector('.invalid-feedback');
+                if (existingError) existingError.remove();
+            }
+        });
+    }
+    
+    // Validation à la soumission
+    form.addEventListener('submit', function(e) {
+        if (!validerFormulaire()) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Si la validation passe, afficher l'état de chargement
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Création en cours...';
+    });
+    
+    // Validation en temps réel
+    document.querySelectorAll('input, textarea').forEach(champ => {
+        champ.addEventListener('blur', function() {
+            if (this.classList.contains('is-invalid')) {
+                validerFormulaire();
+            }
+        });
+    });
+    
+    // Calculer le prix initial si un événement est pré-sélectionné
+    if (eventField?.value) {
+        calculerPrixTotal();
+    }
+});
+</script>
+{% endblock %}
