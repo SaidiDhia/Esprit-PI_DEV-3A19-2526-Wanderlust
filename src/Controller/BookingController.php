@@ -21,7 +21,7 @@ class BookingController extends AbstractController
     private const DEFAULT_LATITUDE = '36.80650000';
     private const DEFAULT_LONGITUDE = '10.18150000';
 
-    #[Route('', name: '')]
+    #[Route('', name: 'app_booking')]
     public function index(Request $request, EntityManagerInterface $em): Response
     {
         $search = trim((string) $request->query->get('q', ''));
@@ -89,7 +89,7 @@ class BookingController extends AbstractController
         ]);
     }
 
-    #[Route('/place/{id}', name: '_place', methods: ['GET'])]
+    #[Route('/place/{id}', name: 'app_booking_place', methods: ['GET'])]
     public function place(int $id, EntityManagerInterface $em): Response
     {
         $place = $em->find(Place::class, $id);
@@ -100,7 +100,7 @@ class BookingController extends AbstractController
         return $this->render('booking/place.html.twig', $this->buildPlacePageData($em, $place));
     }
 
-    #[Route('/place/{id}/book', name: '_book', methods: ['POST'])]
+    #[Route('/place/{id}/book', name: 'app_booking_book', methods: ['POST'])]
     public function book(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $user = $this->requireUser();
@@ -187,7 +187,7 @@ class BookingController extends AbstractController
         return $this->redirectToRoute('app_booking_my_bookings');
     }
 
-    #[Route('/place/{id}/review', name: '_review', methods: ['POST'])]
+    #[Route('/place/{id}/review', name: 'app_booking_review', methods: ['POST'])]
     public function submitReview(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $user = $this->requireUser();
@@ -248,7 +248,7 @@ class BookingController extends AbstractController
         return $this->redirectToRoute('app_booking_place', ['id' => $place->getId()]);
     }
 
-    #[Route('/my-bookings', name: '_my_bookings')]
+    #[Route('/my-bookings', name: 'app_booking_my_bookings')]
     public function myBookings(EntityManagerInterface $em): Response
     {
         $user = $this->requireUser();
@@ -285,7 +285,7 @@ class BookingController extends AbstractController
         ]);
     }
 
-    #[Route('/my-bookings/{id}/edit', name: '_my_booking_edit', methods: ['POST'])]
+    #[Route('/my-bookings/{id}/edit', name: 'app_booking_my_booking_edit', methods: ['POST'])]
     public function editMyBooking(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $user = $this->requireUser();
@@ -368,14 +368,14 @@ class BookingController extends AbstractController
         return $this->redirectToRoute('app_booking_my_bookings');
     }
 
-    #[Route('/host', name: '_host')]
+    #[Route('/host', name: 'app_booking_host')]
     public function hostDashboard(EntityManagerInterface $em): Response
     {
         $user = $this->requireUser();
         return $this->renderHostDashboard($em, $user, $user);
     }
 
-    #[Route('/host/{id}', name: '_host_view', methods: ['GET'])]
+    #[Route('/host/{id}', name: 'app_booking_host_view', methods: ['GET'])]
     public function hostDashboardForUser(string $id, EntityManagerInterface $em): Response
     {
         $viewer = $this->requireUser();
@@ -391,7 +391,7 @@ class BookingController extends AbstractController
         return $this->renderHostDashboard($em, $hostUser, $viewer);
     }
 
-    #[Route('/host/request', name: '_host_request', methods: ['POST'])]
+    #[Route('/host/request', name: 'app_booking_host_request', methods: ['POST'])]
     public function submitPlaceRequest(Request $request, EntityManagerInterface $em): Response
     {
         $user = $this->requireUser();
@@ -503,7 +503,7 @@ class BookingController extends AbstractController
         return $this->redirectToRoute('app_booking_host');
     }
 
-    #[Route('/host/places/{id}/update', name: '_host_place_update', methods: ['POST'])]
+    #[Route('/host/places/{id}/update', name: 'app_booking_host_place_update', methods: ['POST'])]
     public function updateHostPlace(Place $place, Request $request, EntityManagerInterface $em): Response
     {
         $viewer = $this->requireUser();
@@ -608,7 +608,7 @@ class BookingController extends AbstractController
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $host->getId()]);
     }
 
-    #[Route('/host/places/{id}/delete', name: '_host_place_delete', methods: ['POST'])]
+    #[Route('/host/places/{id}/delete', name: 'app_booking_host_place_delete', methods: ['POST'])]
     public function deleteHostPlace(Place $place, Request $request, EntityManagerInterface $em): Response
     {
         $viewer = $this->requireUser();
@@ -735,7 +735,7 @@ class BookingController extends AbstractController
         ]);
     }
 
-    #[Route('/host/bookings/{id}/confirm', name: '_host_booking_confirm', methods: ['POST'])]
+    #[Route('/host/bookings/{id}/confirm', name: 'app_booking_host_booking_confirm', methods: ['POST'])]
     public function confirmHostBooking(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $viewer = $this->requireUser();
@@ -761,7 +761,7 @@ class BookingController extends AbstractController
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
     }
 
-    #[Route('/host/bookings/{id}/reject', name: '_host_booking_reject', methods: ['POST'])]
+    #[Route('/host/bookings/{id}/reject', name: 'app_booking_host_booking_reject', methods: ['POST'])]
     public function rejectHostBooking(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $viewer = $this->requireUser();
@@ -997,7 +997,7 @@ class BookingController extends AbstractController
         $place->setAvgRating($avgRating);
     }
 
-    #[Route('/admin', name: '_admin')]
+    #[Route('/admin', name: 'app_booking_admin')]
     public function adminDashboard(EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
@@ -1142,7 +1142,7 @@ class BookingController extends AbstractController
         return $galleryMap;
     }
 
-    #[Route('/admin/place/{id}/approve', name: '_admin_place_approve', methods: ['POST'])]
+    #[Route('/admin/place/{id}/approve', name: 'app_booking_admin_place_approve', methods: ['POST'])]
     public function approvePlace(int $id, EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
@@ -1164,7 +1164,7 @@ class BookingController extends AbstractController
         return $this->redirectToRoute('app_booking_admin');
     }
 
-    #[Route('/admin/place/{id}/deny', name: '_admin_place_deny', methods: ['POST'])]
+    #[Route('/admin/place/{id}/deny', name: 'app_booking_admin_place_deny', methods: ['POST'])]
     public function denyPlace(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
