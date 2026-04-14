@@ -54,9 +54,9 @@
 
         /* Styles pour la modale */
 
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
 
-        .modal { background: white; border-radius: 12px; max-width: 800px; max-height: 80vh; width: 90%; overflow: hidden; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3); }
+        .modal { background: white; border-radius: 12px; max-width: 800px; max-height: 80vh; width: 90%; overflow: hidden; }
 
         .modal-header { padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
 
@@ -124,7 +124,7 @@
 
         /* ── Champs généraux ── */
 
-        .form-control { width: 100%; padding: .6rem .85rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: .95rem; transition: border-color .2s; }
+        .form-control { width: 100%; padding: .6rem .85rem; border: 1px solid #d1d5db; border-radius: 8px; font-size: .95rem; transition: border-color .2s; color: #374151 !important; background-color: #fff !important; }
 
         .form-control:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,.15); }
 
@@ -178,10 +178,6 @@
 
     {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'enctype': 'multipart/form-data', 'id': 'event-form'}}) }}
 
-        
-        {# Hidden form field - managed by JavaScript #}
-        {{ form_widget(form.activities, {'attr': {'style': 'display:none', 'id': 'form-activities-field'}}) }}
-        {{ form_errors(form.activities) }}
 
 
         {# Section activités avec interface moderne de sélection par modale #}
@@ -192,7 +188,7 @@
 
             <div class="form-group">
 
-                <button type="button" class="btn-add-activity" id="openActivitiesModal" style="position: relative; z-index: 10;">
+                <button type="button" class="btn-add-activity" id="openActivitiesModal">
 
                     ➕ Ajouter des activités
 
@@ -622,11 +618,11 @@
 
                     id: {{ activity.id }},
 
-                    titre: ({{ activity.titre|json_encode|raw }} || 'Sans titre'),
+                    titre: {{ activity.titre|json_encode|raw }},
 
-                    categorie: ({{ activity.categorie ? activity.categorie.value|json_encode|raw : 'null' }} || ''),
+                    categorie: {{ activity.categorie ? activity.categorie.value|json_encode|raw : '""' }},
 
-                    description: ({{ activity.description ? activity.description|slice(0, 100)|json_encode|raw : 'null' }} || '')
+                    description: {{ activity.description ? activity.description|slice(0, 100)|json_encode|raw : '""' }}
 
                 }{% if not loop.last %},{% endif %}
 
@@ -634,13 +630,9 @@
 
         ];
 
-        console.log('✅ Activités chargées:', allActivities.length);
-
     } catch(e) {
 
-        console.error('❌ Erreur chargement activités:', e);
-
-        console.warn('Tentative alternative de chargement...');
+        console.error('Erreur chargement activités:', e);
 
         allActivities = [];
 
@@ -653,36 +645,6 @@
     const selectedDefaultIds = {% if selectedActivitiesIds is defined and selectedActivitiesIds is iterable %}{{ selectedActivitiesIds|json_encode|raw }}{% else %}[]{% endif %};
 
     selectedActivities = allActivities.filter(activity => selectedDefaultIds.includes(String(activity.id)));
-
-    
-
-    // Aussi charger depuis le champ de formulaire natif si présent
-
-    const formActivitiesField = document.getElementById('form-activities-field');
-
-    if (formActivitiesField && formActivitiesField.tagName === 'SELECT') {
-
-        Array.from(formActivitiesField.selectedOptions).forEach(option => {
-
-            const activityId = parseInt(option.value);
-
-            if (!selectedActivities.some(a => a.id === activityId)) {
-
-                const activity = allActivities.find(a => a.id === activityId);
-
-                if (activity) {
-
-                    selectedActivities.push(activity);
-
-                }
-
-            }
-
-        });
-
-        console.log('✅ Activités pré-sélectionnées chargées du formulaire:', selectedActivities.length);
-
-    }
 
 
 
@@ -910,27 +872,13 @@ function escapeHtml(text) {
 
     function openModal() {
 
-        const modal = document.getElementById('activitiesModal');
-
-        if (!modal) {
-
-            console.error('❌ Modal not found');
-
-            return;
-
-        }
-
         renderModalActivities('');
 
-        modal.style.display = 'flex';
+        document.getElementById('activitiesModal').style.display = 'flex';
 
-        modal.setAttribute('aria-hidden', 'false');
+        document.getElementById('activitiesModal').setAttribute('aria-hidden', 'false');
 
-        const searchInput = document.getElementById('searchActivities');
-
-        if (searchInput) searchInput.focus();
-
-        console.log('✅ Modal ouvert');
+        document.getElementById('searchActivities').focus();
 
     }
 
@@ -938,11 +886,7 @@ function escapeHtml(text) {
 
     function closeModal() {
 
-        const modal = document.getElementById('activitiesModal');
-
-        if (!modal) return;
-
-        
+        // Retirer le focus avant de cacher la modal
 
         const activeElement = document.activeElement;
 
@@ -954,11 +898,9 @@ function escapeHtml(text) {
 
         
 
-        modal.style.display = 'none';
+        document.getElementById('activitiesModal').style.display = 'none';
 
-        modal.setAttribute('aria-hidden', 'true');
-
-        console.log('✅ Modal fermé');
+        document.getElementById('activitiesModal').setAttribute('aria-hidden', 'true');
 
     }
 
@@ -966,19 +908,11 @@ function escapeHtml(text) {
 
     document.addEventListener('DOMContentLoaded', function () {
 
-        console.log('🔄 Initialisation du formulaire...');
-
-        
-
-        // Rendre les activités sélectionnées au démarrage
-
         renderSelectedActivities();
 
         initMap();
 
-        
 
-        // Récupérer tous les éléments du modal
 
         const openActivitiesModal = document.getElementById('openActivitiesModal');
 
@@ -994,109 +928,49 @@ function escapeHtml(text) {
 
 
 
-        // Vérifications de sécurité
-
-        if (!openActivitiesModal) console.warn('⚠️ openActivitiesModal pas trouvé');
-
-        if (!activitiesModal) console.warn('⚠️ activitiesModal pas trouvée');
-
-        
-
-        // Attacher les événements
-
-        if (openActivitiesModal) {
-
-            openActivitiesModal.onclick = openModal;
-
-            console.log('✅ Bouton ouverture modal attaché');
-
-        }
+        if (openActivitiesModal) openActivitiesModal.onclick = openModal;
 
         if (closeModalBtn) closeModalBtn.onclick = closeModal;
 
         if (cancelModalBtn) cancelModalBtn.onclick = closeModal;
 
-        if (confirmModalBtn) {
+        if (confirmModalBtn) confirmModalBtn.onclick = () => {
 
-            confirmModalBtn.onclick = () => {
+            renderSelectedActivities();
+
+            closeModal();
+
+        };
+
+        if (searchActivities) searchActivities.oninput = (e) => renderModalActivities(e.target.value);
+
+        if (activitiesModal) activitiesModal.onclick = (e) => {
+
+            if (e.target === activitiesModal) {
 
                 renderSelectedActivities();
 
                 closeModal();
 
-            };
+            }
 
-        }
+        };
 
-        if (searchActivities) {
 
-            searchActivities.oninput = (e) => renderModalActivities(e.target.value);
-
-        }
-
-        if (activitiesModal) {
-
-            activitiesModal.onclick = (e) => {
-
-                if (e.target === activitiesModal) {
-
-                    renderSelectedActivities();
-
-                    closeModal();
-
-                }
-
-            };
-
-        }
-
-        
-
-        // Gestion de la soumission du formulaire
 
         const eventForm = document.getElementById('event-form');
 
         if (eventForm) {
 
-            eventForm.addEventListener('submit', function (e) {
-
-                // Mettre à jour les inputs cachés avant soumission
+            eventForm.addEventListener('submit', function () {
 
                 updateActivitiesInput();
 
-                
-
-                // Optionnel: mettre à jour le champ de formulaire natif aussi
-
-                const formActivitiesField = document.getElementById('form-activities-field');
-
-                if (formActivitiesField && formActivitiesField.tagName === 'SELECT') {
-
-                    // Désélectionner tous les options puis en sélectionner les actifs
-
-                    Array.from(formActivitiesField.options).forEach(opt => opt.selected = false);
-
-                    selectedActivities.forEach(activity => {
-
-                        const option = formActivitiesField.querySelector(`option[value="${activity.id}"]`);
-
-                        if (option) option.selected = true;
-
-                    });
-
-                }
-
-                
-
-                console.log('✅ Formulaire soumis avec', selectedActivities.length, 'activité(s)');
+                alert('Événement ajouté avec succès !');
 
             });
 
         }
-
-
-
-        console.log('✅ Initialisation complétée. Activités disponibles:', allActivities.length);
 
 
 

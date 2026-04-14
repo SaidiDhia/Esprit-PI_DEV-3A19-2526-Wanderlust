@@ -2,131 +2,376 @@
 
 {% block title %}Détails Réservation{% endblock %}
 
-{% block body %}
-<div class="container mt-4">
-    <h1 class="mb-4">Détails de la réservation</h1>
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
+    :root {
+        --primary-color: #667eea;
+        --primary-dark: #5a67d8;
+        --secondary-color: #764ba2;
+        --success-color: #28a745;
+        --danger-color: #dc3545;
+        --warning-color: #ffc107;
+        --border-radius: 16px;
+        --shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
+        --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
+        --shadow-lg: 0 16px 40px rgba(0,0,0,0.15);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body { 
+        background: #fffcf5; 
+        font-family: 'DM Sans', sans-serif;
+        color: #0f0e17;
+    }
+
+    /* Section Header */
+    .show-hero {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        padding: 4rem 0 2rem;
+        text-align: center;
+        color: white;
+        margin-bottom: 3rem;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .show-hero::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+        background-size: cover;
+        opacity: 0.3;
+    }
+
+    .show-hero h1 { 
+        font-family: 'Syne', sans-serif; 
+        font-size: 2.5rem; 
+        font-weight: 800; 
+        margin-bottom: .5rem; 
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    
+    .show-hero p  { 
+        opacity: .8; 
+        font-size: 1.1rem; 
+    }
+
+    .container { 
+        max-width: 1000px; 
+        margin: 0 auto; 
+        padding: 0 2rem; 
+    }
+
+    /* Detail Card */
+    .detail-card {
+        background: white;
+        border: 1px solid #e4e1d8;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-md);
+        margin-bottom: 2rem;
+        overflow: hidden;
+    }
+
+    .card-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 1.5rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .card-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .status-badge {
+        padding: 0.5rem 1.2rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .status-en_attente { 
+        background: linear-gradient(135deg, var(--warning-color) 0%, #ff9800 100%);
+        color: #856404; 
+        box-shadow: 0 4px 20px rgba(255, 193, 7, 0.25);
+    }
+
+    .status-confirmee { 
+        background: linear-gradient(135deg, var(--success-color) 0%, #157347 100%);
+        color: #ffffff; 
+        box-shadow: 0 4px 20px rgba(40, 167, 69, 0.25);
+    }
+
+    .status-annulee { 
+        background: linear-gradient(135deg, var(--danger-color) 0%, #b02a37 100%);
+        color: #ffffff; 
+        box-shadow: 0 4px 20px rgba(220, 38, 38, 0.25);
+    }
+
+    .card-body {
+        padding: 2rem;
+    }
+
+    .info-section {
+        margin-bottom: 2rem;
+    }
+    .section-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--line);
+    }
+
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .info-item {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 1.5rem;
+    }
+    .info-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--mid);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+    .info-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--ink);
+        margin: 0;
+    }
+
+    .participants {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    .participant-badge {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    .adultes { color: var(--accent); }
+    .enfants { color: var(--mid); }
+
+    .price-tag {
+        background: linear-gradient(135deg, var(--accent), #f7a278);
+        color: black;
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        font-family: 'Syne', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-top: 1rem;
+        display: inline-block;
+    }
+
+    .actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .btn-primary {
+        background: var(--accent);
+        color: white;
+    }
+    .btn-primary:hover {
+        background: #d14820;
+        transform: translateY(-1px);
+    }
+    .btn-secondary {
+        background: var(--paper);
+        color: var(--ink);
+        border: 1px solid var(--line);
+    }
+    .btn-secondary:hover {
+        background: var(--mid);
+        color: white;
+    }
+
+    .special-requests {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+    }
+    .special-requests h5 {
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--accent);
+        margin-bottom: 1rem;
+    }
+    .special-requests p {
+        color: var(--ink);
+        line-height: 1.6;
+        margin: 0;
+    }
+    .no-requests {
+        color: var(--mid);
+        font-style: italic;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="show-hero">
+    <div class="container">
+        <h1><i class="fas fa-ticket-alt me-3"></i>Détails Réservation</h1>
+        <p>Consultez toutes les informations de votre réservation</p>
+    </div>
+</div>
+
+<div class="container">
     <div class="row">
         <div class="col-md-8">
-            <div class="card">
+            <div class="detail-card">
                 <div class="card-header">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Réservation #{{ reservation.id }}</h5>
-                        {% if reservation.statut == 'confirmee' %}
-                            <span class="badge bg-success">Confirmée</span>
-                        {% elseif reservation.statut == 'en_attente' %}
-                            <span class="badge bg-warning">En attente</span>
-                        {% elseif reservation.statut == 'annulee' %}
-                            <span class="badge bg-danger">Annulée</span>
-                        {% else %}
-                            <span class="badge bg-info">Terminée</span>
-                        {% endif %}
-                    </div>
+                    <h3 class="card-title">
+                        <i class="fas fa-calendar-check me-2"></i>
+                        Réservation #{{ reservation.id }}
+                    </h3>
+                    <span class="status-badge status-{{ reservation.statut }}">
+                        {{ reservation.statut|replace({'_': ' '})|title }}
+                    </span>
                 </div>
+
                 <div class="card-body">
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <p><strong>Événement ID:</strong> {{ reservation.idEvent }}</p>
-                            <p><strong>Client ID:</strong> {{ reservation.idClient }}</p>
-                            <p><strong>Date de réservation:</strong> {{ reservation.dateCreation ? reservation.dateCreation|date('d/m/Y H:i') : '' }}</p>
-                            <p><strong>Date de l'événement:</strong> {{ reservation.dateEvenement ? reservation.dateEvenement|date('d/m/Y H:i') : '' }}</p>
+                    <!-- Événement -->
+                    <div class="info-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-calendar-alt me-2"></i>Événement
+                        </h4>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Lieu</div>
+                                <div class="info-value">{{ reservation.event ? reservation.event.lieu : 'N/A' }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Date événement</div>
+                                <div class="info-value">{{ reservation.event ? reservation.event.dateDebut|date('d/m/Y H:i') : 'N/A' }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Places disponibles</div>
+                                <div class="info-value">{{ reservation.event ? reservation.event.placesDisponibles : 'N/A' }}</div>
+                            </div>
                         </div>
-                        <div class="col-md-6">
-                            <p><strong>Nombre de places:</strong> {{ reservation.nombrePersonnes }}</p>
-                            <p><strong>Prix total:</strong> <span class="badge bg-primary">{{ reservation.prixTotal }} €</span></p>
+                    </div>
+
+                    <!-- Client -->
+                    <div class="info-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-user me-2"></i>Informations client
+                        </h4>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Nom complet</div>
+                                <div class="info-value">{{ reservation.nomComplet }}</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Email</div>
+                                <div class="info-value">{{ reservation.email }}</div>
+                            </div>
+                            {% if reservation.telephone %}
+                            <div class="info-item">
+                                <div class="info-label">Téléphone</div>
+                                <div class="info-value">{{ reservation.telephone }}</div>
+                            </div>
+                            {% endif %}
                         </div>
                     </div>
 
-                    {% if reservation.emailClient or reservation.telephoneClient %}
-                    <div class="mb-3">
-                        <h6>Coordonnées client</h6>
-                        {% if reservation.emailClient %}
-                            <p><i class="fas fa-envelope"></i> {{ reservation.emailClient }}</p>
-                        {% endif %}
-                        {% if reservation.telephoneClient %}
-                            <p><i class="fas fa-phone"></i> {{ reservation.telephoneClient }}</p>
-                        {% endif %}
+                    <!-- Participants -->
+                    <div class="info-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-users me-2"></i>Participants
+                        </h4>
+                        <div class="info-item">
+                            <div class="info-label">Nombre total de personnes</div>
+                            <div class="info-value">{{ reservation.nombrePersonnes }}</div>
+                          
+                            <div class="participants">
+                                {% if reservation.nombreAdultes > 0 %}
+                                <span class="participant-badge adultes">
+                                    {{ reservation.nombreAdultes }} adulte{{ reservation.nombreAdultes > 1 ? 's' : '' }}
+                                </span>
+                                {% endif %}
+                                {% if reservation.nombreEnfants > 0 %}
+                                <span class="participant-badge enfants">
+                                    {{ reservation.nombreEnfants }} enfant{{ reservation.nombreEnfants > 1 ? 's' : '' }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Prix -->
+                    <div class="info-section">
+                        <h4 class="section-title">
+                            <i class="fas fa-money-bill-wave me-2"></i>Prix
+                        </h4>
+                        <div class="price-tag">
+                            {{ reservation.prixTotal }} TND
+                        </div>
+                    </div>
+
+                    <!-- Demandes spéciales -->
+                    {% if reservation.demandesSpeciales %}
+                    <div class="special-requests">
+                        <h5><i class="fas fa-comment-dots me-2"></i>Demandes spéciales</h5>
+                        <p>{{ reservation.demandesSpeciales }}</p>
                     </div>
                     {% endif %}
 
-                    {% if reservation.methodePaiement %}
-                    <div class="mb-3">
-                        <h6>Informations de paiement</h6>
-                        <p><strong>Méthode de paiement:</strong> {{ reservation.methodePaiement|replace({'_': ' '})|title }}</p>
-                        <p><strong>Date de paiement:</strong> {{ reservation.datePaiement ? reservation.datePaiement|date('d/m/Y H:i') : '' }}</p>
-                    </div>
-                    {% endif %}
-
-                    {% if reservation.notes %}
-                    <div class="mb-3">
-                        <h6>Notes</h6>
-                        <p>{{ reservation.notes }}</p>
-                    </div>
-                    {% endif %}
-
-                    <div class="mb-3">
-                        <small class="text-muted">
-                            Date de création: {{ reservation.dateCreation ? reservation.dateCreation|date('d/m/Y H:i') : '' }}
-                        </small>
-                    </div>
-
-                    <div class="btn-group" role="group">
-                        <a href="{{ path('app_reservations_edit', {'id': reservation.id}) }}" class="btn btn-warning">
-                            <i class="fas fa-edit"></i> Modifier
-                        </a>
-                        <a href="{{ path('app_reservations_index') }}" class="btn btn-secondary">
-                            <i class="fas fa-arrow-left"></i> Retour à la liste
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card">
-                <div class="card-header">
-                    <h5>Actions rapides</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{{ path('app_reservations_edit', {'id': reservation.id}) }}" class="btn btn-warning">
-                            <i class="fas fa-edit"></i> Modifier la réservation
-                        </a>
-                        
-                        <form method="post" action="{{ path('app_reservations_delete', {'id': reservation.id}) }}" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer cette réservation ?');">
-                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ reservation.id) }}">
-                            <button type="submit" class="btn btn-danger w-100">
-                                <i class="fas fa-trash"></i> Supprimer la réservation
-                            </button>
-                        </form>
-                        
-                        <a href="{{ path('app_reservations_index') }}" class="btn btn-secondary">
-                            <i class="fas fa-list"></i> Voir toutes les réservations
-                        </a>
-                        
-                        <a href="{{ path('app_reservations_new') }}" class="btn btn-primary">
-                            <i class="fas fa-plus"></i> Ajouter une réservation
-                        </a>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h5>Statut du paiement</h5>
-                </div>
-                <div class="card-body">
-                                        
-                    <div class="mb-3">
-                        <h6>Statut final</h6>
-                        {% if reservation.isPayeComplet %}
-                            <span class="badge bg-success">Payé complètement</span>
-                        {% else %}
-                            <span class="badge bg-warning">Paiement en cours</span>
-                            <p class="mt-2 mb-0">
-                                <strong>Reste à payer:</strong> {{ reservation.getResteAPayer() }} €
-                            </p>
-                        {% endif %}
+                    <!-- Actions -->
+                    <div class="actions">
+                        <div class="btn-group" role="group">
+                           
+                            <a href="{{ path('app_reservations_index') }}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Retour à la liste
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

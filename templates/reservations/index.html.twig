@@ -1,451 +1,637 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Réservations - Wanderlust{% endblock %}
+{% block title %}Réservations — WanderLust{% endblock %}
 
 {% block stylesheets %}
 {{ parent() }}
 <style>
-    .reservations-hero {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 0 0 60px 60px;
-        padding: 3rem 0;
-        margin-bottom: 3rem;
+
+    /* ── Delete Modal ── */
+    .delete-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 14, 23, 0.5);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s ease;
+    }
+
+    .delete-modal-overlay.active {
+        opacity: 1;
+        pointer-events: all;
+    }
+
+    .delete-modal {
+        background: white;
+        border-radius: 20px;
+        padding: 2.5rem 2rem 2rem;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 24px 60px rgba(0,0,0,0.18);
+        transform: scale(0.92) translateY(16px);
+        transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .delete-modal-overlay.active .delete-modal {
+        transform: scale(1) translateY(0);
+    }
+
+    .delete-modal-icon {
+        width: 64px;
+        height: 64px;
+        background: #fee2e2;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.25rem;
+        font-size: 1.6rem;
+    }
+
+    .delete-modal h3 {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #0f0e17;
+        margin-bottom: 0.75rem;
+    }
+
+    .delete-modal p {
+        color: #6b6b80;
+        font-size: 0.9rem;
+        line-height: 1.6;
+        margin-bottom: 1.75rem;
+    }
+
+    .delete-modal p strong {
+        color: #0f0e17;
+        font-weight: 700;
+    }
+
+    .delete-modal-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: center;
+    }
+
+    .btn-modal-cancel {
+        padding: 0.7rem 1.5rem;
+        border-radius: 10px;
+        border: 1.5px solid #e4e1d8;
+        background: white;
+        color: #6b6b80;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: 'DM Sans', sans-serif;
+    }
+
+    .btn-modal-cancel:hover {
+        background: #f5f5f5;
+        border-color: #c4c0d8;
+        color: #0f0e17;
+    }
+
+    .btn-modal-delete {
+        padding: 0.7rem 1.5rem;
+        border-radius: 10px;
+        border: none;
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+        color: white;
+        font-size: 0.9rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-family: 'DM Sans', sans-serif;
+        box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+    }
+
+    .btn-modal-delete:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(220, 38, 38, 0.45);
+    }
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+    :root {
+        --primary-color: #667eea;
+        --primary-dark: #5a67d8;
+        --secondary-color: #764ba2;
+        --border-radius: 16px;
+        --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
+        --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
+        --shadow-lg: 0 16px 40px rgba(0,0,0,0.15);
+        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+        background: #fffcf5;
+        font-family: 'DM Sans', sans-serif;
+        color: #0f0e17;
+    }
+
+    /* ── Hero ── */
+    .res-hero {
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        padding: 4rem 0 2.5rem;
+        text-align: center;
+        color: white;
+        margin-bottom: 2.5rem;
         position: relative;
         overflow: hidden;
     }
 
-    .reservations-hero::before {
+    .res-hero::before {
         content: '';
         position: absolute;
-        top: -50%;
-        right: -20%;
-        width: 300px;
-        height: 300px;
-        background: rgba(255,255,255,0.1);
-        border-radius: 50%;
-        animation: float 10s ease-in-out infinite;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.08)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
+        background-size: cover;
     }
 
-    @keyframes float {
-        0%, 100% { transform: translate(0, 0) rotate(0deg); }
-        50% { transform: translate(30px, -20px) rotate(10deg); }
-    }
-
-    .hero-title {
-        font-size: 3rem;
+    .res-hero h1 {
+        font-family: 'Syne', sans-serif;
+        font-size: 2.2rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        margin-bottom: 0.4rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        position: relative;
     }
 
-    .reservation-card {
-        border: none;
-        border-radius: 20px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        transition: all 0.3s ease;
-        overflow: hidden;
-        background: white;
+    .res-hero p {
+        opacity: 0.75;
+        font-size: 0.95rem;
+        position: relative;
     }
 
-    .reservation-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    /* ── Wrapper ── */
+    .res-wrapper {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 0 1.5rem 4rem;
     }
 
-    .reservation-header {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 1.5rem;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
+    /* ── Flash ── */
+    .flash-success {
+        background: #d1fae5; color: #065f46;
+        padding: .9rem 1.1rem; border-radius: 10px;
+        margin-bottom: 1.25rem; font-size: .88rem;
+        display: flex; align-items: center; gap: .5rem;
+    }
+    .flash-error {
+        background: #fee2e2; color: #991b1b;
+        padding: .9rem 1.1rem; border-radius: 10px;
+        margin-bottom: 1.25rem; font-size: .88rem;
+        display: flex; align-items: center; gap: .5rem;
     }
 
-    .reservation-body {
-        padding: 1.5rem;
-    }
-
-    .badge-modern {
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-weight: 600;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .badge-success-modern {
-        background: linear-gradient(135deg, #28a745, #20c997);
-        color: white;
-    }
-
-    .badge-warning-modern {
-        background: linear-gradient(135deg, #ffc107, #fd7e14);
-        color: white;
-    }
-
-    .badge-danger-modern {
-        background: linear-gradient(135deg, #dc3545, #e83e8c);
-        color: white;
-    }
-
-    .badge-info-modern {
-        background: linear-gradient(135deg, #17a2b8, #6f42c1);
-        color: white;
-    }
-
-    .btn-modern {
-        border: none;
-        padding: 0.5rem 1rem;
-        border-radius: 15px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.9rem;
-    }
-
-    .btn-primary-modern {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
-    }
-
-    .btn-primary-modern:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-        color: white;
-    }
-
-    .btn-info-modern {
-        background: linear-gradient(135deg, #17a2b8, #6f42c1);
-        color: white;
-    }
-
-    .btn-warning-modern {
-        background: linear-gradient(135deg, #ffc107, #fd7e14);
-        color: white;
-    }
-
-    .btn-danger-modern {
-        background: linear-gradient(135deg, #dc3545, #e83e8c);
-        color: white;
-    }
-
-    .btn-success-modern {
-        background: linear-gradient(135deg, #28a745, #20c997);
-        color: white;
-    }
-
-    .progress-modern {
-        height: 8px;
-        border-radius: 10px;
-        background: #e9ecef;
-        overflow: hidden;
-    }
-
-    .progress-bar-modern {
-        border-radius: 10px;
-        transition: width 0.6s ease;
-    }
-
-    .progress-bar-success {
-        background: linear-gradient(90deg, #28a745, #20c997);
-    }
-
-    .progress-bar-warning {
-        background: linear-gradient(90deg, #ffc107, #fd7e14);
-    }
-
-    .reservation-meta {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        color: #6c757d;
-        font-size: 0.9rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .reservation-meta i {
-        color: #667eea;
-        width: 16px;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: #6c757d;
-    }
-
-    .empty-state i {
-        font-size: 4rem;
-        color: #dee2e6;
-        margin-bottom: 1rem;
-    }
-
-    .stats-card {
-        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-        border-radius: 15px;
-        padding: 1.5rem;
+    /* ── Stats ── */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
         margin-bottom: 2rem;
-        border: none;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
     }
 
-    .stat-item {
+    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } }
+
+    .stat-card {
+        background: white;
+        border: 1px solid #e4e1d8;
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
         text-align: center;
+        box-shadow: var(--shadow-sm);
+        transition: var(--transition);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .stat-icon {
+        width: 48px; height: 48px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        margin: 0 auto 0.75rem;
+        font-size: 1.2rem;
+        color: white;
     }
 
     .stat-number {
+        font-family: 'Syne', sans-serif;
         font-size: 2rem;
         font-weight: 800;
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: var(--primary-color);
+        line-height: 1;
+        margin-bottom: 0.25rem;
     }
 
     .stat-label {
-        color: #6c757d;
-        font-size: 0.9rem;
+        font-size: 0.8rem;
+        color: #6b6b80;
         font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* ── Cards grid ── */
+    .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+
+    /* ── Reservation Card ── */
+    .reservation-card {
+        background: white;
+        border: 1px solid #e4e1d8;
+        border-radius: var(--border-radius);
+        overflow: hidden;
+        box-shadow: var(--shadow-sm);
+        transition: var(--transition);
+        display: flex;
+        flex-direction: column;
+    }
+
+    .reservation-card:hover {
+        transform: translateY(-6px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .card-top-bar {
+        height: 5px;
+        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    }
+
+    .card-body {
+        padding: 1.5rem;
+        flex: 1;
+    }
+
+    .card-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.25rem;
+    }
+
+    .card-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0f0e17;
+        margin: 0;
+    }
+
+    /* ── Status Badges ── */
+    .status-badge {
+        padding: 0.35rem 0.85rem;
+        border-radius: 20px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        white-space: nowrap;
+    }
+
+    .status-en_attente {
+        background: #fef3c7; color: #92400e;
+        border: 1px solid #fde68a;
+    }
+    .status-confirmee {
+        background: #d1fae5; color: #065f46;
+        border: 1px solid #6ee7b7;
+    }
+    .status-annulee {
+        background: #fee2e2; color: #991b1b;
+        border: 1px solid #fca5a5;
+    }
+
+    /* ── Meta items ── */
+    .meta-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .meta-row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        font-size: 0.875rem;
+    }
+
+    .meta-row i {
+        width: 16px;
+        color: var(--primary-color);
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+
+    .meta-row .meta-label {
+        color: #6b6b80;
+        font-weight: 500;
+        min-width: 90px;
+    }
+
+    .meta-row .meta-value {
+        color: #0f0e17;
+        font-weight: 600;
+    }
+
+    .price-value {
+        color: var(--primary-color) !important;
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem !important;
+    }
+
+    /* ── Card Footer / Actions ── */
+    .card-footer-actions {
+        display: flex;
+        gap: 0.75rem;
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #f0ede6;
+        background: #fafaf8;
+        align-items: center;
+    }
+
+    .btn-view {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 0.55rem 1.1rem;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: var(--transition);
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-view:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.35);
+        color: white;
+    }
+
+    .btn-delete {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        background: white;
+        color: #dc3545;
+        padding: 0.55rem 1.1rem;
+        border-radius: 10px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: var(--transition);
+        border: 1.5px solid #fca5a5;
+        cursor: pointer;
+        margin-left: auto;
+    }
+
+    .btn-delete:hover {
+        background: #fee2e2;
+        border-color: #dc3545;
+        transform: translateY(-2px);
+    }
+
+    /* ── Empty state ── */
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        background: white;
+        border: 1px solid #e4e1d8;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .empty-state i {
+        font-size: 3.5rem;
+        color: #c4c0d8;
+        margin-bottom: 1.25rem;
+        display: block;
+    }
+
+    .empty-state h3 {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        color: #0f0e17;
+    }
+
+    .empty-state p {
+        color: #6b6b80;
+        font-size: 0.9rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .btn-primary-action {
+        display: inline-flex; align-items: center; gap: 0.5rem;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 0.75rem 1.75rem;
+        border-radius: 12px;
+        font-size: 0.95rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: var(--transition);
+        box-shadow: 0 4px 14px rgba(102, 126, 234, 0.3);
+    }
+
+    .btn-primary-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.45);
+        color: white;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Hero Section -->
-<section class="reservations-hero">
-    <div class="container text-center">
-        <h1 class="hero-title mb-3">
-            🎫 Gestion des Réservations
-        </h1>
-        <p class="text-white-50">Consultez et gérez toutes les réservations</p>
-    </div>
-</section>
 
-<!-- Main Content -->
-<section class="container mb-5">
-    <!-- Flash Messages -->
-    {% for message in app.flashes('success') %}
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            <i class="fas fa-check-circle me-2"></i>{{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+<div class="res-hero">
+    <div class="container">
+        <h1><i class="fas fa-ticket-alt me-2"></i>Gestion des Réservations</h1>
+        <p>Consultez et gérez toutes les réservations</p>
+    </div>
+</div>
+
+<div class="res-wrapper">
+
+    {# Flash messages #}
+    {% for msg in app.flashes('success') %}
+        <div class="flash-success">
+            <i class="fas fa-check-circle"></i> {{ msg }}
         </div>
     {% endfor %}
 
-    {% for message in app.flashes('error') %}
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i>{{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    {% for msg in app.flashes('error') %}
+        <div class="flash-error">
+            <i class="fas fa-exclamation-circle"></i> {{ msg }}
         </div>
     {% endfor %}
 
-    <!-- Statistics -->
-    <div class="stats-card">
-        <div class="row">
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-number">{{ reservations|length }}</div>
-                    <div class="stat-label">Total Réservations</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-number">
-                        {% set confirmed = 0 %}
-                        {% for reservation in reservations %}
-                            {% if reservation.statut == 'confirmee' %}
-                                {% set confirmed = confirmed + 1 %}
-                            {% endif %}
-                        {% endfor %}
-                        {{ confirmed }}
-                    </div>
-                    <div class="stat-label">Confirmées</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-number">
-                        {% set pending = 0 %}
-                        {% for reservation in reservations %}
-                            {% if reservation.statut == 'en_attente' %}
-                                {% set pending = pending + 1 %}
-                            {% endif %}
-                        {% endfor %}
-                        {{ pending }}
-                    </div>
-                    <div class="stat-label">En attente</div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-item">
-                    <div class="stat-number">
-                        {% set cancelled = 0 %}
-                        {% for reservation in reservations %}
-                            {% if reservation.statut == 'annulee' %}
-                                {% set cancelled = cancelled + 1 %}
-                            {% endif %}
-                        {% endfor %}
-                        {{ cancelled }}
-                    </div>
-                    <div class="stat-label">Annulées</div>
-                </div>
-            </div>
+    {# Stats #}
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon"><i class="fas fa-list"></i></div>
+            <div class="stat-number">{{ reservations|length }}</div>
+            <div class="stat-label">Total</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg,#10b981,#059669);"><i class="fas fa-check"></i></div>
+            <div class="stat-number" id="confirmed-count" style="color:#10b981;">0</div>
+            <div class="stat-label">Confirmées</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg,#f59e0b,#d97706);"><i class="fas fa-clock"></i></div>
+            <div class="stat-number" id="pending-count" style="color:#f59e0b;">0</div>
+            <div class="stat-label">En attente</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: linear-gradient(135deg,#ef4444,#dc2626);"><i class="fas fa-times"></i></div>
+            <div class="stat-number" id="cancelled-count" style="color:#ef4444;">0</div>
+            <div class="stat-label">Annulées</div>
         </div>
     </div>
 
-    <!-- Actions -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="section-title">
-            <i class="fas fa-list me-2"></i>Liste des Réservations
-        </h2>
-        <div class="btn-group">
-            <a href="{{ path('app_events_index') }}" class="btn-modern btn-primary-modern">
-                <i class="fas fa-plus me-2"></i>Nouvelle Réservation
+    {# Liste des réservations #}
+    {% if reservations is empty %}
+        <div class="empty-state">
+            <i class="fas fa-calendar-times"></i>
+            <h3>Aucune réservation trouvée</h3>
+            <p>Les réservations apparaîtront ici une fois que des clients auront réservé un événement.</p>
+            <a href="{{ path('app_events_index') }}" class="btn-primary-action">
+                <i class="fas fa-calendar"></i> Voir les événements
             </a>
         </div>
-    </div>
-
-    <!-- Reservations Grid -->
-    <div class="row">
-        {% if reservations is empty %}
-            <div class="col-12">
-                <div class="empty-state">
-                    <i class="fas fa-calendar-times"></i>
-                    <h3>Aucune réservation trouvée</h3>
-                    <p class="text-muted">Commencez par créer votre première réservation</p>
-                    <a href="{{ path('app_events_index') }}" class="btn-modern btn-primary-modern mt-3">
-                        <i class="fas fa-plus me-2"></i>Voir les Événements
-                    </a>
-                </div>
-            </div>
-        {% else %}
+    {% else %}
+        <div class="cards-grid">
             {% for reservation in reservations %}
-                <div class="col-lg-4 col-md-6 mb-4">
-                    <div class="reservation-card h-100">
-                        <!-- Header -->
-                        <div class="reservation-header">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <div>
-                                    <h6 class="mb-1 fw-bold">
-                                        <i class="fas fa-ticket-alt me-2"></i>Réservation #{{ reservation.id }}
-                                    </h6>
-                                    <small class="text-muted">
-                                        <i class="fas fa-calendar me-1"></i>
-                                        {{ reservation.dateCreation ? reservation.dateCreation|date('d/m/Y H:i') : '' }}
-                                    </small>
-                                </div>
-                                <div>
-                                    {% if reservation.statut == 'confirmee' %}
-                                        <span class="badge-modern badge-success-modern">
-                                            <i class="fas fa-check-circle me-1"></i>Confirmée
-                                        </span>
-                                    {% elseif reservation.statut == 'en_attente' %}
-                                        <span class="badge-modern badge-warning-modern">
-                                            <i class="fas fa-clock me-1"></i>En attente
-                                        </span>
-                                    {% elseif reservation.statut == 'annulee' %}
-                                        <span class="badge-modern badge-danger-modern">
-                                            <i class="fas fa-times-circle me-1"></i>Annulée
-                                        </span>
-                                    {% else %}
-                                        <span class="badge-modern badge-info-modern">
-                                            <i class="fas fa-check-double me-1"></i>Terminée
-                                        </span>
-                                    {% endif %}
-                                </div>
-                            </div>
+                <div class="reservation-card">
+                    <div class="card-top-bar"></div>
+                    <div class="card-body">
+                        <div class="card-header-row">
+                            <h5 class="card-title">Réservation #{{ reservation.id }}</h5>
+                            <span class="status-badge status-{{ reservation.statut }}">
+                                {{ reservation.statut|replace({'_': ' '})|title }}
+                            </span>
                         </div>
 
-                        <!-- Body -->
-                        <div class="reservation-body">
-                            <!-- Event Info -->
-                            {% if reservation.event %}
-                                <div class="reservation-meta">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    <span>{{ reservation.event.lieu }}</span>
-                                </div>
-                                <div class="reservation-meta">
-                                    <i class="fas fa-calendar-alt"></i>
-                                    <span>{{ reservation.event.dateDebut ? reservation.event.dateDebut|date('d/m/Y H:i') : '' }}</span>
-                                </div>
-                            {% endif %}
-
-                            <!-- Client Info -->
-                            <div class="reservation-meta">
+                        <div class="meta-list">
+                            <div class="meta-row">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span class="meta-label">Événement :</span>
+                                <span class="meta-value">{{ reservation.event ? reservation.event.lieu : 'N/A' }}</span>
+                            </div>
+                            <div class="meta-row">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="meta-label">Date :</span>
+                                <span class="meta-value">{{ reservation.event ? reservation.event.dateDebut|date('d/m/Y H:i') : 'N/A' }}</span>
+                            </div>
+                            <div class="meta-row">
                                 <i class="fas fa-user"></i>
-                                <span>{{ reservation.nomComplet }}</span>
+                                <span class="meta-label">Client :</span>
+                                <span class="meta-value">{{ reservation.nomComplet }}</span>
                             </div>
-                            {% if reservation.email %}
-                                <div class="reservation-meta">
-                                    <i class="fas fa-envelope"></i>
-                                    <span>{{ reservation.email }}</span>
-                                </div>
-                            {% endif %}
-                            {% if reservation.telephone %}
-                                <div class="reservation-meta">
-                                    <i class="fas fa-phone"></i>
-                                    <span>{{ reservation.telephone }}</span>
-                                </div>
-                            {% endif %}
-
-                            <!-- Reservation Details -->
-                            <div class="reservation-meta">
+                            <div class="meta-row">
                                 <i class="fas fa-users"></i>
-                                <span>{{ reservation.nombrePersonnes }} personne(s)</span>
+                                <span class="meta-label">Participants :</span>
+                                <span class="meta-value">{{ reservation.nombrePersonnes }}</span>
                             </div>
-                            <div class="reservation-meta">
-                                <i class="fas fa-euro-sign"></i>
-                                <span><strong>{{ reservation.prixTotal }} €</strong></span>
+                            <div class="meta-row">
+                                <i class="fas fa-money-bill-wave"></i>
+                                <span class="meta-label">Total :</span>
+                                <span class="meta-value price-value">{{ reservation.prixTotal }} TND</span>
                             </div>
-
-                            <!-- Special Requests -->
-                            {% if reservation.demandesSpeciales %}
-                                <div class="mt-3">
-                                    <small class="text-muted">
-                                        <i class="fas fa-comment-dots me-1"></i>
-                                        {{ reservation.demandesSpeciales|slice(0, 50) }}{% if reservation.demandesSpeciales|length > 50 %}...{% endif %}
-                                    </small>
-                                </div>
-                            {% endif %}
                         </div>
+                    </div>
 
-                        <!-- Footer Actions -->
-                        <div class="p-3 border-top">
-                            <form method="post" action="{{ path('app_reservations_delete', {'id': reservation.id}) }}" 
-                                  onsubmit="return confirmDeleteReservation({{ reservation.id }});" 
-                                  class="w-100">
-                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ reservation.id) }}">
-                                <button type="submit" class="btn-modern btn-danger-modern w-100 py-2 fw-bold" title="Supprimer">
-                                    <i class="fas fa-trash me-2"></i>SUPPRIMER
-                                </button>
-                            </form>
-                        </div>
+                    <div class="card-footer-actions">
+                        <a href="{{ path('app_reservations_show', {'id': reservation.id}) }}" class="btn-view">
+                            <i class="fas fa-eye"></i> Voir
+                        </a>
+                        <form id="delete-form-{{ reservation.id }}" method="post" action="{{ path('app_reservations_delete', {'id': reservation.id}) }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ reservation.id) }}">
+                            <button type="button" class="btn-delete"
+                                onclick="openDeleteModal({{ reservation.id }}, '#{{ reservation.id }}')">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                        </form>
                     </div>
                 </div>
             {% endfor %}
-        {% endif %}
+        </div>
+    {% endif %}
+
+</div>
+
+{# Delete confirmation modal #}
+<div class="delete-modal-overlay" id="deleteModalOverlay">
+    <div class="delete-modal">
+        <div class="delete-modal-icon">
+            ⚠️
+        </div>
+        <h3>Confirmer la suppression</h3>
+        <p id="deleteModalMsg">Êtes-vous sûr de vouloir supprimer cette réservation ?<br>Cette action est <strong>irréversible</strong>.</p>
+        <div class="delete-modal-actions">
+            <button class="btn-modal-cancel" onclick="closeDeleteModal()">Annuler</button>
+            <button class="btn-modal-delete" id="deleteModalConfirm">Supprimer</button>
+        </div>
     </div>
-</section>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('confirmed-count').textContent = document.querySelectorAll('.status-confirmee').length;
+    document.getElementById('pending-count').textContent   = document.querySelectorAll('.status-en_attente').length;
+    document.getElementById('cancelled-count').textContent = document.querySelectorAll('.status-annulee').length;
+});
+</script>
+
 {% endblock %}
 
 {% block javascripts %}
 {{ parent() }}
 <script>
-function confirmDeleteReservation(reservationId) {
-    // Créer une alerte de confirmation plus détaillée
-    const confirmation = confirm(
-        '⚠️ CONFIRMATION DE SUPPRESSION ⚠️\n\n' +
-        'Êtes-vous sûr de vouloir supprimer la réservation #' + reservationId + ' ?\n\n' +
-        'Cette action est IRRÉVERSIBLE et :\n' +
-        '• Supprimera définitivement la réservation\n' +
-        '• Libérera les places réservées\n' +
-        '• Effacera toutes les données associées\n\n' +
-        'Cliquez sur OK pour confirmer ou Annuler pour garder la réservation.'
-    );
-    
-    return confirmation;
+let pendingFormId = null;
+
+function openDeleteModal(reservationId, label) {
+    pendingFormId = 'delete-form-' + reservationId;
+    const msg = document.getElementById('deleteModalMsg');
+    msg.innerHTML = 'Êtes-vous sûr de vouloir supprimer la réservation <strong>' + label + '</strong> ?<br>Cette action est <strong>irréversible</strong>.';
+    document.getElementById('deleteModalOverlay').classList.add('active');
 }
+
+function closeDeleteModal() {
+    document.getElementById('deleteModalOverlay').classList.remove('active');
+    pendingFormId = null;
+}
+
+document.getElementById('deleteModalConfirm').addEventListener('click', function() {
+    if (pendingFormId) {
+        document.getElementById(pendingFormId).submit();
+    }
+});
+
+document.getElementById('deleteModalOverlay').addEventListener('click', function(e) {
+    if (e.target === this) closeDeleteModal();
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeDeleteModal();
+});
 </script>
 {% endblock %}
