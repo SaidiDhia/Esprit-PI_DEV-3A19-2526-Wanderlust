@@ -1,0 +1,172 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Réservations — WanderLust{% endblock %}
+
+{% block styles %}
+{{ parent() }}
+<style>
+    .reservations-hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 4rem 0;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+
+    .hero-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .stat-item {
+        text-align: center;
+        padding: 1.5rem;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #667eea;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6c757d;
+        font-weight: 600;
+    }
+
+    .reservation-card {
+        background: white;
+        border-radius: 15px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+
+    .reservation-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .reservation-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+
+    .reservation-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #495057;
+        margin: 0;
+    }
+
+    .reservation-meta {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .meta-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+    }
+
+    .meta-label {
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .meta-value {
+        color: #495057;
+        font-weight: 600;
+    }
+
+    .status-badge {
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    .status-en_attente { background-color: #ffc107; color: #856404; }
+    .status-confirmee { background-color: #198754; color: #155724; }
+    .status-annulee { background-color: #dc3545; color: #721c24; }
+
+    .btn-modern {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+    }
+
+    .btn-primary-modern { background: #667eea; color: white; }
+    .btn-secondary-modern { background: #6c757d; color: white; }
+    .btn-danger-modern { background: #dc3545; color: white; }
+    .btn-warning-modern { background: #ffc107; color: #212529; }
+
+    .btn-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .btn-close {
+        background: none;
+        border: none;
+        font-size: 1.2rem;
+        cursor: pointer;
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .reservation-meta {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .action-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}

@@ -1,0 +1,22 @@
+</div>
+</section>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+function confirmDeleteReservation(reservationId) {
+    const confirmation = confirm(
+        '⚠️ CONFIRMATION DE SUPPRESSION ⚠️\n\n' +
+        'Êtes-vous sûr de vouloir supprimer la réservation #' + reservationId + ' ?\n\n' +
+        'Cette action est IRRÉVERSIBLE et :\n' +
+        '• Supprimera définitivement la réservation\n' +
+        '• Libérera les places réservées\n' +
+        '• Effacera toutes les données associées\n\n' +
+        'Cliquez sur OK pour confirmer ou Annuler pour garder la réservation.'
+    );
+    
+    return confirmation;
+}
+</script>
+{% endblock %}

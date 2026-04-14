@@ -54,7 +54,7 @@ class ReservationsController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-
+            
             $adultes = $reservation->getNombreAdultes();
             $enfants = $reservation->getNombreEnfants();
             $total   = $adultes + $enfants;
@@ -77,15 +77,15 @@ class ReservationsController extends AbstractController
                 ]);
             }
 
-            // ── Calculs automatiques ───────────────────────────────
-            $reservation->setNombrePersonnes($total);
+            // ── Calculs automatiques selon la structure de table ───────────────────────────────
+            $reservation->setNombrePersonnes($total); // nombre_personnes = nombre_adultes + nombre_enfants
             $reservation->setPrixTotal(
-                number_format((float) $event->getPrix() * $total, 2, '.', '')
+                number_format((float) $event->getPrix() * $total, 2, '.', '') // prix_total = (nombre_enfants + nombre_adultes) × prix_event
             );
-            $reservation->setStatut('en_attente');
-            $reservation->setDateCreation(new \DateTime());
+            $reservation->setStatut('en_attente'); // statut par défaut
+            // date_creation est déjà défini dans le constructeur de l'entité
 
-            // Décrémenter les places
+            // Décrémenter les places dans l'événement
             $event->setPlacesDisponibles($event->getPlacesDisponibles() - $total);
 
             $em->persist($reservation);
@@ -146,11 +146,12 @@ class ReservationsController extends AbstractController
             $reservation->setNombrePersonnes($total);
 
             if ($event) {
-                $reservation->setPrixTotal(
-                    number_format((float) $event->getPrix() * $total, 2, '.', '')
-                );
+                $prixTotal = number_format((float) $event->getPrix() * $total, 2, '.', '');
+                $reservation->setPrixTotal($prixTotal);
             }
 
+            // S'assurer que l'entité est bien suivie par Doctrine
+            $em->merge($reservation);
             $em->flush();
             $this->addFlash('success', 'Réservation modifiée avec succès !');
             return $this->redirectToRoute('app_reservations_index');
