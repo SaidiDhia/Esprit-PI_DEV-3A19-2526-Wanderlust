@@ -8,6 +8,7 @@ use App\Entity\PlaceImage;
 use App\Entity\Review;
 use App\Entity\User;
 use App\Enum\RoleEnum;
+use App\Service\AiReviewService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -53,6 +54,46 @@ class BookingController extends AbstractController
         $places = $qb->getQuery()->getResult();
         $placePreviewImages = $this->buildPlacePreviewImagesMap($em, $places);
 
+        $mapPlaces = [];
+        foreach ($places as $place) {
+            if (!$place instanceof Place) {
+                continue;
+            }
+
+            $latitude = $place->getLatitude();
+            $longitude = $place->getLongitude();
+            if ($latitude === null || $longitude === null || !is_numeric($latitude) || !is_numeric($longitude)) {
+                continue;
+            }
+
+            $placeId = $place->getId();
+            if ($placeId === null) {
+                continue;
+            }
+
+            $previewImage = $placePreviewImages[$placeId] ?? $place->getImageUrl();
+            $imageUrl = null;
+            if (is_string($previewImage) && $previewImage !== '') {
+                $imageUrl = str_starts_with($previewImage, 'http')
+                    ? $previewImage
+                    : $request->getBasePath() . '/uploads/places/' . ltrim($previewImage, '/');
+            }
+
+            $mapPlaces[] = [
+                'id' => $placeId,
+                'title' => $place->getTitle(),
+                'city' => $place->getCity(),
+                'category' => $place->getCategory(),
+                'pricePerDay' => (float) $place->getPricePerDay(),
+                'avgRating' => $place->getAvgRating() !== null ? (float) $place->getAvgRating() : null,
+                'reviewsCount' => $place->getReviewsCount(),
+                'imageUrl' => $imageUrl,
+                'latitude' => (float) $latitude,
+                'longitude' => (float) $longitude,
+                'url' => $this->generateUrl('app_booking_place', ['id' => $placeId]),
+            ];
+        }
+
         $myPendingPlaces = [];
         $currentUser = $this->getUser();
         if ($currentUser instanceof User) {
@@ -60,9 +101,9 @@ class BookingController extends AbstractController
                 ->select('p')
                 ->from(Place::class, 'p')
                 ->where('p.host = :user')
-                ->andWhere('p.status IN (:statuses)')
+                ->andWhere('p.status = :status')
                 ->setParameter('user', $currentUser)
-                ->setParameter('statuses', [Place::STATUS_PENDING, Place::STATUS_DENIED])
+                ->setParameter('status', Place::STATUS_PENDING)
                 ->orderBy('p.createdAt', 'DESC')
                 ->setMaxResults(5)
                 ->getQuery()
@@ -80,6 +121,7 @@ class BookingController extends AbstractController
             'places' => $places,
             'placePreviewImages' => $placePreviewImages,
             'myPendingPlaces' => $myPendingPlaces,
+            'mapPlaces' => $mapPlaces,
             'stats' => $stats,
             'filters' => [
                 'q' => $search,
@@ -188,7 +230,7 @@ class BookingController extends AbstractController
     }
 
     #[Route('/place/{id}/review', name: 'app_booking_review', methods: ['POST'])]
-    public function submitReview(int $id, Request $request, EntityManagerInterface $em): Response
+    public function submitReview(int $id, Request $request, EntityManagerInterface $em, AiReviewService $aiReviewService): Response
     {
         $user = $this->requireUser();
         $place = $em->find(Place::class, $id);
@@ -220,16 +262,29 @@ class BookingController extends AbstractController
             ], new Response('', Response::HTTP_UNPROCESSABLE_ENTITY));
         }
 
-        $existingReview = $em->createQueryBuilder()
+        $existingReviews = $em->createQueryBuilder()
             ->select('r')
             ->from(Review::class, 'r')
             ->where('r.place = :place')
             ->andWhere('r.user = :user')
             ->setParameter('place', $place)
             ->setParameter('user', $user)
-            ->setMaxResults(1)
+            ->orderBy('r.createdAt', 'DESC')
             ->getQuery()
-            ->getOneOrNullResult();
+            ->getResult();
+
+        $existingReview = $existingReviews[0] ?? null;
+        if (!$existingReview instanceof Review) {
+            $existingReview = null;
+        }
+
+        if (count($existingReviews) > 1) {
+            foreach (array_slice($existingReviews, 1) as $duplicateReview) {
+                if ($duplicateReview instanceof Review) {
+                    $em->remove($duplicateReview);
+                }
+            }
+        }
 
         $review = $existingReview instanceof Review ? $existingReview : new Review();
         if (!$existingReview instanceof Review) {
@@ -240,6 +295,13 @@ class BookingController extends AbstractController
 
         $review->setRating($rating);
         $review->setComment($reviewFormData['comment'] !== '' ? $reviewFormData['comment'] : null);
+
+        $aiResult = $aiReviewService->analyzeReview($review->getComment(), $rating);
+        if ($aiResult->getSummary() !== '') {
+            $review->setSentiment($aiResult->getSentiment());
+            $review->setAiSummary($aiResult->getSummary());
+            $review->setLanguageQuality($aiResult->getLanguageQuality());
+        }
 
         $this->recalculatePlaceRatingStats($em, $place);
         $em->flush();
@@ -365,6 +427,58 @@ class BookingController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Booking dates updated successfully.');
+        return $this->redirectToRoute('app_booking_my_bookings');
+    }
+
+    #[Route('/my-bookings/{id}/cancel', name: 'app_booking_my_booking_cancel', methods: ['POST'])]
+    public function cancelMyBooking(int $id, Request $request, EntityManagerInterface $em): Response
+    {
+        $user = $this->requireUser();
+        $booking = $em->createQueryBuilder()
+            ->select('b', 'p')
+            ->from(Booking::class, 'b')
+            ->join('b.place', 'p')
+            ->where('b.id = :id')
+            ->andWhere('b.guest = :user')
+            ->setParameter('id', $id)
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$booking instanceof Booking) {
+            throw $this->createNotFoundException('Booking not found.');
+        }
+
+        if (!$this->isCsrfTokenValid('booking_cancel_' . $booking->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid booking token. Please try again.');
+            return $this->redirectToRoute('app_booking_my_bookings');
+        }
+
+        $currentStatus = $booking->getStatus();
+        if (!in_array($currentStatus, [Booking::STATUS_PENDING, Booking::STATUS_CONFIRMED], true)) {
+            $this->addFlash('error', 'Only pending or confirmed bookings can be cancelled.');
+            return $this->redirectToRoute('app_booking_my_bookings');
+        }
+
+        $refundPolicy = $this->calculateCancellationRefundPolicy($booking, new \DateTimeImmutable());
+
+        $booking->setStatus(Booking::STATUS_CANCELLED);
+        $booking->setCancelledAt(new \DateTimeImmutable());
+        $booking->setCancelledBy('GUEST');
+        $booking->setCancelReason('Cancelled by guest');
+        $booking->setRefundAmount((string) $refundPolicy['amount']);
+        $em->flush();
+
+        if ($currentStatus === Booking::STATUS_CONFIRMED) {
+            $this->addFlash('success', sprintf(
+                'Booking cancelled. Refund: %.2f%% (%.2f).',
+                (float) $refundPolicy['percent'],
+                (float) $refundPolicy['amount']
+            ));
+        } else {
+            $this->addFlash('success', 'Booking cancelled. No refund is applied to non-confirmed bookings.');
+        }
+
         return $this->redirectToRoute('app_booking_my_bookings');
     }
 
@@ -1194,6 +1308,30 @@ class BookingController extends AbstractController
     private function normalizeDecimalString(string $value): string
     {
         return rtrim(rtrim(number_format((float) $value, 8, '.', ''), '0'), '.') ?: '0';
+    }
+
+    private function calculateCancellationRefundPolicy(Booking $booking, \DateTimeImmutable $cancelledAt): array
+    {
+        if ($booking->getStatus() !== Booking::STATUS_CONFIRMED) {
+            return ['percent' => 0.0, 'amount' => '0.00'];
+        }
+
+        $secondsUntilStart = $booking->getStartDate()->setTime(0, 0)->getTimestamp() - $cancelledAt->getTimestamp();
+        $daysUntilStart = (int) floor($secondsUntilStart / 86400);
+
+        $refundPercent = 0.0;
+        if ($daysUntilStart >= 7) {
+            $refundPercent = 100.0;
+        } elseif ($daysUntilStart >= 3) {
+            $refundPercent = 50.0;
+        }
+
+        $refundAmount = ((float) $booking->getTotalPrice() * $refundPercent) / 100;
+
+        return [
+            'percent' => $refundPercent,
+            'amount' => number_format($refundAmount, 2, '.', ''),
+        ];
     }
 
     private function isPlaceAvailable(EntityManagerInterface $em, Place $place, \DateTimeImmutable $start, \DateTimeImmutable $end, ?int $ignoreBookingId = null): bool
