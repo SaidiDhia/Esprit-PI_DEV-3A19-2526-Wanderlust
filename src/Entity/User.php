@@ -40,6 +40,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column(name: 'tfa_method', type: 'string', enumType: TFAMethod::class, options: ['default' => 'NONE'])]
     private TFAMethod $tfaMethod = TFAMethod::NONE;
 
+    #[ORM\Column(name: 'tfa_secret', type: 'string', length: 64, nullable: true)]
+    private ?string $tfaSecret = null;
+
+    #[ORM\Column(name: 'face_reference_image', type: 'string', length: 255, nullable: true)]
+    private ?string $faceReferenceImage = null;
+
     #[ORM\Column(name: 'is_active', type: 'boolean', options: ['default' => true])]
     private bool $isActive = true;
 
@@ -222,6 +228,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getTfaLabel(): string
     {
         return $this->tfaMethod->getLabel();
+    }
+
+    public function getTfaSecret(): ?string
+    {
+        return $this->tfaSecret;
+    }
+
+    public function setTfaSecret(?string $tfaSecret): self
+    {
+        $this->tfaSecret = $tfaSecret;
+
+        return $this;
+    }
+
+    public function getFaceReferenceImage(): ?string
+    {
+        return $this->faceReferenceImage;
+    }
+
+    public function setFaceReferenceImage(?string $faceReferenceImage): self
+    {
+        $this->faceReferenceImage = $faceReferenceImage;
+
+        return $this;
     }
 
     public function isIsActive(): bool

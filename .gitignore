@@ -17,3 +17,8 @@
 ###> lexik/jwt-authentication-bundle ###
 /config/jwt/*.pem
 ###< lexik/jwt-authentication-bundle ###
+/osrm-tunisia
+/osrm-tunisia/
+C:\Users\jacer\Desktop\dev\Esprit-PI_DEV-3A19-2526-Wanderlust - Copie\osrm-tunisia
+# OSRM Tunisia data
+/osrm-tunisia/**

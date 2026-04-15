@@ -85,12 +85,35 @@
                     Sign in
                 </button>
 
-                <!-- FaceID Login (Design only as in explorer-sphere) -->
-                <button type="button" class="w-full bg-background border border-border hover:bg-secondary/50 text-foreground font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
+                <button id="faceLoginOpen" type="button" class="w-full bg-background border border-border hover:bg-secondary/50 text-foreground font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2">
                     <svg class="w-5 h-5 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2"></path><path d="M17 3h2a2 2 0 0 1 2 2v2"></path><path d="M21 17v2a2 2 0 0 1-2 2h-2"></path><path d="M7 21H5a2 2 0 0 1-2-2v-2"></path><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><path d="M9 9h.01"></path><path d="M15 9h.01"></path></svg>
                     FaceID Login
                 </button>
             </form>
+
+            <div id="faceLoginModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/70 p-4">
+                <div class="w-full max-w-lg rounded-2xl border border-border bg-background p-5 shadow-2xl">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-xl font-heading font-bold text-foreground">FaceID Login</h3>
+                        <button id="faceLoginClose" type="button" class="text-muted-foreground hover:text-foreground text-sm font-semibold">Close</button>
+                    </div>
+
+                    <p class="text-sm text-muted-foreground mb-3">Center your face, capture a clear photo, then verify.</p>
+
+                    <div id="faceCameraWrap" class="rounded-xl overflow-hidden bg-secondary/30 border border-border">
+                        <video id="faceLoginVideo" autoplay playsinline class="w-full h-72 object-cover"></video>
+                        <img id="faceLoginPreview" alt="Captured face" class="hidden w-full h-72 object-cover" />
+                    </div>
+
+                    <div id="faceLoginError" class="hidden mt-3 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"></div>
+
+                    <div class="grid grid-cols-2 gap-3 mt-4">
+                        <button id="faceLoginCapture" type="button" class="rounded-xl bg-primary text-white font-semibold py-2.5">Capture</button>
+                        <button id="faceLoginRetake" type="button" class="rounded-xl border border-border font-semibold py-2.5 hover:bg-secondary/50 hidden">Retake</button>
+                        <button id="faceLoginSubmit" type="button" class="col-span-2 rounded-xl bg-accent text-white font-semibold py-2.5 disabled:opacity-50 disabled:cursor-not-allowed" disabled>Verify and Login</button>
+                    </div>
+                </div>
+            </div>
 
             <p class="text-center text-sm text-muted-foreground mt-10 font-medium">
                 Don't have an account? <a href="{{ path('app_signup') }}" class="text-primary font-bold hover:underline transition-all">Create an account</a>
@@ -115,5 +138,144 @@
             eyeOffIcon.classList.add('hidden');
         }
     }
+
+    (function () {
+        const openBtn = document.getElementById('faceLoginOpen');
+        const modal = document.getElementById('faceLoginModal');
+        const closeBtn = document.getElementById('faceLoginClose');
+        const captureBtn = document.getElementById('faceLoginCapture');
+        const retakeBtn = document.getElementById('faceLoginRetake');
+        const submitBtn = document.getElementById('faceLoginSubmit');
+        const errorBox = document.getElementById('faceLoginError');
+        const video = document.getElementById('faceLoginVideo');
+        const preview = document.getElementById('faceLoginPreview');
+        const endpoint = '{{ path('app_login_face_id') }}';
+        const csrfToken = '{{ csrf_token('face_login') }}';
+
+        let stream = null;
+        let capturedFaceData = '';
+
+        function showError(message) {
+            errorBox.textContent = message;
+            errorBox.classList.remove('hidden');
+        }
+
+        function clearError() {
+            errorBox.classList.add('hidden');
+            errorBox.textContent = '';
+        }
+
+        async function startCamera() {
+            clearError();
+            capturedFaceData = '';
+            submitBtn.disabled = true;
+            retakeBtn.classList.add('hidden');
+            preview.classList.add('hidden');
+            video.classList.remove('hidden');
+
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+                video.srcObject = stream;
+            } catch (e) {
+                showError('Cannot access camera. Allow camera permission and try again.');
+            }
+        }
+
+        function stopCamera() {
+            if (!stream) {
+                return;
+            }
+
+            for (const track of stream.getTracks()) {
+                track.stop();
+            }
+            stream = null;
+            video.srcObject = null;
+        }
+
+        function openModal() {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            startCamera();
+        }
+
+        function closeModal() {
+            stopCamera();
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        function captureFace() {
+            clearError();
+            if (!video.videoWidth || !video.videoHeight) {
+                showError('Camera is not ready yet. Please wait one second and retry.');
+                return;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) {
+                showError('Could not capture frame from camera.');
+                return;
+            }
+
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            capturedFaceData = canvas.toDataURL('image/jpeg', 0.95);
+            preview.src = capturedFaceData;
+            preview.classList.remove('hidden');
+            video.classList.add('hidden');
+            retakeBtn.classList.remove('hidden');
+            submitBtn.disabled = false;
+            stopCamera();
+        }
+
+        async function submitFaceLogin() {
+            clearError();
+            if (!capturedFaceData) {
+                showError('Capture your face before verification.');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            const previousText = submitBtn.textContent;
+            submitBtn.textContent = 'Verifying...';
+
+            const formData = new FormData();
+            formData.append('faceImageData', capturedFaceData);
+            formData.append('_token', csrfToken);
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin',
+                });
+                const payload = await response.json();
+
+                if (!response.ok || !payload.success) {
+                    throw new Error(payload.message || 'Face login failed.');
+                }
+
+                window.location.href = payload.redirectUrl || '{{ path('app_home') }}';
+            } catch (e) {
+                showError(e.message || 'Face login failed. Please try again.');
+                submitBtn.disabled = false;
+                submitBtn.textContent = previousText;
+            }
+        }
+
+        openBtn.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+        captureBtn.addEventListener('click', captureFace);
+        retakeBtn.addEventListener('click', startCamera);
+        submitBtn.addEventListener('click', submitFaceLogin);
+        modal.addEventListener('click', function (event) {
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+    })();
 </script>
 {% endblock %}
