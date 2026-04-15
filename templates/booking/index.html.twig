@@ -85,6 +85,22 @@
             color: #0f172a;
         }
         .field input:focus { outline: none; border-color: #0ea5e9; }
+        .gps-status {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #475569;
+            font-weight: 600;
+        }
+        .distance-summary {
+            margin-top: 12px;
+            border-radius: 14px;
+            border: 1px solid #bfdbfe;
+            background: #eff6ff;
+            color: #1e3a8a;
+            font-size: 13px;
+            font-weight: 700;
+            padding: 10px 12px;
+        }
         .btn-solid, .btn-outline {
             width: 100%;
             height: 44px;
@@ -132,6 +148,7 @@
         .stay-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
         .stay-title { margin: 0; font-size: 1.35rem; font-weight: 700; color: #020617; }
         .stay-city { margin-top: 4px; margin-bottom: 0; color: #64748b; font-size: 14px; }
+        .stay-distance { margin-top: 6px; margin-bottom: 0; color: #0369a1; font-size: 12px; font-weight: 700; }
         .rating-box { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; font-weight: 700; color: #0f172a; }
         .rating-box svg { width: 15px; height: 15px; fill: #f59e0b; }
         .reviews-count { color: #64748b; font-size: 11px; font-weight: 600; }
@@ -174,7 +191,7 @@
 
         @media (min-width: 768px) {
             .pending-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .filters-grid { grid-template-columns: 2fr 1fr 1fr auto auto; align-items: end; }
+            .filters-grid { grid-template-columns: 2fr 1fr 1fr 1fr auto auto; align-items: end; }
             .stays-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .booking-hero { padding: 90px 0 112px; }
         }
@@ -216,7 +233,7 @@
                 </div>
             {% endif %}
 
-            <form method="get" class="panel filters">
+            <form method="get" class="panel filters" id="stays-filter-form">
                 <div class="filters-grid">
                     <div class="field">
                         <label>Search</label>
@@ -230,12 +247,34 @@
                         <label>Category</label>
                         <input name="category" value="{{ filters.category ?? '' }}" type="text" placeholder="Resort">
                     </div>
+                    <div class="field">
+                        <label>Distance (km)</label>
+                        <input id="distance-input" name="distance" value="{{ filters.distance ?? '' }}" type="number" min="0.5" step="0.5" placeholder="25">
+                    </div>
                     <div><button class="btn-solid" type="submit">Search</button></div>
-                    <div><button type="button" id="map-view-toggle" class="btn-outline">Map view</button></div>
+                    <div class="d-flex gap-2">
+                        <button type="button" id="use-gps-location" class="btn-outline">Use my GPS</button>
+                        <button type="button" id="map-view-toggle" class="btn-outline">Map view</button>
+                    </div>
                 </div>
+                <input type="hidden" id="user-lat-input" name="user_lat" value="{{ filters.user_lat ?? '' }}">
+                <input type="hidden" id="user-lng-input" name="user_lng" value="{{ filters.user_lng ?? '' }}">
+                <p id="gps-status" class="gps-status">Add a distance and use GPS to filter by road distance.</p>
+                {% if distanceFilterActive and (filters.user_lat ?? '') != '' and (filters.user_lng ?? '') != '' %}
+                    <div class="distance-summary">
+                        Showing {{ places|length }} place{{ places|length == 1 ? '' : 's' }} within {{ filters.distance }} km from your GPS location.
+                    </div>
+                {% endif %}
             </form>
 
-            <div id="stays-results" class="results" data-map-places="{{ mapPlaces|json_encode|e('html_attr') }}">
+            <div
+                id="stays-results"
+                class="results"
+                data-map-places="{{ mapPlaces|json_encode|e('html_attr') }}"
+                data-user-lat="{{ filters.user_lat ?? '' }}"
+                data-user-lng="{{ filters.user_lng ?? '' }}"
+                data-radius-km="{{ filters.distance ?? '' }}"
+            >
                 <div id="stays-grid-view" class="stays-grid">
                     {% for place in places %}
                         <article class="stay-card">
@@ -253,6 +292,9 @@
                                     <div>
                                         <h2 class="stay-title">{{ place.title }}</h2>
                                         <p class="stay-city">{{ place.city }}</p>
+                                        {% if distanceByPlaceIdKm[place.id] is defined %}
+                                            <p class="stay-distance">{{ distanceByPlaceIdKm[place.id]|number_format(2, '.', '') }} km from your GPS</p>
+                                        {% endif %}
                                     </div>
                                     {% if place.avgRating %}
                                         <div class="rating-box">
@@ -291,4 +333,68 @@
 
 {% block importmap %}
     {{ importmap(['app', 'booking_map']) }}
+    <script>
+        (function () {
+            const form = document.getElementById('stays-filter-form');
+            const gpsButton = document.getElementById('use-gps-location');
+            const gpsStatus = document.getElementById('gps-status');
+            const userLatInput = document.getElementById('user-lat-input');
+            const userLngInput = document.getElementById('user-lng-input');
+            const distanceInput = document.getElementById('distance-input');
+
+            if (!form || !gpsButton || !gpsStatus || !userLatInput || !userLngInput || !distanceInput) {
+                return;
+            }
+
+            const setStatus = (message) => {
+                gpsStatus.textContent = message;
+            };
+
+            const hasCoordinates = () => userLatInput.value !== '' && userLngInput.value !== '';
+
+            const requestGps = (autoSubmit) => {
+                if (!navigator.geolocation) {
+                    setStatus('Geolocation is not supported in this browser.');
+                    return;
+                }
+
+                setStatus('Getting your current location...');
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLatInput.value = position.coords.latitude.toFixed(8);
+                        userLngInput.value = position.coords.longitude.toFixed(8);
+                        setStatus('GPS location saved. Search now uses OSRM road distance.');
+
+                        if (autoSubmit) {
+                            form.submit();
+                        }
+                    },
+                    () => {
+                        setStatus('Unable to get GPS location. Please allow location permission.');
+                    },
+                    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+                );
+            };
+
+            if (hasCoordinates()) {
+                setStatus('Using saved GPS location for distance filtering.');
+            }
+
+            gpsButton.addEventListener('click', () => requestGps(false));
+
+            form.addEventListener('submit', (event) => {
+                const radius = Number.parseFloat(distanceInput.value || '');
+                if (!Number.isFinite(radius) || radius <= 0) {
+                    return;
+                }
+
+                if (hasCoordinates()) {
+                    return;
+                }
+
+                event.preventDefault();
+                requestGps(true);
+            });
+        })();
+    </script>
 {% endblock %}

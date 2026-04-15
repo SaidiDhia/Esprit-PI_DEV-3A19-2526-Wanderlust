@@ -95,9 +95,21 @@ function initBookingMap() {
         parsedPlaces = [];
     }
 
+    const userLatitude = Number(resultsRoot.dataset.userLat || '');
+    const userLongitude = Number(resultsRoot.dataset.userLng || '');
+    const radiusKm = Number(resultsRoot.dataset.radiusKm || '');
+    const hasUserLocation = Number.isFinite(userLatitude)
+        && Number.isFinite(userLongitude)
+        && isInTunisia(userLatitude, userLongitude);
+    const hasRadiusFilter = Number.isFinite(radiusKm) && radiusKm > 0;
+
     const places = normalizePlaces(parsedPlaces).filter((place) => isInTunisia(place.latitude, place.longitude));
     if (markerCount) {
-        markerCount.textContent = `${places.length} place${places.length === 1 ? '' : 's'} in Tunisia`;
+        if (hasUserLocation && hasRadiusFilter) {
+            markerCount.textContent = `${places.length} place${places.length === 1 ? '' : 's'} within ${radiusKm.toFixed(1)} km`;
+        } else {
+            markerCount.textContent = `${places.length} place${places.length === 1 ? '' : 's'} in Tunisia`;
+        }
     }
 
     let map = null;
@@ -150,9 +162,33 @@ function initBookingMap() {
 
                 renderTunisiaBaseLayer(map);
 
-                if (places.length > 0) {
-                    const bounds = [];
+                let userMarker = null;
+                let radiusCircle = null;
+                const bounds = [];
 
+                if (hasUserLocation) {
+                    userMarker = L.circleMarker([userLatitude, userLongitude], {
+                        radius: 7,
+                        color: '#0f172a',
+                        weight: 2,
+                        fillColor: '#22c55e',
+                        fillOpacity: 0.95,
+                    }).addTo(map).bindPopup('Your location');
+
+                    bounds.push([userLatitude, userLongitude]);
+
+                    if (hasRadiusFilter) {
+                        radiusCircle = L.circle([userLatitude, userLongitude], {
+                            radius: radiusKm * 1000,
+                            color: '#0ea5e9',
+                            weight: 2,
+                            fillColor: '#38bdf8',
+                            fillOpacity: 0.14,
+                        }).addTo(map);
+                    }
+                }
+
+                if (places.length > 0) {
                     places.forEach((place) => {
                         const ratingHtml = renderRatingStars(place.avgRating);
                         const reviewsCountLabel = `${place.reviewsCount} review${place.reviewsCount === 1 ? '' : 's'}`;
@@ -187,11 +223,17 @@ function initBookingMap() {
 
                     if (bounds.length === 1) {
                         map.setView(bounds[0], 12);
-                    } else {
+                    } else if (bounds.length > 1) {
                         map.fitBounds(bounds, { padding: [30, 30] });
                     }
-                } else {
+                } else if (!hasUserLocation) {
                     map.fitBounds(tunisiaBounds, { padding: [20, 20] });
+                }
+
+                if (hasUserLocation && hasRadiusFilter && radiusCircle) {
+                    map.fitBounds(radiusCircle.getBounds(), { padding: [24, 24] });
+                } else if (hasUserLocation && userMarker) {
+                    map.setView([userLatitude, userLongitude], 11);
                 }
 
                 mapReady = true;

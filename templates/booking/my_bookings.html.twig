@@ -4,6 +4,7 @@
 
 {% block stylesheets %}
     {{ parent() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         .bookings-shell { background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); padding: 36px 0 72px; }
         .bookings-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 24px; }
@@ -34,9 +35,28 @@
         .refund-box p + p { margin-top: 4px; font-size: 12px; }
 
         .cancel-form { margin-top: 14px; }
+        .booking-actions { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
         .cancel-btn { border: 0; border-radius: 12px; background: #e11d48; color: #fff; font-size: 13px; font-weight: 700; padding: 9px 14px; transition: .2s ease; }
         .cancel-btn:hover { background: #be123c; }
+        .invoice-btn { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #0ea5e9; border-radius: 12px; background: #f0f9ff; color: #0369a1; font-size: 13px; font-weight: 700; padding: 9px 14px; transition: .2s ease; }
+        .invoice-btn:hover { background: #e0f2fe; color: #075985; }
+        .calendar-btn { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #16a34a; border-radius: 12px; background: #f0fdf4; color: #166534; font-size: 13px; font-weight: 700; padding: 9px 14px; transition: .2s ease; }
+        .calendar-btn:hover { background: #dcfce7; color: #14532d; }
+        .route-btn { display: inline-flex; align-items: center; justify-content: center; border: 1px solid #1d4ed8; border-radius: 12px; background: #eff6ff; color: #1e40af; font-size: 13px; font-weight: 700; padding: 9px 14px; transition: .2s ease; }
+        .route-btn:hover { background: #dbeafe; color: #1e3a8a; }
+        .route-btn[disabled] { opacity: .45; cursor: not-allowed; }
         .policy-text { margin: 8px 0 0; font-size: 12px; color: #64748b; }
+
+        .route-modal-overlay { position: fixed; inset: 0; z-index: 80; display: none; align-items: center; justify-content: center; padding: 16px; background: rgba(2, 6, 23, .66); backdrop-filter: blur(2px); }
+        .route-modal-overlay.is-open { display: flex; }
+        .route-modal-card { width: min(920px, 100%); border-radius: 22px; border: 1px solid #cbd5e1; background: #fff; box-shadow: 0 20px 48px rgba(15, 23, 42, .28); overflow: hidden; }
+        .route-modal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 16px 18px; border-bottom: 1px solid #e2e8f0; }
+        .route-modal-title { margin: 0; color: #020617; font-size: 1.2rem; font-weight: 700; }
+        .route-modal-subtitle { margin: 4px 0 0; color: #64748b; font-size: 13px; }
+        .route-modal-close { border: 0; border-radius: 999px; width: 34px; height: 34px; font-size: 16px; background: #f1f5f9; color: #334155; font-weight: 700; }
+        .route-modal-close:hover { background: #e2e8f0; }
+        .route-modal-status { margin: 0; padding: 10px 18px; font-size: 13px; color: #334155; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+        .route-map { width: 100%; height: 420px; }
 
         .edit-panel { margin-top: 16px; border-radius: 18px; border: 1px solid #cbd5e1; background: #f8fafc; padding: 14px; }
         .edit-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; }
@@ -143,13 +163,36 @@
                     {% endif %}
 
                     {% if booking.status in ['PENDING', 'CONFIRMED'] %}
+                        <div class="booking-actions">
                         <form method="post" action="{{ path('app_booking_my_booking_cancel', { id: booking.id }) }}" class="cancel-form" onsubmit="return confirm('Cancel this booking?');">
                             <input type="hidden" name="_token" value="{{ csrf_token('booking_cancel_' ~ booking.id) }}">
                             <button type="submit" class="cancel-btn">Cancel booking</button>
-                            {% if booking.status == 'CONFIRMED' %}
-                                <p class="policy-text">Refund policy: 100% (>=7 days), 50% (3-6 days), 0% (<3 days before start).</p>
-                            {% endif %}
                         </form>
+
+                        {% if booking.status == 'CONFIRMED' %}
+                            <a href="{{ path('app_booking_my_booking_invoice_pdf', { id: booking.id }) }}" class="invoice-btn">Export PDF Invoice</a>
+                            <a href="{{ path('app_booking_my_booking_google_calendar', { id: booking.id }) }}" class="calendar-btn" target="_blank" rel="noopener">Add to Google Calendar</a>
+                        {% endif %}
+
+                        {% if booking.place.latitude is not null and booking.place.longitude is not null %}
+                            <button
+                                type="button"
+                                class="route-btn js-show-route"
+                                data-route-url="{{ path('app_booking_my_booking_route_data', { id: booking.id }) }}"
+                                data-place-title="{{ booking.place.title|e('html_attr') }}"
+                                data-place-lat="{{ booking.place.latitude|e('html_attr') }}"
+                                data-place-lng="{{ booking.place.longitude|e('html_attr') }}"
+                            >
+                                Show route
+                            </button>
+                        {% else %}
+                            <button type="button" class="route-btn" disabled title="No coordinates available for this place">Show route</button>
+                        {% endif %}
+                        </div>
+
+                        {% if booking.status == 'CONFIRMED' %}
+                            <p class="policy-text">Refund policy: 100% (>=7 days), 50% (3-6 days), 0% (<3 days before start).</p>
+                        {% endif %}
                     {% endif %}
 
                     {% if booking.status == 'PENDING' %}
@@ -219,4 +262,182 @@
         </div>
     </div>
 </section>
+
+<div id="route-modal" class="route-modal-overlay" aria-hidden="true">
+    <div class="route-modal-card" role="dialog" aria-modal="true" aria-labelledby="route-modal-title">
+        <div class="route-modal-header">
+            <div>
+                <h3 id="route-modal-title" class="route-modal-title">Route</h3>
+                <p id="route-modal-subtitle" class="route-modal-subtitle">From your current GPS position to the selected place.</p>
+            </div>
+            <button id="route-modal-close" class="route-modal-close" type="button" aria-label="Close route modal">X</button>
+        </div>
+        <p id="route-modal-status" class="route-modal-status">Preparing map...</p>
+        <div id="route-map" class="route-map"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+    const routeModal = document.getElementById('route-modal');
+    const routeModalClose = document.getElementById('route-modal-close');
+    const routeModalTitle = document.getElementById('route-modal-title');
+    const routeModalSubtitle = document.getElementById('route-modal-subtitle');
+    const routeModalStatus = document.getElementById('route-modal-status');
+    const routeButtons = document.querySelectorAll('.js-show-route');
+
+    let routeMap = null;
+    let userMarker = null;
+    let placeMarker = null;
+    let routeLine = null;
+
+    function openRouteModal() {
+        routeModal.classList.add('is-open');
+        routeModal.setAttribute('aria-hidden', 'false');
+    }
+
+    function closeRouteModal() {
+        routeModal.classList.remove('is-open');
+        routeModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function setRouteStatus(message) {
+        routeModalStatus.textContent = message;
+    }
+
+    function ensureMap() {
+        if (routeMap) {
+            routeMap.invalidateSize();
+            return;
+        }
+
+        routeMap = L.map('route-map').setView([36.8065, 10.1815], 12);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(routeMap);
+    }
+
+    function clearRouteLayers() {
+        if (userMarker) {
+            routeMap.removeLayer(userMarker);
+            userMarker = null;
+        }
+        if (placeMarker) {
+            routeMap.removeLayer(placeMarker);
+            placeMarker = null;
+        }
+        if (routeLine) {
+            routeMap.removeLayer(routeLine);
+            routeLine = null;
+        }
+    }
+
+    function getCurrentPosition() {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                reject(new Error('Geolocation is not supported by this browser.'));
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 12000,
+                maximumAge: 0,
+            });
+        });
+    }
+
+    async function fetchRouteFromController(routeUrl, userLat, userLng) {
+        const response = await fetch(routeUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({
+                userLat: userLat,
+                userLng: userLng,
+            }),
+        });
+
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data || !data.route || !data.route.geometry) {
+            throw new Error((data && data.error) ? data.error : ('Route request failed with status ' + response.status + '.'));
+        }
+
+        return data;
+    }
+
+    async function showRouteToPlace(button) {
+        const routeUrl = button.dataset.routeUrl || '';
+        const placeTitle = button.dataset.placeTitle || 'Selected place';
+        const placeLat = parseFloat(button.dataset.placeLat);
+        const placeLng = parseFloat(button.dataset.placeLng);
+
+        if (routeUrl === '' || !Number.isFinite(placeLat) || !Number.isFinite(placeLng)) {
+            alert('This place does not have valid coordinates.');
+            return;
+        }
+
+        routeModalTitle.textContent = 'Route to ' + placeTitle;
+        routeModalSubtitle.textContent = 'From your GPS location to ' + placeTitle + '.';
+
+        openRouteModal();
+        ensureMap();
+        clearRouteLayers();
+
+        setRouteStatus('Getting your GPS location...');
+
+        try {
+            const position = await getCurrentPosition();
+            const userLat = position.coords.latitude;
+            const userLng = position.coords.longitude;
+
+            setRouteStatus('Calculating route...');
+
+            const routePayload = await fetchRouteFromController(routeUrl, userLat, userLng);
+            const route = routePayload.route;
+
+            userMarker = L.marker([userLat, userLng]).addTo(routeMap).bindPopup('You are here');
+            placeMarker = L.marker([placeLat, placeLng]).addTo(routeMap).bindPopup(placeTitle);
+
+            routeLine = L.geoJSON(route.geometry, {
+                style: {
+                    color: '#1d4ed8',
+                    weight: 5,
+                    opacity: 0.9,
+                },
+            }).addTo(routeMap);
+
+            const bounds = routeLine.getBounds();
+            if (bounds.isValid()) {
+                routeMap.fitBounds(bounds, { padding: [32, 32] });
+            }
+
+            const distanceKm = (route.distance / 1000).toFixed(2);
+            const durationMin = Math.round(route.duration / 60);
+            setRouteStatus('Distance: ' + distanceKm + ' km - Estimated time: ' + durationMin + ' min.');
+        } catch (error) {
+            setRouteStatus('Unable to load route: ' + error.message);
+        }
+    }
+
+    routeButtons.forEach((button) => {
+        button.addEventListener('click', () => showRouteToPlace(button));
+    });
+
+    routeModalClose.addEventListener('click', closeRouteModal);
+    routeModal.addEventListener('click', (event) => {
+        if (event.target === routeModal) {
+            closeRouteModal();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && routeModal.classList.contains('is-open')) {
+            closeRouteModal();
+        }
+    });
+</script>
 {% endblock %}
