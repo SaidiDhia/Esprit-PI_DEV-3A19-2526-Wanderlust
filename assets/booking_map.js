@@ -104,19 +104,31 @@ function initBookingMap() {
     let mapReady = false;
     let mapModeEnabled = false;
 
+    // Keep view switching resilient even if utility classes are unavailable.
+    const showGridView = () => {
+        gridView.style.display = '';
+        mapView.style.display = 'none';
+        mapView.classList.remove('visible');
+    };
+
+    const showMapView = () => {
+        gridView.style.display = 'none';
+        mapView.style.display = 'block';
+        mapView.classList.add('visible');
+    };
+
+    showGridView();
+
     const setMapMode = (enabled) => {
         mapModeEnabled = enabled;
 
         if (enabled) {
-            gridView.classList.add('hidden');
-            mapView.classList.remove('hidden');
+            showMapView();
             toggleButton.textContent = 'Grid view';
-            toggleButton.classList.remove('bg-white', 'text-slate-900', 'border-slate-300');
-            toggleButton.classList.add('bg-slate-900', 'text-white', 'border-slate-900');
 
             if (!mapReady) {
                 if (typeof L === 'undefined' || typeof L.map !== 'function') {
-                    mapView.classList.remove('hidden');
+                    showMapView();
                     mapContainer.innerHTML = '<div style="height:100%;display:flex;align-items:center;justify-content:center;padding:1rem;text-align:center;color:#0f172a;font-weight:600;">Offline map library failed to load.</div>';
                     return;
                 }
@@ -194,11 +206,8 @@ function initBookingMap() {
             return;
         }
 
-        mapView.classList.add('hidden');
-        gridView.classList.remove('hidden');
+        showGridView();
         toggleButton.textContent = 'Map view';
-        toggleButton.classList.add('bg-white', 'text-slate-900', 'border-slate-300');
-        toggleButton.classList.remove('bg-slate-900', 'text-white', 'border-slate-900');
     };
 
     toggleButton.addEventListener('click', () => {
