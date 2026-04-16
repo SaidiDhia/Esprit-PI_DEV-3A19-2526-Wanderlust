@@ -47,9 +47,32 @@
                         </div>
                         <div>
                             <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Total</p>
-                            <p class="mt-2 text-sm font-medium text-slate-950">{{ booking.totalPrice }}</p>
+                            <p class="mt-2 text-sm font-medium text-slate-950">{{ booking.totalPrice|number_format(2, '.', ' ') }}</p>
                         </div>
                     </div>
+
+                    {% if booking.status == 'CANCELLED' %}
+                        {% set totalPriceValue = booking.totalPrice + 0 %}
+                        {% set refundAmountValue = booking.refundAmount + 0 %}
+                        <div class="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                            <p class="font-bold">Refund amount: {{ booking.refundAmount|number_format(2, '.', ' ') }}</p>
+                            {% if totalPriceValue > 0 %}
+                                <p class="mt-1 text-xs">
+                                    Refund rate: {{ ((refundAmountValue / totalPriceValue) * 100)|number_format(0, '.', ' ') }}%
+                                </p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+
+                    {% if booking.status in ['PENDING', 'CONFIRMED'] %}
+                        <form method="post" action="{{ path('app_booking_my_booking_cancel', { id: booking.id }) }}" class="mt-5" onsubmit="return confirm('Cancel this booking?');">
+                            <input type="hidden" name="_token" value="{{ csrf_token('booking_cancel_' ~ booking.id) }}">
+                            <button type="submit" class="rounded-2xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-rose-700">Cancel booking</button>
+                            {% if booking.status == 'CONFIRMED' %}
+                                <p class="mt-2 text-xs text-slate-500">Refund policy: 100% (>=7 days), 50% (3-6 days), 0% (<3 days before start).</p>
+                            {% endif %}
+                        </form>
+                    {% endif %}
 
                     {% if booking.status == 'PENDING' %}
                         <form method="post" action="{{ path('app_booking_my_booking_edit', { id: booking.id }) }}" class="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4">
