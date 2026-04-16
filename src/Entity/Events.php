@@ -71,6 +71,10 @@ class Events
     #[ORM\JoinTable(name: 'events_activities')]
     private Collection $activities;
 
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'created_by_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?User $createdBy = null;
+
     public function __construct()
     {
         $this->activities = new ArrayCollection();
@@ -311,6 +315,18 @@ class Events
         if ($this->activities->removeElement($activity)) {
             $activity->removeEvent($this); // Synchroniser la relation inverse
         }
+        return $this;
+    }
+
+    public function getCreatedBy(): ?User
+    {
+        return $this->createdBy;
+    }
+
+    public function setCreatedBy(?User $createdBy): static
+    {
+        $this->createdBy = $createdBy;
+
         return $this;
     }
     

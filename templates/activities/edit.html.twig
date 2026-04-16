@@ -72,8 +72,16 @@
         transition: all 0.3s ease;
         background: white;
         position: relative;
-        max-width: 700px;
-        margin: 0 auto;
+        width: 100%;
+        margin: 0;
+    }
+
+    .form-card * {
+        color: #000 !important;
+    }
+
+    .form-card label, .form-card h4, .form-card p {
+        color: #000 !important;
     }
 
     .form-card::before {
@@ -365,19 +373,21 @@
 
 {% block content %}
 <div class="form-hero">
-    <div class="container text-center">
-        <h1 class="hero-title mb-4">
-            ✏️ Modifier l'activité
-        </h1>
-        <p class="hero-subtitle mb-0">
-            Mettez à jour les informations de l'activité
-        </p>
+    <div class="container">
+        <div style="text-align: center;">
+            <h1 class="hero-title mb-4" style="text-align: center; color: white;">
+                ✏️ Modifier l'activité
+            </h1>
+            <p class="hero-subtitle mb-0" style="text-align: center;">
+                Mettez à jour les informations de l'activité
+            </p>
+        </div>
     </div>
 </div>
 
-<div class="container mb-5">
+<div class="container mb-5" style="max-width: 100%; padding: 0 2rem;">
     <div class="row justify-content-center">
-        <div class="col-lg-10 col-xl-8">
+        <div class="col-12">
             <!-- Messages Flash -->
             {% for message in app.flashes('success') %}
                 <div id="success-message" data-message="{{ message|striptags|e('html_attr') }}" style="display: none;"></div>

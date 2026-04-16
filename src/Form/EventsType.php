@@ -40,6 +40,7 @@ class EventsType extends AbstractType
                 'choice_label' => 'titre',
                 'multiple'     => true,
                 'expanded'     => false,
+                'mapped'       => false,
                 'label'        => 'Activités associées',
                 'attr'         => [
                     'class'        => 'form-select-modern',

@@ -16,6 +16,19 @@
         <h2 style="font-family: var(--font-display);">Your Conversations</h2>
         <a href="{{ path('messaging_conversation_new') }}" class="btn btn-primary">➕ New Conversation</a>
     </div>
+
+    <!-- Search Conversations -->
+    <div style="margin-bottom: 24px;">
+        <form method="GET" action="" style="display: flex; gap: 8px;">
+            <input type="text" name="search" placeholder="🔍 Search conversations..."
+                   value="{{ app.request.query.get('search') }}"
+                   style="flex: 1; padding: 10px 16px; border: 1px solid var(--gray-200); border-radius: 24px; outline: none;">
+            <button type="submit" class="btn btn-primary" style="border-radius: 24px;">Search</button>
+            {% if app.request.query.get('search') %}
+                <a href="{{ path('app_messaging') }}" class="btn btn-outline" style="border-radius: 24px;">Clear</a>
+            {% endif %}
+        </form>
+    </div>
     
     {% for message in app.flashes('success') %}
         <div class="flash flash-success">{{ message }}</div>

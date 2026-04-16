@@ -1,0 +1,65 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Search Results - {{ conversation.name }}{% endblock %}
+
+{% block content %}
+<div class="page-hero" style="padding: 20px 40px; background: linear-gradient(135deg, #1e3a8a, #1D4ED8);">
+    <div class="page-hero-content">
+        <a href="{{ path('messaging_conversation_show', {id: conversation.id}) }}" style="color: white; text-decoration: none;">← Back to chat</a>
+        <h1 class="page-hero-title" style="font-size: 28px;">Search Results</h1>
+        <p class="page-hero-subtitle">Found {{ messages|length }} messages matching "{{ query }}"</p>
+    </div>
+</div>
+
+<div class="page-content">
+    {% if messages is empty %}
+        <div class="mp-empty">
+            <div style="font-size: 48px;">🔍</div>
+            <h3>No results found</h3>
+            <p>Try different keywords or check your spelling.</p>
+            <a href="{{ path('messaging_conversation_show', {id: conversation.id}) }}" class="btn btn-primary">Back to Chat</a>
+        </div>
+    {% else %}
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            {% for msg in messages %}
+                <div style="background: white; border-radius: 12px; border: 1px solid var(--gray-200); padding: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div>
+                            <strong>{{ msg.sender_name ?: 'User ' ~ msg.sender_id|slice(0,8) }}</strong>
+                            <span style="font-size: 12px; color: var(--gray-400); margin-left: 8px;">{{ msg.created_at|date('M d, H:i') }}</span>
+                        </div>
+                        <a href="{{ path('messaging_conversation_show', {id: conversation.id}) }}#msg-{{ msg.id }}" class="btn btn-outline" style="padding: 4px 12px; font-size: 12px;">Jump to message</a>
+                    </div>
+                    <div style="color: var(--gray-700);">
+                        {% if msg.message_type == 'IMAGE' %}
+                            📷 <span class="highlight">{{ msg.file_name ?: 'Image' }}</span>
+                        {% elseif msg.message_type == 'VIDEO' %}
+                            🎥 <span class="highlight">{{ msg.file_name ?: 'Video' }}</span>
+                        {% elseif msg.message_type == 'AUDIO' %}
+                            🎵 <span class="highlight">{{ msg.file_name ?: 'Audio' }}</span>
+                        {% elseif msg.message_type == 'FILE' %}
+                            📎 <span class="highlight">{{ msg.file_name ?: 'File' }}</span>
+                        {% else %}
+                            {{ msg.content|replace({(query): '<mark>' ~ query ~ '</mark>'})|raw }}
+                        {% endif %}
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+
+<style>
+    mark {
+        background-color: #FEF3C7;
+        padding: 0 2px;
+        border-radius: 4px;
+        color: #92400E;
+    }
+    .highlight {
+        background-color: #FEF3C7;
+        padding: 0 2px;
+        border-radius: 4px;
+    }
+</style>
+{% endblock %}

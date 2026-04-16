@@ -15,6 +15,11 @@
         --border-radius: 20px;
     }
 
+    /* Text color - all black for clarity */
+    body, h1, h2, h3, h4, h5, h6, p, label, span {
+        color: #000 !important;
+    }
+
     /* Hero Section */
     .show-hero {
         background: var(--primary-gradient);
@@ -75,8 +80,12 @@
         transition: all 0.3s ease;
         background: white;
         position: relative;
-        max-width: 600px;
-        margin: 0 auto;
+        width: 100%;
+        margin: 0;
+    }
+
+    .activity-show-card * {
+        color: #000 !important;
     }
 
     .activity-show-card::before {
@@ -357,17 +366,19 @@
 
 {% block content %}
 <div class="show-hero">
-    <div class="container text-center">
-        <h1 class="hero-title mb-4">
-            🌟 {{ activity.titre }}
-        </h1>
-        <p class="hero-subtitle mb-0">
-            Découvrez les détails de cette activité exceptionnelle
-        </p>
+    <div class="container">
+        <div style="text-align: center;">
+            <h1 class="hero-title mb-4" style="text-align: center; color: white;">
+                🌟 {{ activity.titre }}
+            </h1>
+            <p class="hero-subtitle mb-0" style="text-align: center;">
+                Découvrez les détails de cette activité exceptionnelle
+            </p>
+        </div>
     </div>
 </div>
 
-<div class="container mb-5">
+<div class="container mb-5" style="max-width: 100%; padding: 0 2rem;">
     {% set categoryValue = activity.categorie is not null ? activity.categorie.value|lower : '' %}
     {% set categoryLabel = activity.categorie is not null ? activity.categorie.getLabel() : 'Non classé' %}
     {% set typeValue = activity.typeActivite is not null ? activity.typeActivite : '' %}

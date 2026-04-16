@@ -8,9 +8,18 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <style>
         /*  Layout général  */
-        .event-form-wrapper { max-width: 860px; margin: 2rem auto; padding: 0 1rem; }
+        .event-form-wrapper { max-width: 100%; margin: 2rem auto; padding: 0 2rem; }
         .form-section { background: #fff; border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-        .form-section h2 { font-size: 1rem; font-weight: 600; color: #374151; margin-bottom: 1.25rem; padding-bottom: .5rem; border-bottom: 1px solid #e5e7eb; }
+        .form-section h2 { font-size: 1rem; font-weight: 600; color: #000; margin-bottom: 1.25rem; padding-bottom: .5rem; border-bottom: 1px solid #e5e7eb; }
+        
+        /* Text color - all black for clarity */
+        .form-section, .form-control, .form-group label, .form-check-label {
+            color: #000 !important;
+        }
+        
+        h1, h2, h3, h4, h5, h6 {
+            color: #000 !important;
+        }
 
         /*  Styles pour le nouveau système d'activités  */
         .activities-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
@@ -77,7 +86,7 @@
 
 {% block content %}
 <div class="event-form-wrapper">
-    <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;">Modifier l'événement</h1>
+    <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;text-align:center;color:#000;">Modifier l'événement</h1>
 
     {% for message in app.flashes('error') %}
         <div class="alert alert-danger">{{ message }}</div>
@@ -85,6 +94,8 @@
     {% for message in app.flashes('success') %}
         <div class="alert alert-success">{{ message }}</div>
     {% endfor %}
+
+    {{ form_errors(form) }}
 
     {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'enctype': 'multipart/form-data', 'id': 'event-form'}}) }}
 
@@ -250,7 +261,9 @@
 
         <button type="submit" class="btn-submit">Enregistrer les modifications</button>
 
-    {{ form_end(form) }}
+        {{ form_row(form._token) }}
+
+    {{ form_end(form, {'render_rest': false}) }}
 </div>
 {% endblock %}
 

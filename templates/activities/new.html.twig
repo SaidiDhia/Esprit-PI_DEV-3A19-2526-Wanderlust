@@ -638,70 +638,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 typeSelect.innerHTML = '<option value="">Chargement...</option>';
                 typeSelect.disabled = true;
                 
-                const apiUrl = `/api/types-activite/${encodeURIComponent(categorie)}`;
-                console.log('📡 Appel API:', apiUrl);
-                
-                // Appel API
-                const response = await fetch(apiUrl);
-                console.log('📥 Réponse API:', response.status, response.statusText);
-                
-                const data = await response.json();
-                console.log('📊 Données API:', data);
-                
-                if (data.success) {
-                    // Vider et remplir le select
-                    typeSelect.innerHTML = '<option value="">Choisir un type</option>';
-                    
-                    data.data.forEach(type => {
-                        const option = document.createElement('option');
-                        option.value = type.nom;
-                        option.textContent = `${type.nom} ${type.emoji}`;
-                        typeSelect.appendChild(option);
-                    });
-                    
-                    typeSelect.disabled = false;
-                } else {
-                    throw new Error(data.message);
-                }
-            } catch (error) {
-                console.error('Erreur lors du chargement des types:', error);
-                
-                // SOLUTION DE SECOURS : Types codés en dur
+                // Typage immédiat avec les types codés en dur (sans appel API)
                 const typesSecours = {
                     'desert': [
-                        {nom: 'Randonnée dans le Sahara', emoji: '??'},
-                        {nom: 'Trekking dans les dunes', emoji: '??'},
-                        {nom: 'Quad et buggy', emoji: '??'},
-                        {nom: 'Balade à dos de dromadaire', emoji: '??'},
-                        {nom: 'Nuit en campement saharien', emoji: '??'}
+                        {nom: 'Randonnée dans le Sahara', emoji: '🏜️'},
+                        {nom: 'Trekking dans les dunes', emoji: '🚶'},
+                        {nom: 'Quad et buggy', emoji: '🏎️'},
+                        {nom: 'Balade à dos de dromadaire', emoji: '🐪'},
+                        {nom: 'Nuit en campement saharien', emoji: '🏕️'}
                     ],
-                    'Mer': [
-                        {nom: 'Jet ski', emoji: '??'},
-                        {nom: 'Plongée sous-marine', emoji: '??'},
-                        {nom: 'Kayak', emoji: '??'},
-                        {nom: 'Pêche touristique', emoji: '??'}
+                    'mer': [
+                        {nom: 'Jet ski', emoji: '🚤'},
+                        {nom: 'Plongée sous-marine', emoji: '🤿'},
+                        {nom: 'Kayak', emoji: '🛶'},
+                        {nom: 'Pêche touristique', emoji: '🎣'}
                     ],
-                    'Aérien': [
-                        {nom: 'Parachutisme', emoji: '??'},
-                        {nom: 'Parapente', emoji: '??'},
-                        {nom: 'Montgolfière', emoji: '??'}
+                    'aerien': [
+                        {nom: 'Parachutisme', emoji: '🪂'},
+                        {nom: 'Parapente', emoji: '🪂'},
+                        {nom: 'Montgolfière', emoji: '🎈'}
                     ],
                     'nature': [
-                        {nom: 'Randonnée en forêt', emoji: '??'},
-                        {nom: 'Escalade', emoji: '??'},
-                        {nom: 'Camping', emoji: '??'},
-                        {nom: 'VTT', emoji: '??'}
+                        {nom: 'Randonnée en forêt', emoji: '🥾'},
+                        {nom: 'Escalade', emoji: '🧗'},
+                        {nom: 'Camping', emoji: '⛺'},
+                        {nom: 'VTT', emoji: '🚵'}
                     ],
-                    'Culture': [
-                        {nom: 'Visite des ksour', emoji: '??'},
-                        {nom: 'Décors de films', emoji: '??'},
-                        {nom: 'Visite archéologique', emoji: '??'}
+                    'culture': [
+                        {nom: 'Visite des ksour', emoji: '🏛️'},
+                        {nom: 'Décors de films', emoji: '🎬'},
+                        {nom: 'Visite archéologique', emoji: '🏺'}
                     ]
                 };
                 
-                const types = typesSecours[categorie] || [];
+                const types = typesSecours[categorie.toLowerCase()] || [];
                 
-                // Vider et remplir le select avec les types de secours
+                if (types.length === 0) {
+                    throw new Error('Aucun type disponible pour cette catégorie');
+                }
+                
+                // Vider et remplir le select avec les types
                 typeSelect.innerHTML = '<option value="">Choisir un type</option>';
                 
                 types.forEach(type => {
@@ -712,6 +688,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 typeSelect.disabled = false;
+                console.log('✅ Types chargés:', types.length);
+            } catch (error) {
+                console.error('Erreur lors du chargement des types:', error);
+                typeSelect.innerHTML = '<option value="">Erreur au chargement</option>';
+                typeSelect.disabled = true;
             }
         }
         

@@ -50,6 +50,10 @@ class Activities
     #[ORM\Column(type: 'integer', nullable: true)]
     private ?int $ageMinimum = null;
 
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'created_by_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?User $createdBy = null;
+
     public function __construct()
     {
         $this->events = new ArrayCollection();
@@ -187,6 +191,18 @@ class Activities
     public function setAgeMinimum(?int $ageMinimum): static
     {
         $this->ageMinimum = $ageMinimum;
+        return $this;
+    }
+
+    public function getCreatedBy(): ?User
+    {
+        return $this->createdBy;
+    }
+
+    public function setCreatedBy(?User $createdBy): static
+    {
+        $this->createdBy = $createdBy;
+
         return $this;
     }
 

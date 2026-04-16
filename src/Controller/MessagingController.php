@@ -169,26 +169,38 @@ class MessagingController extends AbstractController
     }
 
 #[Route('/', name: 'app_messaging')]
-public function index(EntityManagerInterface $em): Response
+public function index(Request $request, EntityManagerInterface $em): Response
 {
     $currentUserId = $this->getCurrentUserId();
+    $searchQuery = trim($request->query->get('search', ''));
     $conn = $em->getConnection();
-    
-    // Get active conversations (not archived)
+
+    // Build base query
+    $where = "cu.user_id = :userId AND cu.is_active = 1 AND c.is_archived = 0";
+    $orderBy = "c.is_pinned DESC, c.last_activity DESC, c.id DESC";
+
+    // Add search filter
+    if (!empty($searchQuery)) {
+        $where .= " AND (c.name LIKE :query OR c.type LIKE :query)";
+    }
+
     $sql = "
         SELECT c.*, MAX(cu.role) as user_role
         FROM conversation c
         JOIN conversation_user cu ON c.id = cu.conversation_id
-        WHERE cu.user_id = :userId AND cu.is_active = 1 AND c.is_archived = 0
+        WHERE $where
         GROUP BY c.id
-        ORDER BY c.is_pinned DESC, c.last_activity DESC, c.id DESC
+        ORDER BY $orderBy
     ";
-    
+
     $stmt = $conn->prepare($sql);
     $stmt->bindValue('userId', $currentUserId);
+    if (!empty($searchQuery)) {
+        $stmt->bindValue('query', '%' . $searchQuery . '%');
+    }
     $result = $stmt->executeQuery();
     $conversations = $result->fetchAllAssociative();
-    
+
     // Get archived conversations
     $sqlArchived = "
         SELECT c.*, MAX(cu.role) as user_role
@@ -198,12 +210,12 @@ public function index(EntityManagerInterface $em): Response
         GROUP BY c.id
         ORDER BY c.last_activity DESC, c.id DESC
     ";
-    
+
     $stmtArchived = $conn->prepare($sqlArchived);
     $stmtArchived->bindValue('userId', $currentUserId);
     $resultArchived = $stmtArchived->executeQuery();
     $archivedConversations = $resultArchived->fetchAllAssociative();
-    
+
     return $this->render('messaging/index.html.twig', [
         'conversations' => $conversations,
         'archivedConversations' => $archivedConversations,
@@ -217,17 +229,17 @@ public function index(EntityManagerInterface $em): Response
 
         // Get conversation details
         $conn = $em->getConnection();
-        
+
         $sql = "SELECT * FROM conversation WHERE id = :id";
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('id', $id);
         $result = $stmt->executeQuery();
         $conversation = $result->fetchAssociative();
-        
+
         if (!$conversation) {
             throw $this->createNotFoundException('Conversation not found');
         }
-        
+
         // Get messages
         $sql = "
             SELECT m.*, u.full_name as sender_name
@@ -240,10 +252,71 @@ public function index(EntityManagerInterface $em): Response
         $stmt->bindValue('conversationId', $id);
         $result = $stmt->executeQuery();
         $messages = $result->fetchAllAssociative();
-        
+
+        // Get all conversations for forward modal
+        $sqlConv = "
+            SELECT c.*, MAX(cu.role) as user_role
+            FROM conversation c
+            JOIN conversation_user cu ON c.id = cu.conversation_id
+            WHERE cu.user_id = :userId AND cu.is_active = 1 AND c.is_archived = 0
+            GROUP BY c.id
+            ORDER BY c.is_pinned DESC, c.last_activity DESC, c.id DESC
+        ";
+        $stmtConv = $conn->prepare($sqlConv);
+        $stmtConv->bindValue('userId', $currentUserId);
+        $resultConv = $stmtConv->executeQuery();
+        $conversations = $resultConv->fetchAllAssociative();
+
         return $this->render('messaging/show.html.twig', [
             'conversation' => $conversation,
             'messages' => $messages,
+            'conversations' => $conversations,
+            'currentUserId' => $currentUserId,
+        ]);
+    }
+
+    #[Route('/conversation/{id}/search', name: 'messaging_search', requirements: ['id' => '\d+'])]
+    public function searchMessages(int $id, Request $request, EntityManagerInterface $em): Response
+    {
+        $query = trim($request->query->get('q', ''));
+        $currentUserId = $this->getCurrentUserId();
+        $conn = $em->getConnection();
+
+        // Get conversation details
+        $sql = "SELECT * FROM conversation WHERE id = :id";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('id', $id);
+        $result = $stmt->executeQuery();
+        $conversation = $result->fetchAssociative();
+
+        if (!$conversation) {
+            throw $this->createNotFoundException('Conversation not found');
+        }
+
+        // Search messages
+        $sql = "
+            SELECT m.*, u.full_name as sender_name
+            FROM message m
+            LEFT JOIN users u ON m.sender_id = u.id
+            WHERE m.conversation_id = :id
+            AND (
+                m.content LIKE :query
+                OR u.full_name LIKE :query
+                OR m.message_type LIKE :query
+                OR m.file_name LIKE :query
+            )
+            ORDER BY m.created_at DESC
+        ";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('id', $id);
+        $stmt->bindValue('query', '%' . $query . '%');
+        $result = $stmt->executeQuery();
+        $messages = $result->fetchAllAssociative();
+
+        return $this->render('messaging/search_results.html.twig', [
+            'conversation' => $conversation,
+            'messages' => $messages,
+            'query' => $query,
             'currentUserId' => $currentUserId,
         ]);
     }
@@ -896,17 +969,286 @@ public function demoteToMember(int $id, string $userId, EntityManagerInterface $
 public function adminMenu(EntityManagerInterface $em): Response
 {
     $conn = $em->getConnection();
-    
+
     // Get quick stats for the menu page
     $totalMessages = $conn->executeQuery("SELECT COUNT(*) FROM message")->fetchOne();
     $totalUsers = $conn->executeQuery("SELECT COUNT(*) FROM users")->fetchOne();
     $totalConversations = $conn->executeQuery("SELECT COUNT(*) FROM conversation")->fetchOne();
-    
+
     return $this->render('messaging/admin_menu.html.twig', [
         'totalMessages' => $totalMessages,
         'totalUsers' => $totalUsers,
         'totalConversations' => $totalConversations,
     ]);
 }
+
+#[Route('/message/forward', name: 'messaging_message_forward', methods: ['POST'])]
+public function forwardMessage(Request $request, EntityManagerInterface $em): Response
+{
+    $messageId = (int) $request->request->get('message_id');
+    $targetConversationId = (int) $request->request->get('target_conversation_id');
+    $currentUserId = $this->getCurrentUserId();
+
+    $conn = $em->getConnection();
+
+    // Get original message
+    $sql = "SELECT * FROM message WHERE id = :id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('id', $messageId);
+    $result = $stmt->executeQuery();
+    $originalMessage = $result->fetchAssociative();
+
+    if (!$originalMessage) {
+        $this->addFlash('error', 'Message not found');
+        return $this->redirectToRoute('app_messaging');
+    }
+
+    // Create forwarded message
+    $forwardedContent = $originalMessage['content'];
+
+    $message = new Message();
+    $message->setConversationId($targetConversationId);
+    $message->setSenderId($currentUserId);
+    $message->setContent($forwardedContent);
+    $message->setMessageType($originalMessage['message_type']);
+    $message->setFileUrl($originalMessage['file_url']);
+    $message->setFileName($originalMessage['file_name']);
+    $message->setFileSize($originalMessage['file_size']);
+    $message->setCreatedAt(new \DateTime());
+
+    $em->persist($message);
+    $em->flush();
+
+    // Update conversation last activity
+    $sql = "UPDATE conversation SET last_activity = NOW() WHERE id = :id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('id', $targetConversationId);
+    $stmt->executeStatement();
+
+    $this->addFlash('success', 'Message forwarded!');
+    return $this->redirectToRoute('messaging_conversation_show', ['id' => $targetConversationId]);
+}
+
+#[Route('/message/reply', name: 'messaging_message_reply', methods: ['POST'])]
+public function replyMessage(Request $request, EntityManagerInterface $em): Response
+{
+    $conversationId = (int) $request->request->get('conversation_id');
+    $replyToId = (int) $request->request->get('reply_to_id');
+    $content = trim($request->request->get('content'));
+    $currentUserId = $this->getCurrentUserId();
+    
+    if (empty($content)) {
+        $this->addFlash('error', 'Reply cannot be empty');
+        return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
+    }
+    
+    // Get original message with sender info
+    $conn = $em->getConnection();
+    $sql = "
+        SELECT m.*, u.full_name as sender_name 
+        FROM message m
+        LEFT JOIN users u ON m.sender_id = u.id
+        WHERE m.id = :id
+    ";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('id', $replyToId);
+    $result = $stmt->executeQuery();
+    $original = $result->fetchAssociative();
+    
+    if (!$original) {
+        $this->addFlash('error', 'Original message not found');
+        return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
+    }
+    
+    // Format the quoted message
+    $senderName = $original['sender_name'] ?: 'User ' . substr($original['sender_id'], 0, 8);
+    $originalContent = $original['content'];
+    
+    // If replying to a reply, extract just the actual message (not the entire reply chain)
+    if (strpos($originalContent, '**Replying to') === 0) {
+        // Split on \n\n to get just the reply text, not the header and quote
+        $parts = explode("\n\n", $originalContent, 2);
+        $originalContent = isset($parts[1]) ? $parts[1] : $originalContent;
+    }
+    
+    // Truncate long quoted messages
+    if (strlen($originalContent) > 150) {
+        $originalContent = substr($originalContent, 0, 150) . '...';
+    }
+    
+    // Build the reply with quote block
+    $replyContent = "**Replying to " . $senderName . ":**\n> " . $originalContent . "\n\n" . $content;
+    
+    $message = new Message();
+    $message->setConversationId($conversationId);
+    $message->setSenderId($currentUserId);
+    $message->setContent($replyContent);
+    $message->setMessageType('TEXT');
+    $message->setCreatedAt(new \DateTime());
+    
+    $em->persist($message);
+    $em->flush();
+    
+    // Update conversation last activity
+    $sql = "UPDATE conversation SET last_activity = NOW() WHERE id = :id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('id', $conversationId);
+    $stmt->executeStatement();
+    
+    $this->addFlash('success', 'Reply sent!');
+    return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
+}
+
+#[Route('/conversation/{id}/export', name: 'messaging_export')]
+public function exportConversation(int $id, EntityManagerInterface $em): Response
+{
+    $currentUserId = $this->getCurrentUserId();
+    $conn = $em->getConnection();
+
+    // Get conversation details
+    $sql = "SELECT * FROM conversation WHERE id = :id";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('id', $id);
+    $result = $stmt->executeQuery();
+    $conversation = $result->fetchAssociative();
+
+    if (!$conversation) {
+        throw $this->createNotFoundException('Conversation not found');
+    }
+
+    // Get all messages
+    $sql = "
+        SELECT m.*, u.full_name as sender_name
+        FROM message m
+        LEFT JOIN users u ON m.sender_id = u.id
+        WHERE m.conversation_id = :id
+        ORDER BY m.created_at ASC
+    ";
+    $stmt = $conn->prepare($sql);
+    $stmt->bindValue('id', $id);
+    $result = $stmt->executeQuery();
+    $messages = $result->fetchAllAssociative();
+
+    // Build export content
+    $export = [];
+    $export[] = "WanderLust Chat Export";
+    $export[] = "=====================";
+    $export[] = "Conversation: " . ($conversation['name'] ?: 'Conversation #' . $id);
+    $export[] = "Type: " . $conversation['type'];
+    $export[] = "Exported: " . date('Y-m-d H:i:s');
+    $export[] = "";
+    $export[] = "MESSAGES";
+    $export[] = "========";
+    $export[] = "";
+
+    foreach ($messages as $msg) {
+        $date = (new \DateTime($msg['created_at']))->format('Y-m-d H:i:s');
+        $sender = $msg['sender_name'] ?: 'User ' . substr($msg['sender_id'], 0, 8);
+
+        if ($msg['message_type'] == 'IMAGE') {
+            $content = "[IMAGE] " . ($msg['file_name'] ?: 'Image');
+        } elseif ($msg['message_type'] == 'VIDEO') {
+            $content = "[VIDEO] " . ($msg['file_name'] ?: 'Video');
+        } elseif ($msg['message_type'] == 'AUDIO') {
+            $content = "[AUDIO] " . ($msg['file_name'] ?: 'Audio');
+        } elseif ($msg['message_type'] == 'FILE') {
+            $content = "[FILE] " . ($msg['file_name'] ?: 'File');
+        } else {
+            $content = $msg['content'];
+        }
+
+        $export[] = "[$date] $sender: $content";
+    }
+
+    $export[] = "";
+    $export[] = "=====================";
+    $export[] = "End of conversation";
+
+    $content = implode("\n", $export);
+
+    // Create response as downloadable file
+    $response = new Response($content);
+    $response->headers->set('Content-Type', 'text/plain');
+    $response->headers->set('Content-Disposition', 'attachment; filename="conversation_' . $id . '_' . date('Y-m-d') . '.txt"');
+
+    return $response;
+}
+
+    #[Route('/message/{id}/react', name: 'messaging_message_react', methods: ['POST'])]
+    public function addReaction(int $id, Request $request, EntityManagerInterface $em): Response
+    {
+        $reaction = $request->request->get('reaction');
+        $userId = $this->getCurrentUserId();
+        $conn = $em->getConnection();
+        
+        // Check if user already reacted to this message
+        $sql = "SELECT id, reaction FROM message_reactions WHERE message_id = :messageId AND user_id = :userId";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('messageId', $id);
+        $stmt->bindValue('userId', $userId);
+        $result = $stmt->executeQuery();
+        $existing = $result->fetchAssociative();
+        
+        if ($existing) {
+            if ($existing['reaction'] === $reaction) {
+                // Same reaction - remove it (toggle off)
+                $sql = "DELETE FROM message_reactions WHERE id = :id";
+                $stmt = $conn->prepare($sql);
+                $stmt->bindValue('id', $existing['id']);
+                $stmt->executeStatement();
+            } else {
+                // Different reaction - update
+                $sql = "UPDATE message_reactions SET reaction = :reaction WHERE id = :id";
+                $stmt = $conn->prepare($sql);
+                $stmt->bindValue('reaction', $reaction);
+                $stmt->bindValue('id', $existing['id']);
+                $stmt->executeStatement();
+            }
+        } else {
+            // New reaction
+            $sql = "INSERT INTO message_reactions (message_id, user_id, reaction, created_at) VALUES (:messageId, :userId, :reaction, NOW())";
+            $stmt = $conn->prepare($sql);
+            $stmt->bindValue('messageId', $id);
+            $stmt->bindValue('userId', $userId);
+            $stmt->bindValue('reaction', $reaction);
+            $stmt->executeStatement();
+        }
+        
+        // Return JSON response instead of redirect
+        return new JsonResponse(['success' => true]);
+    }
+
+    #[Route('/message/{id}/reactions', name: 'messaging_get_reactions', methods: ['GET'])]
+    public function getReactions(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $conn = $em->getConnection();
+        
+        $sql = "
+            SELECT r.reaction, COUNT(*) as count, GROUP_CONCAT(u.full_name SEPARATOR ', ') as users
+            FROM message_reactions r
+            LEFT JOIN users u ON r.user_id = u.id
+            WHERE r.message_id = :messageId
+            GROUP BY r.reaction
+        ";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('messageId', $id);
+        $result = $stmt->executeQuery();
+        $reactions = $result->fetchAllAssociative();
+        
+        // Also get current user's reaction
+        $userId = $this->getCurrentUserId();
+        $sql = "SELECT reaction FROM message_reactions WHERE message_id = :messageId AND user_id = :userId LIMIT 1";
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('messageId', $id);
+        $stmt->bindValue('userId', $userId);
+        $result = $stmt->executeQuery();
+        $userReactionRow = $result->fetchAssociative();
+        $userReaction = $userReactionRow ? $userReactionRow['reaction'] : null;
+        
+        return $this->json([
+            'reactions' => $reactions,
+            'userReaction' => $userReaction
+        ]);
+    }
 
 }
