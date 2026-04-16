@@ -1,967 +1,116 @@
-{% extends 'base.html.twig' %}
+﻿{% extends 'base.html.twig' %}
 
-{% block title %}Modifier l'activité{% endblock %}
+{% block title %}Modifier l'activite{% endblock %}
 
 {% block stylesheets %}
 {{ parent() }}
 <style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --warning-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        --hover-shadow: 0 20px 60px rgba(0,0,0,0.15);
-        --border-radius: 20px;
+    .module-hero {
+        background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
+                    url('{{ asset('adventure/img/banner-bg.jpg') }}') center/cover no-repeat;
+        color: #fff;
+        padding: 120px 0 80px;
+        margin-bottom: 40px;
     }
 
-    /* Hero Section */
-    .form-hero {
-        background: var(--warning-gradient);
-        border-radius: 0 0 60px 60px;
-        padding: 3rem 0;
-        margin-bottom: 3rem;
-        position: relative;
-        overflow: hidden;
+    .surface-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+        padding: 24px;
+        margin-bottom: 24px;
     }
 
-    .form-hero::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
-        background-size: cover;
-        opacity: 0.1;
-    }
-
-    .hero-title {
-        font-size: 3.5rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        animation: fadeInUp 0.8s ease;
-    }
-
-    .hero-subtitle {
-        color: rgba(255,255,255,0.95);
-        font-size: 1.2rem;
-        font-weight: 300;
-        animation: fadeInUp 0.8s ease 0.2s both;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Form Card */
-    .form-card {
-        border: none;
-        border-radius: var(--border-radius);
-        box-shadow: var(--card-shadow);
-        overflow: hidden;
-        transition: all 0.3s ease;
-        background: white;
-        position: relative;
-        width: 100%;
-        margin: 0;
-    }
-
-    .form-card * {
-        color: #000 !important;
-    }
-
-    .form-card label, .form-card h4, .form-card p {
-        color: #000 !important;
-    }
-
-    .form-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--warning-gradient);
-        transform: scaleX(0);
-        transition: transform 0.3s ease;
-    }
-
-    .form-card:hover::before {
-        transform: scaleX(1);
-    }
-
-    .form-card:hover {
-        transform: translateY(-5px);
-        box-shadow: var(--hover-shadow);
-    }
-
-    .form-header {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 2rem;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-        position: relative;
-    }
-
-    .form-body {
-        padding: 3rem;
-    }
-
-    /* Form Controls Modernes */
-    .form-group-modern {
-        margin-bottom: 2rem;
-        position: relative;
-    }
-
-    .form-control-modern {
-        width: 100%;
-        padding: 15px 20px;
-        border: 2px solid #e9ecef;
-        border-radius: 15px;
-        font-size: 1rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        background: white;
-    }
-
-    .form-control-modern:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 5px rgba(102, 126, 234, 0.15);
-        outline: none;
-        transform: translateY(-2px);
-    }
-
-    .form-control-modern.is-valid {
-        border-color: #28a745;
-        background-image: none;
-    }
-
-    .form-control-modern.is-invalid {
-        border-color: #dc3545;
-        background-image: none;
-    }
-
-    textarea.form-control-modern {
-        resize: vertical;
-        min-height: 120px;
-    }
-
-    .form-select-modern {
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 20px center;
-        background-size: 16px;
-        padding-right: 50px !important;
-    }
-
-    /* Floating Labels Modernes */
-    .form-floating-modern {
-        position: relative;
-    }
-
-    .form-floating-modern .form-control-modern {
-        padding-top: 1.8rem;
-        padding-bottom: 0.6rem;
-    }
-
-    .form-floating-modern label {
-        position: absolute;
-        left: 20px;
-        top: 50%;
-        transform: translateY(-50%);
-        transition: all 0.3s ease;
-        color: #6c757d;
-        pointer-events: none;
-        font-size: 1rem;
-        font-weight: 500;
-    }
-
-    .form-floating-modern .form-control-modern:focus ~ label,
-    .form-floating-modern .form-control-modern:not(:placeholder-shown) ~ label {
-        top: 0.3rem;
-        font-size: 0.8rem;
-        color: #667eea;
-        font-weight: 600;
-    }
-
-    /* Current Image Display */
     .current-image {
-        border: 2px solid #e9ecef;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        background: #f8f9fa;
-        position: relative;
+        margin-bottom: 20px;
     }
 
     .current-image img {
-        max-width: 200px;
-        max-height: 150px;
-        border-radius: 10px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    }
-
-    /* Image Upload Modern */
-    .image-upload-modern {
-        border: 3px dashed #dee2e6;
-        border-radius: 20px;
-        padding: 3rem;
-        text-align: center;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        background: #f8f9fa;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .image-upload-modern::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: var(--primary-gradient);
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-
-    .image-upload-modern:hover {
-        border-color: #667eea;
-        background: rgba(102, 126, 234, 0.05);
-        transform: translateY(-2px);
-    }
-
-    .image-upload-modern:hover::before {
-        opacity: 0.05;
-    }
-
-    .upload-icon-modern {
-        font-size: 4rem;
-        color: #adb5bd;
-        margin-bottom: 1.5rem;
-        transition: all 0.3s ease;
-    }
-
-    .image-upload-modern:hover .upload-icon-modern {
-        color: #667eea;
-        transform: translateY(-5px) scale(1.1);
-    }
-
-    /* Boutons Modernes */
-    .btn-modern {
-        border-radius: 25px;
-        font-weight: 600;
-        padding: 12px 30px;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        border: 2px solid transparent;
-    }
-
-    .btn-modern::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        transition: left 0.5s ease;
-    }
-
-    .btn-modern:hover::before {
-        left: 100%;
-    }
-
-    .btn-modern:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-
-    .btn-warning-modern {
-        background: var(--warning-gradient);
-        border-color: transparent;
-        color: white;
-        box-shadow: 0 4px 15px rgba(240, 147, 251, 0.3);
-    }
-
-    .btn-warning-modern:hover {
-        box-shadow: 0 8px 25px rgba(240, 147, 251, 0.4);
-    }
-
-    .btn-secondary-modern {
-        background: white;
-        border: 2px solid #dee2e6;
-        color: #6c757d;
-    }
-
-    .btn-secondary-modern:hover {
-        border-color: #667eea;
-        color: #667eea;
-    }
-
-    .btn-info-modern {
-        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-        border-color: transparent;
-        color: white;
-        box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3);
-    }
-
-    .btn-info-modern:hover {
-        box-shadow: 0 8px 25px rgba(23, 162, 184, 0.4);
-    }
-
-    /* Alertes Modernes */
-    .alert-modern {
-        border-radius: 15px;
-        border: none;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        animation: slideInRight 0.5s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .alert-modern::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: var(--warning-gradient);
-    }
-
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .form-body {
-            padding: 2rem;
-        }
-        
-        .hero-title {
-            font-size: 2.5rem;
-        }
-
-        .form-hero {
-            padding: 2rem 0;
-            border-radius: 0 0 40px 40px;
-        }
+        max-width: 220px;
+        max-height: 160px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 1px solid #e6e6e6;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="form-hero">
-    <div class="container">
-        <div style="text-align: center;">
-            <h1 class="hero-title mb-4" style="text-align: center; color: white;">
-                ✏️ Modifier l'activité
-            </h1>
-            <p class="hero-subtitle mb-0" style="text-align: center;">
-                Mettez à jour les informations de l'activité
-            </p>
-        </div>
+<section class="module-hero">
+    <div class="container text-center">
+        <h2 class="mb-2">Modifier l'activite</h2>
+        <p class="mb-0">Mettez a jour les informations de l'activite</p>
     </div>
-</div>
+</section>
 
-<div class="container mb-5" style="max-width: 100%; padding: 0 2rem;">
-    <div class="row justify-content-center">
-        <div class="col-12">
-            <!-- Messages Flash -->
-            {% for message in app.flashes('success') %}
-                <div id="success-message" data-message="{{ message|striptags|e('html_attr') }}" style="display: none;"></div>
-            {% endfor %}
+<div class="container">
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success">{{ message }}</div>
+    {% endfor %}
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger">{{ message }}</div>
+    {% endfor %}
 
-            {% for message in app.flashes('error') %}
-                <div id="error-message" data-message="{{ message|striptags|e('html_attr') }}" style="display: none;"></div>
-            {% endfor %}
+    <div class="surface-card">
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
 
-            {% for message in app.flashes('info') %}
-                <div class="alert alert-info alert-modern alert-dismissible fade show mb-4" role="alert">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <i class="fas fa-info-circle fa-lg"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            {{ message }}
-                        </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="form-group">
+                {{ form_label(form.titre) }}
+                {{ form_widget(form.titre, {'attr': {'class': 'form-control'}}) }}
+                {{ form_errors(form.titre) }}
+            </div>
+
+            <div class="form-group">
+                {{ form_label(form.description) }}
+                {{ form_widget(form.description, {'attr': {'class': 'form-control', 'rows': 5}}) }}
+                {{ form_errors(form.description) }}
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        {{ form_label(form.categorie) }}
+                        {{ form_widget(form.categorie, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_errors(form.categorie) }}
                     </div>
                 </div>
-            {% endfor %}
-
-            <!-- Formulaire -->
-            <div class="form-card">
-                <div class="form-header">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <i class="fas fa-edit fa-3x text-warning"></i>
-                        </div>
-                        <div>
-                            <h4 class="mb-0 fw-bold">Modifier l'activité</h4>
-                            <p class="text-muted mb-0">Mettez à jour les informations de l'activité</p>
-                        </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        {{ form_label(form.type_activite) }}
+                        {{ form_widget(form.type_activite, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_errors(form.type_activite) }}
                     </div>
                 </div>
-                
-                <div class="form-body">
-                    {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'activityForm'}}) }}
-                        
-                        <!-- Titre -->
-                        <div class="form-group-modern">
-                            <div class="form-floating-modern">
-                                {{ form_widget(form.titre, {'attr': {
-                                    'class': 'form-control-modern',
-                                    'placeholder': ' ',
-                                    'id': 'titre'
-                                }}) }}
-                                {{ form_label(form.titre, 'Titre de l\'activité *', {'label_attr': {'for': 'titre'}}) }}
-                            </div>
-                            
-                            {{ form_errors(form.titre) }}
-                        </div>
-
-                        <!-- Description -->
-                        <div class="form-group-modern">
-                            <div class="form-floating-modern">
-                                {{ form_widget(form.description, {'attr': {
-                                    'class': 'form-control-modern',
-                                    'rows': 5,
-                                    'placeholder': ' ',
-                                    'id': 'description'
-                                }}) }}
-                                {{ form_label(form.description, 'Description *', {'label_attr': {'for': 'description'}}) }}
-                            </div>
-                            
-                            {{ form_errors(form.description) }}
-                        </div>
-
-                        <!-- Catégorie et Type -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label fw-bold mb-2">
-                                        <i class="fas fa-layer-group me-1"></i>
-                                        Catégorie <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form_widget(form.categorie, {'attr': {
-                                        'class': 'form-control-modern form-select-modern',
-                                        'id': 'categorie'
-                                    }}) }}
-                                    {{ form_errors(form.categorie) }}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label fw-bold mb-2">
-                                        <i class="fas fa-tag me-1"></i>
-                                        Type d'activité <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form_widget(form.type_activite, {'attr': {
-                                        'class': 'form-control-modern',
-                                        'placeholder': 'Ex: Randonnée, Plongée...',
-                                        'id': 'type_activite'
-                                    }}) }}
-                                    <small class="text-muted">Ex: Randonnée, Plongée sous-marine, Parachutisme...</small>
-                                    {{ form_errors(form.type_activite) }}
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Âge minimum -->
-                        <div class="form-group-modern">
-                            <div class="form-floating-modern">
-                                {{ form_widget(form.ageMinimum, {'attr': {
-                                    'class': 'form-control-modern',
-                                    'placeholder': ' ',
-                                    'id': 'ageMinimum',
-                                    'min': '0',
-                                    'max': '100'
-                                }}) }}
-                                {{ form_label(form.ageMinimum, 'Âge minimum (optionnel)', {'label_attr': {'for': 'ageMinimum'}}) }}
-                            </div>
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Laissez vide si aucune restriction d'âge n'est requise
-                            </small>
-                            {{ form_errors(form.ageMinimum) }}
-                        </div>
-
-                        <!-- Image Actuelle -->
-                        {% if activity.image %}
-                            <div class="current-image">
-                                <label class="form-label fw-bold mb-2">
-                                    <i class="fas fa-image me-1"></i>
-                                    Image actuelle
-                                </label>
-                                <div class="d-flex align-items-center">
-                                    <img src="{{ asset('uploads/activities/' ~ activity.image) }}" alt="Image actuelle">
-                                    <div class="ms-3">
-                                        <small class="text-muted d-block">Fichier: {{ activity.image }}</small>
-                                        <small class="text-success d-block">
-                                            <i class="fas fa-check-circle me-1"></i>Image déjà uploadée
-                                        </small>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endif %}
-
-                        <!-- Image Upload -->
-                        <div class="form-group-modern">
-                            <label class="form-label fw-bold mb-2">
-                                <i class="fas fa-image me-1"></i>
-                                {% if activity.image %}Changer l'image{% else %}Image de l'activité{% endif %}
-                            </label>
-                            <div class="image-upload-modern" id="imageUploadArea">
-                                <i class="fas fa-cloud-upload-alt upload-icon-modern"></i>
-                                <h6 class="mb-2">Cliquez ou glissez-déposez une nouvelle image</h6>
-                                <p class="text-muted small mb-0">JPG, PNG ou GIF (Max 5MB) - {% if activity.image %}Laissez vide pour conserver l'actuelle{% endif %}</p>
-                                {{ form_widget(form.image, {'attr': {
-                                    'class': 'd-none',
-                                    'id': 'imageInput',
-                                    'accept': 'image/jpeg,image/png,image/gif'
-                                }}) }}
-                            </div>
-                            <div id="imagePreview" class="mt-3" style="display: none;">
-                                <div class="position-relative d-inline-block">
-                                    <img id="previewImg" src="" alt="Preview" class="rounded-3" style="max-width: 200px; max-height: 150px; object-fit: cover;">
-                                    <button type="button" id="removeImage" class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 translate-middle">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            {{ form_errors(form.image) }}
-                        </div>
-
-                        <!-- Boutons -->
-                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                            <div class="d-flex gap-2">
-                                <a href="{{ path('app_activities_index') }}" class="btn btn-secondary-modern btn-modern">
-                                    <i class="fas fa-times me-2"></i>Retour
-                                </a>
-                                <a href="{{ path('app_activities_show', {'id': activity.id}) }}" class="btn btn-info-modern btn-modern">
-                                    <i class="fas fa-eye me-2"></i>Voir
-                                </a>
-                            </div>
-                            <button type="submit" class="btn btn-warning-modern btn-modern">
-                                <i class="fas fa-save me-2"></i>Enregistrer les modifications
-                            </button>
-                        </div>
-
-                    {{ form_end(form) }}
-                </div>
             </div>
-        </div>
+
+            <div class="form-group">
+                {{ form_label(form.ageMinimum) }}
+                {{ form_widget(form.ageMinimum, {'attr': {'class': 'form-control'}}) }}
+                {{ form_errors(form.ageMinimum) }}
+            </div>
+
+            {% if activity.image %}
+                <div class="current-image">
+                    <label class="d-block"><strong>Image actuelle</strong></label>
+                    <img src="{{ asset('uploads/activities/' ~ activity.image) }}" alt="Image actuelle">
+                </div>
+            {% endif %}
+
+            <div class="form-group">
+                {{ form_label(form.image) }}
+                {{ form_widget(form.image, {'attr': {'class': 'form-control-file'}}) }}
+                {{ form_errors(form.image) }}
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div>
+                    <a href="{{ path('app_activities_index') }}" class="genric-btn default-border">Retour</a>
+                    <a href="{{ path('app_activities_show', {'id': activity.id}) }}" class="genric-btn info ml-2">Voir</a>
+                </div>
+                <button type="submit" class="primary-btn text-uppercase">Enregistrer</button>
+            </div>
+
+        {{ form_end(form) }}
     </div>
 </div>
-{% endblock %}
-
-{% block javascripts %}
-<script>
-// Fonction pour afficher une alerte de succès
-function showSuccessModal(message) {
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
-    
-    const modalContent = document.createElement('div');
-    modalContent.style.cssText = `
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        max-width: 400px;
-        width: 90%;
-        text-align: center;
-        animation: slideIn 0.3s ease;
-    `;
-    
-    modalContent.innerHTML = `
-        <div style="margin-bottom: 1.5rem;">
-            <div style="width: 60px; height: 60px; background: #dcfce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem;">
-                🎉
-            </div>
-            <h3 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.25rem; font-weight: 600;">Succès !</h3>
-            <p style="margin: 0; color: #6b7280; line-height: 1.5;">
-                ${message}
-            </p>
-        </div>
-        <div style="display: flex; gap: 1rem; justify-content: center;">
-            <button onclick="closeSuccessModal()" style="
-                background: #10b981;
-                color: white;
-                border: none;
-                padding: 0.75rem 1.5rem;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 500;
-                transition: all 0.2s ease;
-            " onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
-                OK
-            </button>
-        </div>
-    `;
-    
-    modal.appendChild(modalContent);
-    document.body.appendChild(modal);
-    
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-// Fonction pour afficher une alerte d'erreur
-function showErrorModal(message) {
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
-    
-    const modalContent = document.createElement('div');
-    modalContent.style.cssText = `
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        max-width: 400px;
-        width: 90%;
-        text-align: center;
-        animation: slideIn 0.3s ease;
-    `;
-    
-    modalContent.innerHTML = `
-        <div style="margin-bottom: 1.5rem;">
-            <div style="width: 60px; height: 60px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem;">
-                ❌
-            </div>
-            <h3 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.25rem; font-weight: 600;">Erreur !</h3>
-            <p style="margin: 0; color: #6b7280; line-height: 1.5;">
-                ${message}
-            </p>
-        </div>
-        <div style="display: flex; gap: 1rem; justify-content: center;">
-            <button onclick="closeErrorModal()" style="
-                background: #dc2626;
-                color: white;
-                border: none;
-                padding: 0.75rem 1.5rem;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 500;
-                transition: all 0.2s ease;
-            " onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
-                OK
-            </button>
-        </div>
-    `;
-    
-    modal.appendChild(modalContent);
-    document.body.appendChild(modal);
-    
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-function closeSuccessModal() {
-    const modal = document.querySelector('div[style*="position: fixed"]');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-function closeErrorModal() {
-    const modal = document.querySelector('div[style*="position: fixed"]');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Afficher les alertes de succès
-    const successMessages = document.querySelectorAll('#success-message');
-    successMessages.forEach(element => {
-        const message = element.getAttribute('data-message');
-        if (message) {
-            setTimeout(() => {
-                showSuccessModal(message);
-            }, 500);
-        }
-    });
-    
-    // Afficher les alertes d'erreur
-    const errorMessages = document.querySelectorAll('#error-message');
-    errorMessages.forEach(element => {
-        const message = element.getAttribute('data-message');
-        if (message) {
-            setTimeout(() => {
-                showErrorModal(message);
-            }, 500);
-        }
-    });
-    
-    const form = document.querySelector('form');
-    
-    // Image upload preview
-    const imageUploadArea = document.getElementById('imageUploadArea');
-    const imageInput = document.getElementById('activities_image'); // Corriger l'ID
-    const imagePreview = document.getElementById('imagePreview');
-    const previewImg = document.getElementById('previewImg');
-    const removeImageBtn = document.getElementById('removeImage');
-    
-    if (imageUploadArea && imageInput) {
-        imageUploadArea.addEventListener('click', () => imageInput.click());
-        
-        imageUploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            imageUploadArea.style.borderColor = '#667eea';
-            imageUploadArea.style.background = 'rgba(102, 126, 234, 0.05)';
-        });
-        
-        imageUploadArea.addEventListener('dragleave', () => {
-            imageUploadArea.style.borderColor = '#dee2e6';
-            imageUploadArea.style.background = '#f8f9fa';
-        });
-        
-        imageUploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            imageUploadArea.style.borderColor = '#dee2e6';
-            imageUploadArea.style.background = '#f8f9fa';
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                imageInput.files = files;
-                previewImage(files[0]);
-            }
-        });
-        
-        imageInput.addEventListener('change', function() {
-            if (this.files.length > 0) {
-                previewImage(this.files[0]);
-            } else {
-                if (imagePreview) imagePreview.style.display = 'none';
-                if (imageUploadArea) imageUploadArea.style.display = 'block';
-            }
-        });
-        
-        function previewImage(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                if (previewImg) {
-                    previewImg.src = e.target.result;
-                    if (imagePreview) imagePreview.style.display = 'block';
-                    if (imageUploadArea) imageUploadArea.style.display = 'none';
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-        
-        if (removeImageBtn) {
-            removeImageBtn.addEventListener('click', function() {
-                imageInput.value = '';
-                if (imagePreview) imagePreview.style.display = 'none';
-                if (imageUploadArea) imageUploadArea.style.display = 'block';
-            });
-        }
-    }
-    
-    // Validation en temps réel
-    if (form) {
-        form.addEventListener('input', function(e) {
-            if (e.target.classList.contains('form-control-modern')) {
-                validateField(e.target);
-            }
-        });
-        
-        form.addEventListener('change', function(e) {
-            if (e.target.classList.contains('form-control-modern')) {
-                validateField(e.target);
-            }
-        });
-    }
-    
-    function validateField(field) {
-        const value = field.value.trim();
-        let isValid = true;
-        let errorMessage = '';
-        
-        if (field.name === 'activities[titre]') {
-            if (value.length < 3) {
-                isValid = false;
-                errorMessage = 'Le titre doit contenir au moins 3 caractères';
-            } else if (value.length > 150) {
-                isValid = false;
-                errorMessage = 'Le titre ne peut pas dépasser 150 caractères';
-            }
-        }
-        
-        if (field.name === 'activities[description]') {
-            if (value.length < 10) {
-                isValid = false;
-                errorMessage = 'La description doit contenir au moins 10 caractères';
-            }
-        }
-        
-        if (field.name === 'activities[type_activite]') {
-            if (value.length < 3) {
-                isValid = false;
-                errorMessage = 'Le type d\'activité doit contenir au moins 3 caractères';
-            } else if (value.length > 100) {
-                isValid = false;
-                errorMessage = 'Le type d\'activité ne peut pas dépasser 100 caractères';
-            }
-        }
-        
-        // Validation de l'image
-        if (field.name === 'activities[image]') {
-            if (field.files.length > 0) {
-                const file = field.files[0];
-                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
-                const maxSize = 5 * 1024 * 1024; // 5MB
-                
-                if (!allowedTypes.includes(file.type)) {
-                    isValid = false;
-                    errorMessage = 'Format d\'image non valide (JPG, PNG, GIF uniquement)';
-                } else if (file.size > maxSize) {
-                    isValid = false;
-                    errorMessage = 'L\'image ne peut pas dépasser 5MB';
-                }
-            }
-        }
-        
-        // Affichage des erreurs
-        const errorDiv = field.parentNode.querySelector('.invalid-feedback');
-        if (errorDiv) {
-            errorDiv.remove();
-        }
-        
-        if (!isValid && errorMessage) {
-            field.classList.add('is-invalid');
-            field.classList.remove('is-valid');
-            
-            const errorElement = document.createElement('div');
-            errorElement.className = 'invalid-feedback';
-            errorElement.textContent = errorMessage;
-            field.parentNode.appendChild(errorElement);
-        } else if (value || (field.name === 'activities[image]' && field.files.length > 0)) {
-            field.classList.add('is-valid');
-            field.classList.remove('is-invalid');
-        } else {
-            field.classList.remove('is-valid', 'is-invalid');
-        }
-        
-        return isValid;
-    }
-    
-    // Validation à la soumission
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            const fields = form.querySelectorAll('.form-control-modern');
-            let isFormValid = true;
-            
-            fields.forEach(field => {
-                if (!validateField(field)) {
-                    isFormValid = false;
-                }
-            });
-            
-            // Validation spécifique pour la catégorie (enum)
-            const categorieField = form.querySelector('select[name="activities[categorie]"]');
-            if (!categorieField.value) {
-                categorieField.classList.add('is-invalid');
-                if (!categorieField.parentNode.querySelector('.invalid-feedback')) {
-                    const errorElement = document.createElement('div');
-                    errorElement.className = 'invalid-feedback';
-                    errorElement.textContent = 'Veuillez sélectionner une catégorie';
-                    categorieField.parentNode.appendChild(errorElement);
-                }
-                isFormValid = false;
-            } else {
-                categorieField.classList.add('is-valid');
-                categorieField.classList.remove('is-invalid');
-            }
-            
-            if (!isFormValid) {
-                e.preventDefault();
-                // Faire défiler vers le premier champ invalide
-                const firstInvalid = form.querySelector('.is-invalid');
-                if (firstInvalid) {
-                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    firstInvalid.focus();
-                }
-            } else {
-                // Désactiver le bouton pour éviter les doubles soumissions
-                const submitBtn = form.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Mise à jour...';
-                }
-            }
-        });
-    }
-});
-</script>
 {% endblock %}

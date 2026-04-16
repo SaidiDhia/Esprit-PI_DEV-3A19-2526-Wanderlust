@@ -1,92 +1,149 @@
 {% extends 'base.html.twig' %}
-{% block title %}Checkout — WanderLust{% endblock %}
+
+{% block title %}Checkout - WanderLust{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .module-hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.48)), url('{{ asset('adventure/img/slider3.jpg') }}') center center/cover no-repeat;
+            padding: 120px 0 80px;
+            color: #fff;
+            margin-bottom: 50px;
+        }
+
+        .checkout-card {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .payment-option {
+            display: flex;
+            gap: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 12px;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .payment-option.selected {
+            border-color: #22c55e;
+            background: #ecfdf5;
+        }
+
+        .order-line {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .order-line img {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #f7f7f7;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<section class="min-h-[calc(100vh-64px)] bg-gradient-to-b from-slate-50 via-white to-sky-50/40 px-4 py-8">
-<div class="mx-auto max-w-6xl space-y-6">
-    <div class="flex items-center justify-between">
-        <a href="{{ path('app_marketplace_cart') }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Back to Cart</a>
-        <h1 class="text-xl font-heading font-bold text-slate-900">Checkout</h1>
-    </div>
-
-    {% for msg in app.flashes('error') %}
-        <div class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800">{{ msg }}</div>
-    {% endfor %}
-
-    <form method="POST" action="{{ path('app_marketplace_checkout_confirm') }}">
-        <div class="grid grid-cols-1 gap-6 xl:grid-cols-2">
-            <div class="space-y-4">
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <h3 class="mb-4 text-lg font-heading font-bold text-slate-900">Delivery Address</h3>
-                    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-                        <div class="space-y-1 md:col-span-2"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Full Name</label><input type="text" name="full_name" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                        <div class="space-y-1"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Phone</label><input type="tel" name="phone" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                        <div class="space-y-1"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Email</label><input type="email" name="email" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                        <div class="space-y-1 md:col-span-2"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Address</label><input type="text" name="address" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                        <div class="space-y-1"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">City</label><input type="text" name="city" required class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                        <div class="space-y-1"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Postal Code</label><input type="text" name="postal_code" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></div>
-                        <div class="space-y-1 md:col-span-2"><label class="text-xs font-bold uppercase tracking-wider text-slate-500">Notes</label><textarea name="notes" rows="2" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"></textarea></div>
-                    </div>
-                </div>
-
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                    <h3 class="mb-4 text-lg font-heading font-bold text-slate-900">Payment Method</h3>
-                    <label class="mp-payment-option selected" id="opt-cash">
-                        <input type="radio" name="payment_method" value="cash" checked onchange="selectPayment(this)">
-                        <div>
-                            <div style="font-weight:700;">Cash on Delivery</div>
-                            <div style="font-size:12px; color:var(--gray-400);">Stock is reserved until order confirmation.</div>
-                        </div>
-                    </label>
-                    <label class="mp-payment-option" id="opt-online" style="margin-top:12px;">
-                        <input type="radio" name="payment_method" value="online" onchange="selectPayment(this)">
-                        <div>
-                            <div style="font-weight:700;">Pay Online</div>
-                            <div style="font-size:12px; color:var(--gray-400);">Instant confirmation and stock deduction.</div>
-                        </div>
-                    </label>
-                </div>
-            </div>
-
-            <div>
-                <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm xl:sticky xl:top-24">
-                    <h3 class="mb-4 text-lg font-heading font-bold text-slate-900">Order Summary</h3>
-                    <div class="space-y-3">
-                        {% for item in cartItems %}
-                            <div class="flex items-center gap-3">
-                                <div class="h-12 w-12 overflow-hidden rounded-lg bg-slate-100">
-                                    {% if item.image %}
-                                        <img src="{{ item.image }}" alt="{{ item.product_title }}" class="h-full w-full object-cover" onerror="this.parentNode.innerHTML='No image'">
-                                    {% endif %}
-                                </div>
-                                <div class="flex-1 text-sm">
-                                    <p class="font-semibold text-slate-900">{{ item.product_title }}</p>
-                                    <p class="text-xs text-slate-500">x {{ item.cart_qty }}</p>
-                                </div>
-                                <p class="text-sm font-bold text-slate-900">{{ (item.price * item.cart_qty)|number_format(2) }} TND</p>
-                            </div>
-                        {% endfor %}
-                    </div>
-
-                    <div class="mt-5 border-t border-slate-100 pt-4">
-                        <div class="mb-4 flex items-center justify-between">
-                            <span class="text-sm font-semibold text-slate-700">Total</span>
-                            <span class="text-2xl font-heading font-bold text-slate-900">{{ total|number_format(2) }} TND</span>
-                        </div>
-                        <button type="submit" class="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-emerald-700">Place Order</button>
-                    </div>
-                </div>
-            </div>
+<section class="module-hero">
+    <div class="container">
+        <div class="d-flex flex-wrap" style="gap:10px; margin-bottom:14px;">
+            <a href="{{ path('app_marketplace_cart') }}" class="genric-btn default-border">Back To Cart</a>
         </div>
-    </form>
-</div>
+        <h1 class="mb-10">Checkout</h1>
+        <p class="mb-0">Confirm address, choose payment, and place your order.</p>
+    </div>
 </section>
 
+<section class="section-gap pt-0">
+    <div class="container">
+        {% for msg in app.flashes('error') %}
+            <div class="alert alert-danger">{{ msg }}</div>
+        {% endfor %}
+
+        <form method="POST" action="{{ path('app_marketplace_checkout_confirm') }}">
+            <div class="row">
+                <div class="col-lg-7">
+                    <div class="checkout-card">
+                        <h4 class="mb-3">Delivery Address</h4>
+                        <div class="row">
+                            <div class="col-md-12 mb-3"><label>Full Name</label><input type="text" name="full_name" required class="form-control"></div>
+                            <div class="col-md-6 mb-3"><label>Phone</label><input type="tel" name="phone" required class="form-control"></div>
+                            <div class="col-md-6 mb-3"><label>Email</label><input type="email" name="email" class="form-control"></div>
+                            <div class="col-md-12 mb-3"><label>Address</label><input type="text" name="address" required class="form-control"></div>
+                            <div class="col-md-6 mb-3"><label>City</label><input type="text" name="city" required class="form-control"></div>
+                            <div class="col-md-6 mb-3"><label>Postal Code</label><input type="text" name="postal_code" class="form-control"></div>
+                            <div class="col-md-12 mb-0"><label>Notes</label><textarea name="notes" rows="2" class="form-control"></textarea></div>
+                        </div>
+                    </div>
+
+                    <div class="checkout-card">
+                        <h4 class="mb-3">Payment Method</h4>
+                        <label class="payment-option selected" id="opt-cash">
+                            <input type="radio" name="payment_method" value="cash" checked onchange="selectPayment(this)">
+                            <div>
+                                <div style="font-weight:700;">Cash On Delivery</div>
+                                <div class="small text-muted">Stock is reserved until order confirmation.</div>
+                            </div>
+                        </label>
+                        <label class="payment-option mt-2" id="opt-online">
+                            <input type="radio" name="payment_method" value="online" onchange="selectPayment(this)">
+                            <div>
+                                <div style="font-weight:700;">Pay Online</div>
+                                <div class="small text-muted">Instant confirmation and stock deduction.</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-lg-5">
+                    <div class="checkout-card" style="position:sticky; top:110px;">
+                        <h4 class="mb-3">Order Summary</h4>
+                        {% for item in cartItems %}
+                            <div class="order-line">
+                                {% if item.image %}
+                                    <img src="{{ item.image }}" alt="{{ item.product_title }}" onerror="this.src='https://dummyimage.com/200x200/d1d5db/64748b&text=No+Photo'">
+                                {% else %}
+                                    <img src="{{ asset('adventure/img/g6.jpg') }}" alt="No image">
+                                {% endif %}
+                                <div style="flex:1;">
+                                    <div style="font-weight:600; font-size:14px;">{{ item.product_title }}</div>
+                                    <div class="small text-muted">x {{ item.cart_qty }}</div>
+                                </div>
+                                <strong>{{ (item.price * item.cart_qty)|number_format(2) }} TND</strong>
+                            </div>
+                        {% endfor %}
+
+                        <hr>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span style="font-weight:600;">Total</span>
+                            <h4 class="mb-0">{{ total|number_format(2) }} TND</h4>
+                        </div>
+                        <button type="submit" class="primary-btn text-uppercase" style="border:none; width:100%;">Place Order</button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</section>
 {% endblock %}
+
 {% block javascripts %}
 <script>
 function selectPayment(radio) {
-    document.querySelectorAll('.mp-payment-option').forEach(el => el.classList.remove('selected'));
-    radio.closest('.mp-payment-option').classList.add('selected');
+    document.querySelectorAll('.payment-option').forEach(function(el) {
+        el.classList.remove('selected');
+    });
+    radio.closest('.payment-option').classList.add('selected');
 }
 </script>
 {% endblock %}

@@ -5,25 +5,130 @@
 {% block stylesheets %}
     {{ parent() }}
     {% include 'messaging/_ui_theme.html.twig' %}
+    <style>
+        .messaging-topbar {
+            background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url('{{ asset('adventure/img/slider3.jpg') }}') center center/cover no-repeat;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+            margin-top: -96px;
+            padding: 116px 0 16px;
+            margin-bottom: 28px;
+        }
+
+        .messaging-topbar h1 {
+            margin-bottom: 6px;
+            color: #f8fafc;
+            font-size: clamp(1.9rem, 3.6vw, 2.6rem);
+            line-height: 1.08;
+            text-shadow: 0 10px 28px rgba(15, 23, 42, 0.35);
+        }
+
+        .messaging-topbar p {
+            margin-bottom: 0;
+            color: rgba(241, 245, 249, 0.9);
+            font-size: 15px;
+        }
+
+        .messaging-topbar .back-link {
+            color: #e2e8f0;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .messaging-topbar .back-link:hover {
+            color: #ffffff;
+        }
+
+        .new-conversation-shell {
+            max-width: 760px;
+            margin: 0 auto;
+            background: linear-gradient(180deg, #ffffff, #fbfdff);
+            border: 1px solid #d6e0ea;
+            border-radius: 20px;
+            box-shadow: 0 20px 42px rgba(15, 23, 42, 0.13);
+            padding: 30px;
+        }
+
+        .new-conversation-page {
+            min-height: calc(100dvh - 96px - 210px);
+        }
+
+        .new-conversation-shell .form-label {
+            color: #0f172a;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin-bottom: 8px;
+        }
+
+        .new-conversation-shell .form-group {
+            margin-bottom: 16px;
+        }
+
+        .new-conversation-shell .msg-input,
+        .new-conversation-shell .msg-select {
+            min-height: 48px;
+            font-size: 15px;
+            border-radius: 12px;
+            border-color: #cfd8e3;
+        }
+
+        .new-conversation-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .new-conversation-actions .msg-btn {
+            min-height: 42px;
+            min-width: 140px;
+        }
+
+        .new-conversation-actions .msg-btn-primary {
+            background: #2554d9;
+            color: #ffffff;
+            border-color: #2554d9;
+        }
+
+        .new-conversation-actions .msg-btn-primary:hover {
+            background: #1e40af;
+            border-color: #1e40af;
+        }
+
+        .participant-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .participant-input .msg-input {
+            flex: 1;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-<div class="msg-page">
-<div class="page-hero" style="background: white; color: var(--gray-900); border-bottom: 1px solid var(--gray-200); padding: 30px 40px;">
-    <div class="page-hero-content">
-        <a href="{{ path('app_messaging') }}" style="color: var(--gray-700); text-decoration: none; display: inline-block; margin-bottom: 16px;">← Back</a>
-        <h1 class="page-hero-title">New Conversation</h1>
-        <p class="page-hero-subtitle">Start chatting with someone</p>
+<section class="messaging-topbar">
+    <div class="container">
+        <a href="{{ path('app_messaging') }}" class="back-link">← Back to conversations</a>
+        <h1>New Conversation</h1>
+        <p>Start chatting with someone.</p>
     </div>
-</div>
+</section>
 
-<div class="page-content">
-    <div style="max-width: 500px; margin: 0 auto;">
+<div class="container new-conversation-page" style="margin-bottom:26px;">
+    <div class="new-conversation-shell msg-fade-in">
         {% for message in app.flashes('error') %}
             <div class="flash flash-error">{{ message }}</div>
         {% endfor %}
         
-        <form method="POST" id="conversationForm" class="msg-card" style="padding: 32px;">
+        <form method="POST" id="conversationForm">
             <div class="form-group">
                 <label class="form-label">Conversation Name</label>
                 <input type="text" name="name" class="msg-input" placeholder="e.g., Tunisia Trip" required>
@@ -46,12 +151,12 @@
                 <div class="form-group">
                     <label class="form-label">Participant Emails</label>
                     <div id="participantList">
-                        <div class="participant-input" style="display: flex; gap: 8px; margin-bottom: 8px;">
-                            <input type="email" name="participant_emails[]" class="msg-input" style="flex: 1;" placeholder="friend1@example.com">
+                        <div class="participant-input">
+                            <input type="email" name="participant_emails[]" class="msg-input" placeholder="friend1@example.com">
                             <button type="button" class="msg-btn msg-btn-danger msg-btn-sm" onclick="removeParticipant(this)" style="display: none;">❌</button>
                         </div>
-                        <div class="participant-input" style="display: flex; gap: 8px; margin-bottom: 8px;">
-                            <input type="email" name="participant_emails[]" class="msg-input" style="flex: 1;" placeholder="friend2@example.com">
+                        <div class="participant-input">
+                            <input type="email" name="participant_emails[]" class="msg-input" placeholder="friend2@example.com">
                             <button type="button" class="msg-btn msg-btn-danger msg-btn-sm" onclick="removeParticipant(this)" style="display: none;">❌</button>
                         </div>
                     </div>
@@ -59,7 +164,10 @@
                 </div>
             </div>
             
-            <button type="submit" class="msg-btn msg-btn-primary" style="width: 100%;">Create Conversation</button>
+            <div class="new-conversation-actions">
+                <a href="{{ path('app_messaging') }}" class="msg-btn msg-btn-secondary">Cancel</a>
+                <button type="submit" class="msg-btn msg-btn-primary">Create Conversation</button>
+            </div>
         </form>
     </div>
 </div>
@@ -80,11 +188,8 @@
         const container = document.getElementById('participantList');
         const newDiv = document.createElement('div');
         newDiv.className = 'participant-input';
-        newDiv.style.display = 'flex';
-        newDiv.style.gap = '8px';
-        newDiv.style.marginBottom = '8px';
         newDiv.innerHTML = `
-            <input type="email" name="participant_emails[]" class="msg-input" style="flex: 1;" placeholder="newfriend@example.com">
+            <input type="email" name="participant_emails[]" class="msg-input" placeholder="newfriend@example.com">
             <button type="button" class="msg-btn msg-btn-danger msg-btn-sm" onclick="removeParticipant(this)">❌</button>
         `;
         container.appendChild(newDiv);
@@ -94,5 +199,4 @@
         btn.parentElement.remove();
     }
 </script>
-</div>
 {% endblock %}

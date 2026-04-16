@@ -3,6 +3,8 @@
 {% block title %}Search Results - {{ conversation.name }}{% endblock %}
 
 {% block content %}
+{% include 'messaging/_ui_theme.html.twig' %}
+<div class="msg-page">
 <div class="page-hero" style="padding: 20px 40px; background: linear-gradient(135deg, #1e3a8a, #1D4ED8);">
     <div class="page-hero-content">
         <a href="{{ path('messaging_conversation_show', {id: conversation.id}) }}" style="color: white; text-decoration: none;">← Back to chat</a>
@@ -20,15 +22,15 @@
             <a href="{{ path('messaging_conversation_show', {id: conversation.id}) }}" class="btn btn-primary">Back to Chat</a>
         </div>
     {% else %}
-        <div style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="msg-stack">
             {% for msg in messages %}
-                <div style="background: white; border-radius: 12px; border: 1px solid var(--gray-200); padding: 16px;">
+                <div class="msg-list-card" style="display: block;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                         <div>
                             <strong>{{ msg.sender_name ?: 'User ' ~ msg.sender_id|slice(0,8) }}</strong>
                             <span style="font-size: 12px; color: var(--gray-400); margin-left: 8px;">{{ msg.created_at|date('M d, H:i') }}</span>
                         </div>
-                        <a href="{{ path('messaging_conversation_show', {id: conversation.id}) }}#msg-{{ msg.id }}" class="btn btn-outline" style="padding: 4px 12px; font-size: 12px;">Jump to message</a>
+                        <a href="{{ path('messaging_conversation_show', {id: conversation.id}) }}#msg-{{ msg.id }}" class="btn btn-outline msg-btn-sm">Jump to message</a>
                     </div>
                     <div style="color: var(--gray-700);">
                         {% if msg.message_type == 'IMAGE' %}
@@ -62,4 +64,5 @@
         border-radius: 4px;
     }
 </style>
+</div>
 {% endblock %}

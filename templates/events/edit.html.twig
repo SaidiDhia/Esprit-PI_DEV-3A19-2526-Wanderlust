@@ -7,8 +7,15 @@
     {# Leaflet CSS pour la carte #}
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <style>
+        .module-hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.50), rgba(0, 0, 0, 0.50)), url('{{ asset('adventure/img/hero-bg.jpg') }}') center/cover no-repeat;
+            color: #fff;
+            padding: 120px 0 80px;
+            margin-bottom: 40px;
+        }
+
         /*  Layout général  */
-        .event-form-wrapper { max-width: 100%; margin: 2rem auto; padding: 0 2rem; }
+        .event-form-wrapper { max-width: 1100px; margin: 0 auto 60px; padding: 0 15px; }
         .form-section { background: #fff; border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 1.5rem; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
         .form-section h2 { font-size: 1rem; font-weight: 600; color: #000; margin-bottom: 1.25rem; padding-bottom: .5rem; border-bottom: 1px solid #e5e7eb; }
         
@@ -85,9 +92,14 @@
 {% endblock %}
 
 {% block content %}
-<div class="event-form-wrapper">
-    <h1 style="font-size:1.5rem;font-weight:700;margin-bottom:1.5rem;text-align:center;color:#000;">Modifier l'événement</h1>
+<section class="module-hero">
+    <div class="container">
+        <h1 class="mb-2">Modifier l'événement</h1>
+        <p class="mb-0">Mettez a jour les informations de votre evenement.</p>
+    </div>
+</section>
 
+<div class="event-form-wrapper">
     {% for message in app.flashes('error') %}
         <div class="alert alert-danger">{{ message }}</div>
     {% endfor %}
@@ -118,7 +130,7 @@
                     <button class="modal-close" id="closeModalBtn" type="button">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <input type="text" id="searchActivities" class="form-control mb-3" placeholder=" Rechercher une activité...">
+                    <input type="text" id="searchActivities" class="form-control mb-3" placeholder="Rechercher une activite...">
                     <div class="modal-activities" id="modalActivitiesList"></div>
                 </div>
                 <div class="modal-footer">
@@ -366,7 +378,7 @@
                     <div class="activity-card-title">${escapeHtml(activity.titre)}</div>
                     <div class="activity-card-desc">${escapeHtml(activity.categorie || activity.description || '')}</div>
                 </div>
-                <button class="activity-card-remove" type="button" data-id="${activity.id}"></button>
+                <button class="activity-card-remove" type="button" data-id="${activity.id}">x</button>
             `;
             card.querySelector('.activity-card-remove').onclick = () => {
                 selectedActivities = selectedActivities.filter(a => a.id !== activity.id);

@@ -1,333 +1,224 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Sign up — Wanderlust{% endblock %}
+{% block title %}Sign up - Wanderlust{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .module-hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.52), rgba(0, 0, 0, 0.52)), url('{{ asset('adventure/img/slider2.jpg') }}') center center/cover no-repeat;
+            padding: 120px 0 80px;
+            color: #fff;
+            margin-bottom: 50px;
+        }
+
+        .auth-card {
+            max-width: 860px;
+            margin: 0 auto 60px;
+            border: 1px solid #eee;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+            padding: 28px;
+        }
+
+        .role-option {
+            border: 1px solid #e7e7e7;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: all .2s ease;
+        }
+
+        .role-option input {
+            margin-right: 8px;
+        }
+
+        .role-option.active {
+            border-color: #ff5e13;
+            box-shadow: 0 0 0 2px rgba(255, 94, 19, .12);
+        }
+
+        .password-meter {
+            height: 6px;
+            border-radius: 99px;
+            background: #ececec;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .password-meter span {
+            display: block;
+            height: 100%;
+            width: 0;
+            transition: width .2s ease;
+        }
+
+        .avatar-preview {
+            width: 86px;
+            height: 86px;
+            border-radius: 50%;
+            border: 2px solid #ececec;
+            object-fit: cover;
+            display: none;
+            margin-top: 8px;
+        }
+
+        .field-error {
+            color: #d93025;
+            font-size: .82rem;
+            margin-top: .25rem;
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
-<div class="min-h-[calc(100vh-64px)] bg-background flex relative overflow-hidden">
-    <!-- Left Panel (Inspired by explorer-sphere) -->
-    <div class="hidden lg:flex flex-1 bg-gradient-to-br from-primary via-primary/80 to-accent items-center justify-center p-12 relative overflow-hidden">
-        <div class="absolute inset-0 opacity-10">
-            <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <path d="M0 100 C 20 0 50 0 100 100 Z" fill="white"></path>
-            </svg>
-        </div>
-        <div class="relative z-10 text-center">
-            <div class="w-20 h-20 bg-white/20 backdrop-blur-xl rounded-full flex items-center justify-center mx-auto mb-8 border border-white/30">
-                <svg class="w-10 h-10 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                </svg>
-            </div>
-            <h1 class="text-4xl font-heading font-bold text-white mb-4 tracking-tight leading-tight">Join Our Global Community</h1>
-            <p class="text-white/80 text-lg max-w-md mx-auto font-medium">Create your account and start exploring the world's most unique stays and experiences.</p>
-        </div>
+{% set errors = errors|default({}) %}
+{% set old = old|default({}) %}
+
+<section class="module-hero">
+    <div class="container">
+        <h1 class="mb-10">Create Your Account</h1>
+        <p class="mb-0">Join Wanderlust and start booking, hosting, and exploring.</p>
     </div>
+</section>
 
-    <!-- Signup Form -->
-    <div class="flex-1 flex items-center justify-center p-6 bg-background">
-        <div class="w-full max-w-lg">
-            <div class="flex items-center gap-2 mb-8 lg:hidden">
-                <svg class="w-8 h-8 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <line x1="2" y1="12" x2="22" y2="12"></line>
-                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
-                </svg>
-                <span class="text-2xl font-heading font-bold text-foreground tracking-tight">Wanderlust</span>
+<div class="container">
+    <div class="auth-card">
+        <div class="mb-4">
+            <h3 class="mb-2">Sign up</h3>
+            <p class="text-muted mb-0">Fill in your details to create your account.</p>
+        </div>
+
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger">{{ message }}</div>
+        {% endfor %}
+
+        <form id="signup-form" method="post" action="{{ path('app_signup') }}" enctype="multipart/form-data" novalidate>
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('signup') }}">
+
+            <div class="form-group">
+                <label class="d-block">Account type</label>
+                {% set selectedRole = old.role|default('PARTICIPANT') %}
+                <label class="role-option" data-role-option>
+                    <input type="radio" name="role" value="PARTICIPANT" {% if selectedRole == 'PARTICIPANT' %}checked{% endif %}> Traveler (Participant)
+                </label>
+                <label class="role-option" data-role-option>
+                    <input type="radio" name="role" value="HOST" {% if selectedRole == 'HOST' %}checked{% endif %}> Host
+                </label>
+                {% if errors.role is defined %}<div class="field-error">{{ errors.role }}</div>{% endif %}
             </div>
 
-            <h2 class="text-3xl font-heading font-bold text-foreground mb-2 tracking-tight">Create your account</h2>
-            <p class="text-muted-foreground mb-8 font-medium">Start your journey with us today.</p>
-
-            {% for message in app.flashes('error') %}
-                <div class="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-3 mb-6">
-                    <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    {{ message }}
-                </div>
-            {% endfor %}
-
-            <form id="signup-form" method="post" enctype="multipart/form-data" novalidate class="space-y-6">
-                <!-- Role Selection -->
-                <div class="grid grid-cols-2 gap-4">
-                    <label class="relative group cursor-pointer">
-                        <input type="radio" name="role" value="PARTICIPANT" class="peer hidden" {% if (old.role|default('PARTICIPANT')) == 'PARTICIPANT' %}checked{% endif %}>
-                        <div class="p-4 rounded-xl border-2 border-border group-hover:border-primary/40 peer-checked:border-primary peer-checked:bg-primary/5 transition-all text-center">
-                            <div class="w-10 h-10 bg-primary/10 rounded-lg flex items-center justify-center mx-auto mb-2 text-primary transition-all group-hover:scale-110">
-                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                            </div>
-                            <h3 class="font-heading font-bold text-foreground text-sm">Traveler</h3>
-                        </div>
-                    </label>
-                    <label class="relative group cursor-pointer">
-                        <input type="radio" name="role" value="HOST" class="peer hidden" {% if (old.role|default('PARTICIPANT')) == 'HOST' %}checked{% endif %}>
-                        <div class="p-4 rounded-xl border-2 border-border group-hover:border-accent/40 peer-checked:border-accent peer-checked:bg-accent/5 transition-all text-center">
-                            <div class="w-10 h-10 bg-accent/10 rounded-lg flex items-center justify-center mx-auto mb-2 text-accent transition-all group-hover:scale-110">
-                                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
-                            </div>
-                            <h3 class="font-heading font-bold text-foreground text-sm">Host</h3>
-                        </div>
-                    </label>
-                </div>
-                {% if errors.role is defined %}
-                    <p class="text-xs font-bold text-destructive">{{ errors.role }}</p>
-                {% endif %}
-
-                <!-- Profile Picture Upload (Logic from Users/SignupController) -->
-                <div class="flex flex-col items-center gap-4 py-2">
-                    <div id="avatar-preview" class="w-24 h-24 rounded-full bg-secondary/30 border-2 border-dashed border-border flex items-center justify-center overflow-hidden relative group transition-all hover:border-primary/40">
-                        <svg class="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                        <input type="file" name="profilePicture" id="profilePicture" class="absolute inset-0 opacity-0 cursor-pointer" accept="image/*" onchange="previewImage(event)">
-                        <img id="preview-img" class="absolute inset-0 w-full h-full object-cover hidden">
-                    </div>
-                    <span class="text-xs font-bold text-muted-foreground uppercase tracking-widest">Upload Profile Picture</span>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <div class="space-y-2">
-                        <label for="fullName" class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Full Name</label>
-                        <div class="relative group">
-                            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
-                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                            </div>
-                            <input type="text" name="fullName" id="fullName" value="{{ old.fullName|default('') }}" class="w-full bg-secondary/30 border {{ errors.fullName is defined ? 'border-destructive' : 'border-border' }} rounded-xl pl-10 pr-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="John Doe" required>
-                        </div>
-                        {% if errors.fullName is defined %}
-                            <p class="text-xs font-bold text-destructive">{{ errors.fullName }}</p>
-                        {% endif %}
-                    </div>
-                    <div class="space-y-2">
-                        <label for="phoneNumber" class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Phone Number</label>
-                        <div class="relative group">
-                            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
-                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
-                            </div>
-                            <input type="tel" name="phoneNumber" id="phoneNumber" value="{{ old.phoneNumber|default('') }}" pattern="\+?[0-9\s\-]{8,20}" class="w-full bg-secondary/30 border {{ errors.phoneNumber is defined ? 'border-destructive' : 'border-border' }} rounded-xl pl-10 pr-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="+216 22 333 444">
-                        </div>
-                        {% if errors.phoneNumber is defined %}
-                            <p class="text-xs font-bold text-destructive">{{ errors.phoneNumber }}</p>
-                        {% endif %}
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="fullName">Full name</label>
+                        <input id="fullName" name="fullName" type="text" class="form-control" value="{{ old.fullName|default('') }}" required>
+                        {% if errors.fullName is defined %}<div class="field-error">{{ errors.fullName }}</div>{% endif %}
                     </div>
                 </div>
-
-                <div class="space-y-2">
-                    <label for="email" class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Address</label>
-                    <div class="relative group">
-                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
-                        </div>
-                        <input type="email" name="email" id="email" value="{{ old.email|default('') }}" class="w-full bg-secondary/30 border {{ errors.email is defined ? 'border-destructive' : 'border-border' }} rounded-xl pl-10 pr-4 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="you@example.com" required>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="phone">Phone</label>
+                        <input id="phone" name="phoneNumber" type="text" class="form-control" value="{{ old.phoneNumber|default('') }}" required>
+                        {% if errors.phoneNumber is defined %}<div class="field-error">{{ errors.phoneNumber }}</div>{% endif %}
                     </div>
-                    {% if errors.email is defined %}
-                        <p class="text-xs font-bold text-destructive">{{ errors.email }}</p>
-                    {% endif %}
                 </div>
+            </div>
 
-                <div class="space-y-2">
-                    <label for="password" class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Password</label>
-                    <div class="relative group">
-                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        </div>
-                        <input type="password" name="password" id="password" class="w-full bg-secondary/30 border {{ errors.password is defined ? 'border-destructive' : 'border-border' }} rounded-xl pl-10 pr-12 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="••••••••" required onkeyup="checkPasswordStrength(this.value)">
-                        <button type="button" onclick="togglePassword('password', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors focus:outline-none">
-                            <svg class="w-4 h-4 eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            <svg class="w-4 h-4 eye-off-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                        </button>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input id="email" name="email" type="email" class="form-control" value="{{ old.email|default('') }}" required>
+                {% if errors.email is defined %}<div class="field-error">{{ errors.email }}</div>{% endif %}
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input id="password" name="password" type="password" class="form-control" minlength="8" required>
+                        <div class="password-meter"><span id="password-meter-fill"></span></div>
+                        {% if errors.password is defined %}<div class="field-error">{{ errors.password }}</div>{% endif %}
                     </div>
-                    <!-- Password Strength (Design only as in Users/SignupController) -->
-                    <div class="mt-2 flex gap-1 h-1.5">
-                        <div id="strength-1" class="flex-1 bg-border rounded-full transition-colors"></div>
-                        <div id="strength-2" class="flex-1 bg-border rounded-full transition-colors"></div>
-                        <div id="strength-3" class="flex-1 bg-border rounded-full transition-colors"></div>
-                        <div id="strength-4" class="flex-1 bg-border rounded-full transition-colors"></div>
-                    </div>
-                    <p id="strength-label" class="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-1 transition-colors">Strength: None</p>
-                    {% if errors.password is defined %}
-                        <p class="text-xs font-bold text-destructive">{{ errors.password }}</p>
-                    {% endif %}
                 </div>
-
-                <div class="space-y-2">
-                    <label for="confirmPassword" class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Confirm Password</label>
-                    <div class="relative group">
-                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors">
-                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        </div>
-                        <input type="password" name="confirmPassword" id="confirmPassword" data-match="#password" class="w-full bg-secondary/30 border {{ errors.confirmPassword is defined ? 'border-destructive' : 'border-border' }} rounded-xl pl-10 pr-12 py-3 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="••••••••" required>
-                        <button type="button" onclick="togglePassword('confirmPassword', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors focus:outline-none">
-                            <svg class="w-4 h-4 eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            <svg class="w-4 h-4 eye-off-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                        </button>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm password</label>
+                        <input id="confirmPassword" name="confirmPassword" type="password" class="form-control" minlength="8" required>
+                        {% if errors.confirmPassword is defined %}<div class="field-error">{{ errors.confirmPassword }}</div>{% endif %}
                     </div>
-                    {% if errors.confirmPassword is defined %}
-                        <p class="text-xs font-bold text-destructive">{{ errors.confirmPassword }}</p>
-                    {% endif %}
                 </div>
+            </div>
 
-                <button type="submit" class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-3.5 rounded-xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 text-lg">
-                    Create account
-                </button>
-            </form>
+            <div class="form-group">
+                <label for="profilePicture">Profile picture (optional)</label>
+                <input id="profilePicture" name="profilePicture" type="file" class="form-control" accept="image/*">
+                <img id="avatar-preview" class="avatar-preview" alt="Preview">
+                {% if errors.profilePicture is defined %}<div class="field-error">{{ errors.profilePicture }}</div>{% endif %}
+            </div>
 
-            <p class="text-center text-sm text-muted-foreground mt-8 font-medium">
-                Already have an account? <a href="{{ path('app_login') }}" class="text-primary font-bold hover:underline transition-all">Sign in</a>
-            </p>
-        </div>
+            <button type="submit" class="primary-btn text-uppercase" style="border:none;">Create account</button>
+            <p class="mt-3 mb-0">Already have an account? <a href="{{ path('app_login') }}">Sign in</a></p>
+        </form>
     </div>
 </div>
+{% endblock %}
 
-<script>
-    function togglePassword(inputId, btn) {
-        const input = document.getElementById(inputId);
-        const eyeIcon = btn.querySelector('.eye-icon');
-        const eyeOffIcon = btn.querySelector('.eye-off-icon');
-
-        if (input.type === 'password') {
-            input.type = 'text';
-            eyeIcon.classList.add('hidden');
-            eyeOffIcon.classList.remove('hidden');
-        } else {
-            input.type = 'password';
-            eyeIcon.classList.remove('hidden');
-            eyeOffIcon.classList.add('hidden');
-        }
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    function refreshRoleCards() {
+        const options = document.querySelectorAll('[data-role-option]');
+        options.forEach((option) => {
+            const radio = option.querySelector('input[type="radio"]');
+            option.classList.toggle('active', !!(radio && radio.checked));
+        });
     }
 
-    function previewImage(event) {
-        const reader = new FileReader();
-        reader.onload = function(){
-            const output = document.getElementById('preview-img');
-            const placeholder = document.querySelector('#avatar-preview svg');
-            output.src = reader.result;
-            output.classList.remove('hidden');
-            placeholder.classList.add('hidden');
-        };
-        reader.readAsDataURL(event.target.files[0]);
-    }
-
-    function checkPasswordStrength(password) {
-        const s1 = document.getElementById('strength-1');
-        const s2 = document.getElementById('strength-2');
-        const s3 = document.getElementById('strength-3');
-        const s4 = document.getElementById('strength-4');
-        const label = document.getElementById('strength-label');
-
-        let strength = 0;
-        if (password.length > 5) strength++;
-        if (password.match(/[a-z]/) && password.match(/[A-Z]/)) strength++;
-        if (password.match(/\d/)) strength++;
-        if (password.match(/[^a-zA-Z\d]/)) strength++;
-
-        // Reset
-        [s1, s2, s3, s4].forEach(s => s.className = 'flex-1 bg-border rounded-full transition-colors');
-        label.classList.remove('text-destructive', 'text-amber-500', 'text-primary');
-
-        if (strength === 0 && password.length > 0) {
-            s1.classList.add('bg-destructive');
-            label.innerText = 'Strength: Very Weak';
-            label.classList.add('text-destructive');
-        } else if (strength === 1) {
-            s1.classList.add('bg-destructive');
-            label.innerText = 'Strength: Weak';
-            label.classList.add('text-destructive');
-        } else if (strength === 2) {
-            s1.classList.add('bg-amber-500');
-            s2.classList.add('bg-amber-500');
-            label.innerText = 'Strength: Medium';
-            label.classList.add('text-amber-500');
-        } else if (strength === 3) {
-            s1.classList.add('bg-primary');
-            s2.classList.add('bg-primary');
-            s3.classList.add('bg-primary');
-            label.innerText = 'Strength: Good';
-            label.classList.add('text-primary');
-        } else if (strength === 4) {
-            [s1, s2, s3, s4].forEach(s => s.classList.add('bg-primary'));
-            label.innerText = 'Strength: Strong';
-            label.classList.add('text-primary');
-        } else {
-            label.innerText = 'Strength: None';
-        }
-    }
-
-    function getSignupErrorElement(field) {
-        const wrapper = field.closest('.space-y-2') || field.parentElement;
-        if (!wrapper) {
-            return null;
-        }
-
-        let errorElement = wrapper.querySelector('.js-input-error');
-        if (!errorElement) {
-            errorElement = document.createElement('p');
-            errorElement.className = 'js-input-error text-xs font-bold text-destructive';
-            wrapper.appendChild(errorElement);
-        }
-
-        return errorElement;
-    }
-
-    function showSignupError(field, message) {
-        const errorElement = getSignupErrorElement(field);
-        if (!errorElement) {
+    function updatePasswordMeter() {
+        const password = document.getElementById('password');
+        const meter = document.getElementById('password-meter-fill');
+        if (!password || !meter) {
             return;
         }
 
-        errorElement.textContent = message;
-        field.classList.add('border-destructive');
+        const value = password.value || '';
+        let score = 0;
+        if (value.length >= 8) score += 25;
+        if (/[A-Z]/.test(value)) score += 25;
+        if (/[0-9]/.test(value)) score += 25;
+        if (/[^A-Za-z0-9]/.test(value)) score += 25;
+
+        meter.style.width = score + '%';
+        meter.style.background = score < 50 ? '#dc3545' : (score < 75 ? '#f0ad4e' : '#28a745');
     }
 
-    function clearSignupError(field) {
-        const wrapper = field.closest('.space-y-2') || field.parentElement;
-        if (wrapper) {
-            const errorElement = wrapper.querySelector('.js-input-error');
-            if (errorElement) {
-                errorElement.remove();
-            }
+    function initAvatarPreview() {
+        const input = document.getElementById('profilePicture');
+        const preview = document.getElementById('avatar-preview');
+        if (!input || !preview) {
+            return;
         }
 
-        field.classList.remove('border-destructive');
-    }
-
-    function signupFieldLabel(field) {
-        const wrapper = field.closest('.space-y-2');
-        const label = wrapper ? wrapper.querySelector('label') : null;
-        return label ? label.textContent.trim() : (field.name || 'This field');
-    }
-
-    function validateSignupField(field) {
-        if (field.disabled || field.type === 'hidden' || field.type === 'radio' || field.type === 'file') {
-            return true;
-        }
-
-        const label = signupFieldLabel(field);
-
-        if (!field.checkValidity()) {
-            let message = label + ' is invalid.';
-            if (field.validity.valueMissing) {
-                message = label + ' is required.';
-            } else if (field.validity.typeMismatch) {
-                message = 'Please enter a valid ' + field.type + '.';
-            } else if (field.validity.patternMismatch) {
-                message = label + ' format is invalid.';
-            } else if (field.validity.tooShort) {
-                message = label + ' is too short.';
+        input.addEventListener('change', () => {
+            const file = input.files && input.files[0] ? input.files[0] : null;
+            if (!file) {
+                preview.style.display = 'none';
+                preview.removeAttribute('src');
+                return;
             }
 
-            showSignupError(field, message);
-            return false;
-        }
-
-        const matchSelector = field.getAttribute('data-match');
-        if (matchSelector) {
-            const source = document.querySelector(matchSelector);
-            if (source && field.value !== source.value) {
-                showSignupError(field, 'Passwords do not match.');
-                return false;
-            }
-        }
-
-        clearSignupError(field);
-        return true;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                preview.src = event.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        });
     }
 
     function initSignupValidation() {
@@ -336,50 +227,29 @@
             return;
         }
 
-        const fields = form.querySelectorAll('input, textarea, select');
-        fields.forEach((field) => {
-            if (field.type === 'hidden' || field.type === 'radio' || field.type === 'file') {
-                return;
-            }
-
-            const eventName = field.tagName === 'SELECT' ? 'change' : 'input';
-            field.addEventListener(eventName, () => validateSignupField(field));
-            field.addEventListener('blur', () => validateSignupField(field));
-        });
-
-        const passwordField = document.getElementById('password');
-        const confirmField = document.getElementById('confirmPassword');
-        if (passwordField && confirmField) {
-            passwordField.addEventListener('input', () => {
-                if (confirmField.value !== '') {
-                    validateSignupField(confirmField);
-                }
-            });
-        }
-
         form.addEventListener('submit', (event) => {
-            let valid = true;
-            let firstInvalid = null;
-
-            fields.forEach((field) => {
-                const isValid = validateSignupField(field);
-                if (!isValid) {
-                    valid = false;
-                    if (!firstInvalid) {
-                        firstInvalid = field;
-                    }
-                }
-            });
-
-            if (!valid) {
+            const password = document.getElementById('password');
+            const confirm = document.getElementById('confirmPassword');
+            if (password && confirm && password.value !== confirm.value) {
                 event.preventDefault();
-                if (firstInvalid) {
-                    firstInvalid.focus();
-                }
+                confirm.focus();
+                alert('Passwords do not match.');
             }
         });
     }
 
+    document.querySelectorAll('[data-role-option] input[type="radio"]').forEach((radio) => {
+        radio.addEventListener('change', refreshRoleCards);
+    });
+
+    const passwordInput = document.getElementById('password');
+    if (passwordInput) {
+        passwordInput.addEventListener('input', updatePasswordMeter);
+    }
+
+    refreshRoleCards();
+    updatePasswordMeter();
+    initAvatarPreview();
     initSignupValidation();
-</script>
+    </script>
 {% endblock %}

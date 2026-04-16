@@ -1,637 +1,108 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Réservations — WanderLust{% endblock %}
+{% block title %}Reservations{% endblock %}
 
 {% block stylesheets %}
-{{ parent() }}
-<style>
+    {{ parent() }}
+    <style>
+        .module-hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)), url('{{ asset('adventure/img/video-bg.jpg') }}') center center/cover no-repeat;
+            padding: 120px 0 80px;
+            color: #fff;
+            margin-bottom: 50px;
+        }
 
-    /* ── Delete Modal ── */
-    .delete-modal-overlay {
-        position: fixed;
-        inset: 0;
-        background: rgba(15, 14, 23, 0.5);
-        backdrop-filter: blur(4px);
-        z-index: 9999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        opacity: 0;
-        pointer-events: none;
-        transition: opacity 0.25s ease;
-    }
+        .reservation-card {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+            margin-bottom: 24px;
+        }
 
-    .delete-modal-overlay.active {
-        opacity: 1;
-        pointer-events: all;
-    }
+        .reservation-body {
+            padding: 20px;
+        }
 
-    .delete-modal {
-        background: white;
-        border-radius: 20px;
-        padding: 2.5rem 2rem 2rem;
-        max-width: 400px;
-        width: 90%;
-        text-align: center;
-        box-shadow: 0 24px 60px rgba(0,0,0,0.18);
-        transform: scale(0.92) translateY(16px);
-        transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
+        .status-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
 
-    .delete-modal-overlay.active .delete-modal {
-        transform: scale(1) translateY(0);
-    }
+        .status-en_attente { background: #fef3c7; color: #92400e; }
+        .status-confirmee { background: #dcfce7; color: #166534; }
+        .status-annulee { background: #fee2e2; color: #991b1b; }
 
-    .delete-modal-icon {
-        width: 64px;
-        height: 64px;
-        background: #fee2e2;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 auto 1.25rem;
-        font-size: 1.6rem;
-    }
+        .meta-line { margin-bottom: 7px; color: #666; }
+        .meta-line i { width: 18px; }
 
-    .delete-modal h3 {
-        font-family: 'Syne', sans-serif;
-        font-size: 1.25rem;
-        font-weight: 800;
-        color: #0f0e17;
-        margin-bottom: 0.75rem;
-    }
-
-    .delete-modal p {
-        color: #6b6b80;
-        font-size: 0.9rem;
-        line-height: 1.6;
-        margin-bottom: 1.75rem;
-    }
-
-    .delete-modal p strong {
-        color: #0f0e17;
-        font-weight: 700;
-    }
-
-    .delete-modal-actions {
-        display: flex;
-        gap: 0.75rem;
-        justify-content: center;
-    }
-
-    .btn-modal-cancel {
-        padding: 0.7rem 1.5rem;
-        border-radius: 10px;
-        border: 1.5px solid #e4e1d8;
-        background: white;
-        color: #6b6b80;
-        font-size: 0.9rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-family: 'DM Sans', sans-serif;
-    }
-
-    .btn-modal-cancel:hover {
-        background: #f5f5f5;
-        border-color: #c4c0d8;
-        color: #0f0e17;
-    }
-
-    .btn-modal-delete {
-        padding: 0.7rem 1.5rem;
-        border-radius: 10px;
-        border: none;
-        background: linear-gradient(135deg, #ef4444, #dc2626);
-        color: white;
-        font-size: 0.9rem;
-        font-weight: 700;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-family: 'DM Sans', sans-serif;
-        box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
-    }
-
-    .btn-modal-delete:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(220, 38, 38, 0.45);
-    }
-    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
-
-    :root {
-        --primary-color: #667eea;
-        --primary-dark: #5a67d8;
-        --secondary-color: #764ba2;
-        --border-radius: 16px;
-        --shadow-sm: 0 2px 8px rgba(0,0,0,0.08);
-        --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
-        --shadow-lg: 0 16px 40px rgba(0,0,0,0.15);
-        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    body {
-        background: #fffcf5;
-        font-family: 'DM Sans', sans-serif;
-        color: #0f0e17;
-    }
-
-    /* ── Hero ── */
-    .res-hero {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-        padding: 4rem 0 2.5rem;
-        text-align: center;
-        color: white;
-        margin-bottom: 2.5rem;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .res-hero::before {
-        content: '';
-        position: absolute;
-        top: 0; left: 0; right: 0; bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.08)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
-        background-size: cover;
-    }
-
-    .res-hero h1 {
-        font-family: 'Syne', sans-serif;
-        font-size: 2.2rem;
-        font-weight: 800;
-        margin-bottom: 0.4rem;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        position: relative;
-    }
-
-    .res-hero p {
-        opacity: 0.75;
-        font-size: 0.95rem;
-        position: relative;
-    }
-
-    /* ── Wrapper ── */
-    .res-wrapper {
-        max-width: 1100px;
-        margin: 0 auto;
-        padding: 0 1.5rem 4rem;
-    }
-
-    /* ── Flash ── */
-    .flash-success {
-        background: #d1fae5; color: #065f46;
-        padding: .9rem 1.1rem; border-radius: 10px;
-        margin-bottom: 1.25rem; font-size: .88rem;
-        display: flex; align-items: center; gap: .5rem;
-    }
-    .flash-error {
-        background: #fee2e2; color: #991b1b;
-        padding: .9rem 1.1rem; border-radius: 10px;
-        margin-bottom: 1.25rem; font-size: .88rem;
-        display: flex; align-items: center; gap: .5rem;
-    }
-
-    /* ── Stats ── */
-    .stats-grid {
-        display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 1rem;
-        margin-bottom: 2rem;
-    }
-
-    @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 480px) { .stats-grid { grid-template-columns: 1fr; } }
-
-    .stat-card {
-        background: white;
-        border: 1px solid #e4e1d8;
-        border-radius: var(--border-radius);
-        padding: 1.5rem;
-        text-align: center;
-        box-shadow: var(--shadow-sm);
-        transition: var(--transition);
-    }
-
-    .stat-card:hover {
-        transform: translateY(-4px);
-        box-shadow: var(--shadow-md);
-    }
-
-    .stat-icon {
-        width: 48px; height: 48px;
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        border-radius: 12px;
-        display: flex; align-items: center; justify-content: center;
-        margin: 0 auto 0.75rem;
-        font-size: 1.2rem;
-        color: white;
-    }
-
-    .stat-number {
-        font-family: 'Syne', sans-serif;
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--primary-color);
-        line-height: 1;
-        margin-bottom: 0.25rem;
-    }
-
-    .stat-label {
-        font-size: 0.8rem;
-        color: #6b6b80;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-
-    /* ── Cards grid ── */
-    .cards-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-        gap: 1.5rem;
-    }
-
-    /* ── Reservation Card ── */
-    .reservation-card {
-        background: white;
-        border: 1px solid #e4e1d8;
-        border-radius: var(--border-radius);
-        overflow: hidden;
-        box-shadow: var(--shadow-sm);
-        transition: var(--transition);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .reservation-card:hover {
-        transform: translateY(-6px);
-        box-shadow: var(--shadow-md);
-    }
-
-    .card-top-bar {
-        height: 5px;
-        background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
-    }
-
-    .card-body {
-        padding: 1.5rem;
-        flex: 1;
-    }
-
-    .card-header-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.25rem;
-    }
-
-    .card-title {
-        font-family: 'Syne', sans-serif;
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #0f0e17;
-        margin: 0;
-    }
-
-    /* ── Status Badges ── */
-    .status-badge {
-        padding: 0.35rem 0.85rem;
-        border-radius: 20px;
-        font-size: 0.72rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        white-space: nowrap;
-    }
-
-    .status-en_attente {
-        background: #fef3c7; color: #92400e;
-        border: 1px solid #fde68a;
-    }
-    .status-confirmee {
-        background: #d1fae5; color: #065f46;
-        border: 1px solid #6ee7b7;
-    }
-    .status-annulee {
-        background: #fee2e2; color: #991b1b;
-        border: 1px solid #fca5a5;
-    }
-
-    /* ── Meta items ── */
-    .meta-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.6rem;
-        margin-bottom: 1.25rem;
-    }
-
-    .meta-row {
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        font-size: 0.875rem;
-    }
-
-    .meta-row i {
-        width: 16px;
-        color: var(--primary-color);
-        font-size: 0.85rem;
-        flex-shrink: 0;
-    }
-
-    .meta-row .meta-label {
-        color: #6b6b80;
-        font-weight: 500;
-        min-width: 90px;
-    }
-
-    .meta-row .meta-value {
-        color: #0f0e17;
-        font-weight: 600;
-    }
-
-    .price-value {
-        color: var(--primary-color) !important;
-        font-family: 'Syne', sans-serif;
-        font-size: 1rem !important;
-    }
-
-    /* ── Card Footer / Actions ── */
-    .card-footer-actions {
-        display: flex;
-        gap: 0.75rem;
-        padding: 1rem 1.5rem;
-        border-top: 1px solid #f0ede6;
-        background: #fafaf8;
-        align-items: center;
-    }
-
-    .btn-view {
-        display: inline-flex; align-items: center; gap: 0.4rem;
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        padding: 0.55rem 1.1rem;
-        border-radius: 10px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        text-decoration: none;
-        transition: var(--transition);
-        border: none;
-        cursor: pointer;
-    }
-
-    .btn-view:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.35);
-        color: white;
-    }
-
-    .btn-delete {
-        display: inline-flex; align-items: center; gap: 0.4rem;
-        background: white;
-        color: #dc3545;
-        padding: 0.55rem 1.1rem;
-        border-radius: 10px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        text-decoration: none;
-        transition: var(--transition);
-        border: 1.5px solid #fca5a5;
-        cursor: pointer;
-        margin-left: auto;
-    }
-
-    .btn-delete:hover {
-        background: #fee2e2;
-        border-color: #dc3545;
-        transform: translateY(-2px);
-    }
-
-    /* ── Empty state ── */
-    .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        background: white;
-        border: 1px solid #e4e1d8;
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow-sm);
-    }
-
-    .empty-state i {
-        font-size: 3.5rem;
-        color: #c4c0d8;
-        margin-bottom: 1.25rem;
-        display: block;
-    }
-
-    .empty-state h3 {
-        font-family: 'Syne', sans-serif;
-        font-size: 1.3rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-        color: #0f0e17;
-    }
-
-    .empty-state p {
-        color: #6b6b80;
-        font-size: 0.9rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .btn-primary-action {
-        display: inline-flex; align-items: center; gap: 0.5rem;
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        padding: 0.75rem 1.75rem;
-        border-radius: 12px;
-        font-size: 0.95rem;
-        font-weight: 600;
-        text-decoration: none;
-        transition: var(--transition);
-        box-shadow: 0 4px 14px rgba(102, 126, 234, 0.3);
-    }
-
-    .btn-primary-action:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.45);
-        color: white;
-    }
-</style>
+        .reservation-actions {
+            border-top: 1px solid #f0f0f0;
+            padding: 12px 20px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-
-<div class="res-hero">
+<section class="module-hero">
     <div class="container">
-        <h1><i class="fas fa-ticket-alt me-2"></i>Gestion des Réservations</h1>
-        <p>Consultez et gérez toutes les réservations</p>
+        <h1 class="mb-10">My Reservations</h1>
+        <p class="mb-20">Track your confirmed, pending, and cancelled reservations.</p>
+        <a href="{{ path('app_events_index') }}" class="primary-btn text-uppercase">Browse Events</a>
     </div>
-</div>
+</section>
 
-<div class="res-wrapper">
+<section class="section-gap pt-0">
+    <div class="container">
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger">{{ message }}</div>
+        {% endfor %}
 
-    {# Flash messages #}
-    {% for msg in app.flashes('success') %}
-        <div class="flash-success">
-            <i class="fas fa-check-circle"></i> {{ msg }}
-        </div>
-    {% endfor %}
+        {% if reservations is empty %}
+            <div class="text-center p-5 border rounded bg-white">
+                <h4>No reservations found</h4>
+                <p class="text-muted mb-3">You have not booked an event yet.</p>
+                <a href="{{ path('app_events_index') }}" class="primary-btn text-uppercase">Explore Events</a>
+            </div>
+        {% else %}
+            <div class="row">
+                {% for reservation in reservations %}
+                    <div class="col-md-6 col-lg-4 d-flex">
+                        <article class="reservation-card w-100">
+                            <div class="reservation-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="mb-0">Reservation #{{ reservation.id }}</h5>
+                                    <span class="status-pill status-{{ reservation.statut }}">{{ reservation.statut|replace({'_': ' '})|title }}</span>
+                                </div>
 
-    {% for msg in app.flashes('error') %}
-        <div class="flash-error">
-            <i class="fas fa-exclamation-circle"></i> {{ msg }}
-        </div>
-    {% endfor %}
-
-    {# Stats #}
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon"><i class="fas fa-list"></i></div>
-            <div class="stat-number">{{ reservations|length }}</div>
-            <div class="stat-label">Total</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg,#10b981,#059669);"><i class="fas fa-check"></i></div>
-            <div class="stat-number" id="confirmed-count" style="color:#10b981;">0</div>
-            <div class="stat-label">Confirmées</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg,#f59e0b,#d97706);"><i class="fas fa-clock"></i></div>
-            <div class="stat-number" id="pending-count" style="color:#f59e0b;">0</div>
-            <div class="stat-label">En attente</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon" style="background: linear-gradient(135deg,#ef4444,#dc2626);"><i class="fas fa-times"></i></div>
-            <div class="stat-number" id="cancelled-count" style="color:#ef4444;">0</div>
-            <div class="stat-label">Annulées</div>
-        </div>
-    </div>
-
-    {# Liste des réservations #}
-    {% if reservations is empty %}
-        <div class="empty-state">
-            <i class="fas fa-calendar-times"></i>
-            <h3>Aucune réservation trouvée</h3>
-            <p>Les réservations apparaîtront ici une fois que des clients auront réservé un événement.</p>
-            <a href="{{ path('app_events_index') }}" class="btn-primary-action">
-                <i class="fas fa-calendar"></i> Voir les événements
-            </a>
-        </div>
-    {% else %}
-        <div class="cards-grid">
-            {% for reservation in reservations %}
-                <div class="reservation-card">
-                    <div class="card-top-bar"></div>
-                    <div class="card-body">
-                        <div class="card-header-row">
-                            <h5 class="card-title">Réservation #{{ reservation.id }}</h5>
-                            <span class="status-badge status-{{ reservation.statut }}">
-                                {{ reservation.statut|replace({'_': ' '})|title }}
-                            </span>
-                        </div>
-
-                        <div class="meta-list">
-                            <div class="meta-row">
-                                <i class="fas fa-map-marker-alt"></i>
-                                <span class="meta-label">Événement :</span>
-                                <span class="meta-value">{{ reservation.event ? reservation.event.lieu : 'N/A' }}</span>
+                                <div class="meta-line"><i class="fa fa-map-marker"></i> {{ reservation.event ? reservation.event.lieu : 'N/A' }}</div>
+                                <div class="meta-line"><i class="fa fa-calendar"></i> {{ reservation.event and reservation.event.dateDebut ? reservation.event.dateDebut|date('d/m/Y H:i') : 'N/A' }}</div>
+                                <div class="meta-line"><i class="fa fa-users"></i> {{ reservation.nombrePersonnes }} participants</div>
+                                <div class="meta-line"><i class="fa fa-money"></i> <strong>{{ reservation.prixTotal }} TND</strong></div>
                             </div>
-                            <div class="meta-row">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span class="meta-label">Date :</span>
-                                <span class="meta-value">{{ reservation.event ? reservation.event.dateDebut|date('d/m/Y H:i') : 'N/A' }}</span>
+
+                            <div class="reservation-actions">
+                                <a href="{{ path('app_reservations_show', {'id': reservation.id}) }}" class="genric-btn info-border small">View</a>
+                                <form method="post" action="{{ path('app_reservations_delete', {'id': reservation.id}) }}" onsubmit="return confirm('Delete this reservation?');" style="display:inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ reservation.id) }}">
+                                    <button type="submit" class="genric-btn danger-border small">Delete</button>
+                                </form>
                             </div>
-                            <div class="meta-row">
-                                <i class="fas fa-user"></i>
-                                <span class="meta-label">Client :</span>
-                                <span class="meta-value">{{ reservation.nomComplet }}</span>
-                            </div>
-                            <div class="meta-row">
-                                <i class="fas fa-users"></i>
-                                <span class="meta-label">Participants :</span>
-                                <span class="meta-value">{{ reservation.nombrePersonnes }}</span>
-                            </div>
-                            <div class="meta-row">
-                                <i class="fas fa-money-bill-wave"></i>
-                                <span class="meta-label">Total :</span>
-                                <span class="meta-value price-value">{{ reservation.prixTotal }} TND</span>
-                            </div>
-                        </div>
+                        </article>
                     </div>
-
-                    <div class="card-footer-actions">
-                        <a href="{{ path('app_reservations_show', {'id': reservation.id}) }}" class="btn-view">
-                            <i class="fas fa-eye"></i> Voir
-                        </a>
-                        <form id="delete-form-{{ reservation.id }}" method="post" action="{{ path('app_reservations_delete', {'id': reservation.id}) }}">
-                            <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ reservation.id) }}">
-                            <button type="button" class="btn-delete"
-                                onclick="openDeleteModal({{ reservation.id }}, '#{{ reservation.id }}')">
-                                <i class="fas fa-trash"></i> Supprimer
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
-</div>
-
-{# Delete confirmation modal #}
-<div class="delete-modal-overlay" id="deleteModalOverlay">
-    <div class="delete-modal">
-        <div class="delete-modal-icon">
-            ⚠️
-        </div>
-        <h3>Confirmer la suppression</h3>
-        <p id="deleteModalMsg">Êtes-vous sûr de vouloir supprimer cette réservation ?<br>Cette action est <strong>irréversible</strong>.</p>
-        <div class="delete-modal-actions">
-            <button class="btn-modal-cancel" onclick="closeDeleteModal()">Annuler</button>
-            <button class="btn-modal-delete" id="deleteModalConfirm">Supprimer</button>
-        </div>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
-</div>
-
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('confirmed-count').textContent = document.querySelectorAll('.status-confirmee').length;
-    document.getElementById('pending-count').textContent   = document.querySelectorAll('.status-en_attente').length;
-    document.getElementById('cancelled-count').textContent = document.querySelectorAll('.status-annulee').length;
-});
-</script>
-
-{% endblock %}
-
-{% block javascripts %}
-{{ parent() }}
-<script>
-let pendingFormId = null;
-
-function openDeleteModal(reservationId, label) {
-    pendingFormId = 'delete-form-' + reservationId;
-    const msg = document.getElementById('deleteModalMsg');
-    msg.innerHTML = 'Êtes-vous sûr de vouloir supprimer la réservation <strong>' + label + '</strong> ?<br>Cette action est <strong>irréversible</strong>.';
-    document.getElementById('deleteModalOverlay').classList.add('active');
-}
-
-function closeDeleteModal() {
-    document.getElementById('deleteModalOverlay').classList.remove('active');
-    pendingFormId = null;
-}
-
-document.getElementById('deleteModalConfirm').addEventListener('click', function() {
-    if (pendingFormId) {
-        document.getElementById(pendingFormId).submit();
-    }
-});
-
-document.getElementById('deleteModalOverlay').addEventListener('click', function(e) {
-    if (e.target === this) closeDeleteModal();
-});
-
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeDeleteModal();
-});
-</script>
+</section>
 {% endblock %}

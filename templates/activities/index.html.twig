@@ -1,980 +1,167 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Toutes les activités{% endblock %}
+{% block title %}Activities{% endblock %}
 
 {% block stylesheets %}
-{{ parent() }}
-<style>
-    :root {
-        --primary-color: #667eea;
-        --primary-dark: #5a67d8;
-        --secondary-color: #764ba2;
-        --border-radius: 16px;
-        --shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
-        --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
-        --shadow-lg: 0 16px 40px rgba(0,0,0,0.15);
-        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    /* Section Header */
-    .activities-header {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-        padding: 4rem 0;
-        border-radius: 0 0 40px 40px;
-        margin-bottom: 3rem;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .activities-header .header-content {
-        text-align: center;
-    }
-
-    .activities-header::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
-        background-size: cover;
-        opacity: 0.3;
-    }
-
-    .header-content {
-        position: relative;
-        z-index: 1;
-    }
-
-    .header-title {
-        font-size: 3.5rem;
-        font-weight: 800;
-        color: white;
-        margin-bottom: 1rem;
-        text-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }
-
-    .header-subtitle {
-        font-size: 1.3rem;
-        color: rgba(255,255,255,0.95);
-        font-weight: 300;
-    }
-
-    /* Activity Cards Grid */
-    .activities-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-        gap: 2rem;
-        margin-bottom: 3rem;
-    }
-
-    /* Activity Card */
-    .activity-card {
-        background: white;
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow-sm);
-        overflow: hidden;
-        transition: var(--transition);
-        cursor: pointer;
-        display: flex;
-        flex-direction: column;
-        height: 100%;
-        position: relative;
-    }
-
-    .activity-card:hover {
-        transform: translateY(-8px);
-        box-shadow: var(--shadow-lg);
-    }
-
-    /* Card Image */
-    .card-image-container {
-        position: relative;
-        width: 100%;
-        padding-top: 56.25%; /* 16:9 aspect ratio */
-        overflow: hidden;
-        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
-    }
-
-    .card-image {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: var(--transition);
-    }
-
-    .activity-card:hover .card-image {
-        transform: scale(1.05);
-    }
-
-    /* Category Badge */
-    .category-badge {
-        position: absolute;
-        top: 1rem;
-        right: 1rem;
-        background: rgba(255,255,255,0.95);
-        backdrop-filter: blur(10px);
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.85rem;
-        font-weight: 600;
-        box-shadow: var(--shadow-sm);
-        z-index: 10;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .category-badge .emoji {
-        font-size: 1rem;
-    }
-
-    /* Card Body */
-    .card-body {
-        padding: 1.5rem;
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .card-title {
-        font-size: 1.25rem;
-        font-weight: 700;
-        color: #2d3748;
-        margin-bottom: 0.75rem;
-        line-height: 1.4;
-    }
-
-    .card-description {
-        color: #718096;
-        font-size: 0.95rem;
-        line-height: 1.6;
-        margin-bottom: 1.5rem;
-        flex: 1;
-        display: -webkit-box;
-        -webkit-line-clamp: 3;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-
-    /* Card Footer */
-    .card-footer {
-        padding: 1rem 1.5rem;
-        background: #f8fafc;
-        border-top: 1px solid #e2e8f0;
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.75rem;
-    }
-
-    .card-actions {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 0.5rem;
-        width: 100%;
-    }
-
-    .card-actions form {
-        grid-column: 1 / -1;
-        margin: 0;
-    }
-
-    /* Buttons */
-    .btn-primary-custom {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 25px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-
-    .btn-warning-custom {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 25px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-
-    .btn-danger-custom {
-        background: linear-gradient(135deg, #ef4444, #dc2626);
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 25px;
-        font-weight: 600;
-        text-decoration: none;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-        width: 100%;
-    }
-
-    .btn-primary-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-
-    .btn-warning-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(245, 158, 11, 0.4);
-    }
-
-    .btn-danger-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
-    }
-
-    .status-en_attente {
-        background: linear-gradient(135deg, #f59e0b, #d97706);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .status-accepte {
-        background: linear-gradient(135deg, #10b981, #059669);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .status-refuse {
-        background: linear-gradient(135deg, #ef4444, #dc2626);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    /* Buttons */
-    .btn-primary-custom {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-        color: white;
-        border: none;
-        padding: 0.75rem 1.5rem;
-        border-radius: 25px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        transition: var(--transition);
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .btn-primary-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        color: white;
-        text-decoration: none;
-    }
-
-    .btn-outline-custom {
-        background: transparent;
-        color: var(--primary-color);
-        border: 2px solid var(--primary-color);
-        padding: 0.75rem 1.5rem;
-        border-radius: 25px;
-        font-weight: 600;
-        font-size: 0.9rem;
-        transition: var(--transition);
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .btn-outline-custom:hover {
-        background: var(--primary-color);
-        color: white;
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-        text-decoration: none;
-    }
-
-    /* Status Badge */
-    .status-badge {
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .status-accepte {
-        background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-        color: white;
-    }
-
-    /* Empty State */
-    .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        background: white;
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow-md);
-        max-width: 600px;
-        margin: 0 auto;
-    }
-
-    .empty-icon {
-        width: 100px;
-        height: 100px;
-        margin: 0 auto 2rem;
-        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 2.5rem;
-        color: var(--primary-color);
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .header-title {
-            font-size: 2.5rem;
-        }
-        
-        .header-subtitle {
-            font-size: 1.1rem;
-        }
-        
-        .activities-grid {
-            grid-template-columns: 1fr;
-            gap: 1.5rem;
+    {{ parent() }}
+    <style>
+        .module-hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.42), rgba(0, 0, 0, 0.42)), url('{{ asset('adventure/img/slider3.jpg') }}') center center/cover no-repeat;
+            padding: 120px 0 80px;
+            color: #fff;
+            margin-bottom: 50px;
         }
 
-        .card-actions {
-            grid-template-columns: 1fr;
+        .activity-card {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
         }
 
-        .card-actions form {
-            grid-column: auto;
+        .activity-card .thumb {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            background: #f7f7f7;
         }
-        
-        .activities-header {
-            padding: 3rem 0;
-            border-radius: 0 0 30px 30px;
+
+        .activity-body {
+            padding: 18px;
+            flex: 1;
         }
-    }
 
-    @media (min-width: 769px) and (max-width: 1024px) {
-        .activities-grid {
-            grid-template-columns: repeat(2, 1fr);
+        .activity-actions {
+            border-top: 1px solid #f0f0f0;
+            padding: 14px 18px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
         }
-    }
 
-    @media (min-width: 1025px) {
-        .activities-grid {
-            grid-template-columns: repeat(3, 1fr);
+        .status-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
         }
-    }
 
-    /* Pagination */
-    .pagination {
-        display: flex;
-        list-style: none;
-        padding: 0;
-        margin: 0;
-        gap: 0.5rem;
-    }
+        .status-en_attente { background: #fef3c7; color: #92400e; }
+        .status-accepte { background: #dcfce7; color: #166534; }
+        .status-refuse { background: #fee2e2; color: #991b1b; }
 
-    .page-item {
-        display: flex;
-    }
+        .pagination .page-item .page-link {
+            color: #222;
+        }
 
-    .page-link {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 40px;
-        height: 40px;
-        padding: 0 0.75rem;
-        border: 2px solid #e2e8f0;
-        border-radius: 8px;
-        color: #4a5568;
-        text-decoration: none;
-        font-weight: 500;
-        transition: var(--transition);
-        background: white;
-    }
-
-    .page-link:hover {
-        background: var(--primary-color);
-        border-color: var(--primary-color);
-        color: white;
-        transform: translateY(-2px);
-    }
-
-    .page-item.active .page-link {
-        background: var(--primary-color);
-        border-color: var(--primary-color);
-        color: white;
-    }
-
-    .page-item.disabled .page-link {
-        background: #f8fafc;
-        border-color: #e2e8f0;
-        color: #a0aec0;
-        cursor: not-allowed;
-    }
-
-    .page-item.disabled .page-link:hover {
-        transform: none;
-    }
-</style>
+        .pagination .page-item.active .page-link {
+            background: #f6214b;
+            border-color: #f6214b;
+            color: #fff;
+        }
+    </style>
 {% endblock %}
 
 {% block content %}
-<!-- Header Section -->
-<div class="activities-header">
+<section class="module-hero">
     <div class="container">
-        <div class="header-content text-center">
-            <h1 class="header-title">
-                🌟 Nos Activités
-            </h1>
-            <p class="header-subtitle">
-                Découvrez des expériences uniques pour votre prochaine aventure
-            </p>
-        </div>
-    </div>
-</div>
-
-<!-- Main Content -->
-<div class="container mb-5" style="max-width: 1500px; margin-left: auto; margin-right: auto;">
-    <!-- Header with Add Button -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="h3 mb-0">
-            <i class="fas fa-hiking me-2 text-primary"></i>
-            Toutes les activités
-        </h1>
+        <h1 class="mb-10">Activities</h1>
+        <p class="mb-20">Adventure-styled activity catalog with owner-based management actions.</p>
         {% if app.user %}
-            <a href="{{ path('app_activities_new') }}" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>
-                Ajouter une activité
-            </a>
+            <a href="{{ path('app_activities_new') }}" class="primary-btn text-uppercase">Create Activity</a>
         {% else %}
-            <a href="{{ path('app_login') }}" class="btn btn-outline-primary">
-                <i class="fas fa-sign-in-alt me-2"></i>
-                Se connecter pour créer
-            </a>
+            <a href="{{ path('app_login') }}" class="primary-btn text-uppercase">Login To Create</a>
         {% endif %}
     </div>
+</section>
 
-    <!-- Flash Messages -->
-    {% for message in app.flashes('success') %}
-        <div id="success-message" data-message="{{ message|striptags|e('html_attr') }}" style="display: none;"></div>
-    {% endfor %}
+<section class="section-gap pt-0">
+    <div class="container">
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger">{{ message }}</div>
+        {% endfor %}
 
-    {% for message in app.flashes('error') %}
-        <div id="error-message" data-message="{{ message|striptags|e('html_attr') }}" style="display: none;"></div>
-    {% endfor %}
-
-    <!-- Activities Grid -->
-    {% if activities is empty %}
-        <div class="empty-state">
-            <div class="empty-icon">
-                <i class="fas fa-hiking"></i>
+        {% if activities is empty %}
+            <div class="text-center p-5 border rounded bg-white">
+                <h4>No activities available</h4>
+                <p class="text-muted mb-3">Publish your first activity to get started.</p>
             </div>
-            <h2 class="mb-3 fw-bold">Aucune activité disponible</h2>
-            <p class="text-muted mb-4 fs-5">
-                Revenez bientôt pour découvrir de nouvelles aventures !
-            </p>
-        </div>
-    {% else %}
-        <div class="activities-grid">
-            {% for activity in activities %}
-                {% set canManage = app.user and activity.createdBy and activity.createdBy.id == app.user.id %}
-                <div class="activity-card">
-                    <!-- Card Image -->
-                    <div class="card-image-container">
-                        {% if activity.image %}
-                            <img src="{{ asset('uploads/activities/' ~ activity.image) }}" 
-                                 alt="{{ activity.titre }}" 
-                                 class="card-image">
-                        {% else %}
-                            <div class="card-image d-flex align-items-center justify-content-center" 
-                                 style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);">
-                                <div class="text-center text-white">
-                                    <i class="fas fa-hiking fa-3x mb-2"></i>
-                                    <p class="mb-0">Aucune image</p>
-                                </div>
-                            </div>
-                        {% endif %}
-                        
-                        <!-- Category Badge -->
-                        <div class="category-badge">
-                            <span class="emoji">
-                                {% if activity.categorie.value == 'DESERT' %}🏜️
-                                {% elseif activity.categorie.value == 'MER' %}🌊
-                                {% elseif activity.categorie.value == 'AERIEN' %}🪂
-                                {% elseif activity.categorie.value == 'NATURE' %}🌳
-                                {% else %}📌
-                                {% endif %}
-                            </span>
-                            <span>{{ activity.categorie.value|default('Non classé') }}</span>
-                        </div>
-                    </div>
-                    
-                    <!-- Card Body -->
-                    <div class="card-body">
-                        <h3 class="card-title">{{ activity.titre }}</h3>
-                        <p class="card-description">
-                            {{ activity.description|striptags|slice(0, 150) }}{% if activity.description|length > 150 %}...{% endif %}
-                        </p>
-                    </div>
-                    
-                    <!-- Card Footer -->
-                    <div class="card-footer">
-                        {% if canManage %}
-                            {% if activity.status.value == 'en_attente' %}
-                                <div class="status-badge status-en_attente">
-                                    <i class="fas fa-clock me-1"></i>
-                                    En attente
-                                </div>
-                            {% elseif activity.status.value == 'accepte' %}
-                                <div class="status-badge status-accepte">
-                                    <i class="fas fa-check me-1"></i>
-                                    Acceptée
-                                </div>
-                            {% elseif activity.status.value == 'refuse' %}
-                                <div class="status-badge status-refuse">
-                                    <i class="fas fa-times me-1"></i>
-                                    Refusée
-                                </div>
-                            {% endif %}
-                        {% endif %}
-                        <div class="card-actions">
-                            <a href="{{ path('app_activities_show', {'id': activity.id}) }}" 
-                               class="btn-primary-custom">
-                                <i class="fas fa-eye"></i>
-                                Voir
-                            </a>
-                            {% if canManage %}
-                                <a href="{{ path('app_activities_edit', {'id': activity.id}) }}" 
-                                   class="btn-warning-custom">
-                                    <i class="fas fa-edit"></i>
-                                    Modifier
-                                </a>
-                                <form method="post" action="{{ path('app_activities_delete', {'id': activity.id}) }}" style="display: inline;">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ activity.id) }}">
-                                    <button type="button" class="btn-danger-custom" onclick="confirmDeleteActivity({{ activity.id }}, '{{ activity.titre|e('js') }}')">
-                                        <i class="fas fa-trash"></i>
-                                        Supprimer
-                                    </button>
-                                </form>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-
-        <!-- Pagination -->
-        {% if totalPages > 1 %}
-            <nav aria-label="Pagination des activités" class="mt-5">
-                <ul class="pagination justify-content-center">
-                    <!-- Page précédente -->
-                    {% if currentPage > 1 %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ path('app_activities_index', {'page': currentPage - 1}) }}">
-                                <i class="fas fa-chevron-left"></i>
-                            </a>
-                        </li>
-                    {% endif %}
-
-                    <!-- Pages numérotées -->
-                    {% set startPage = max(1, currentPage - 2) %}
-                    {% set endPage = min(totalPages, currentPage + 2) %}
-                    
-                    {% if startPage > 1 %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ path('app_activities_index', {'page': 1}) }}">1</a>
-                        </li>
-                        {% if startPage > 2 %}
-                            <li class="page-item disabled">
-                                <span class="page-link">...</span>
-                            </li>
-                        {% endif %}
-                    {% endif %}
-
-                    {% for page in range(startPage, endPage) %}
-                        <li class="page-item {% if page == currentPage %}active{% endif %}">
-                            {% if page == currentPage %}
-                                <span class="page-link">{{ page }}</span>
+        {% else %}
+            <div class="row">
+                {% for activity in activities %}
+                    {% set canManage = app.user and activity.createdBy and activity.createdBy.id == app.user.id %}
+                    <div class="col-md-6 col-lg-4 d-flex">
+                        <article class="activity-card w-100">
+                            {% if activity.image %}
+                                <img class="thumb" src="{{ asset('uploads/activities/' ~ activity.image) }}" alt="{{ activity.titre }}">
                             {% else %}
-                                <a class="page-link" href="{{ path('app_activities_index', {'page': page}) }}">{{ page }}</a>
+                                <img class="thumb" src="{{ asset('adventure/img/g6.jpg') }}" alt="Activity placeholder">
                             {% endif %}
-                        </li>
-                    {% endfor %}
 
-                    {% if endPage < totalPages %}
-                        {% if endPage < totalPages - 1 %}
-                            <li class="page-item disabled">
-                                <span class="page-link">...</span>
+                            <div class="activity-body">
+                                {% if canManage and activity.status %}
+                                    <span class="status-pill status-{{ activity.status.value }}">{{ activity.status.value|replace({'_': ' '})|title }}</span>
+                                {% endif %}
+                                <h5 class="mb-2">{{ activity.titre }}</h5>
+                                <p class="text-muted mb-2">{{ activity.description|striptags|slice(0, 120) }}{% if activity.description|length > 120 %}...{% endif %}</p>
+                                {% if activity.categorie %}
+                                    <small><i class="fa fa-tag"></i> {{ activity.categorie.value }}</small>
+                                {% endif %}
+                            </div>
+
+                            <div class="activity-actions">
+                                <a href="{{ path('app_activities_show', {'id': activity.id}) }}" class="genric-btn info-border small">View</a>
+                                {% if canManage %}
+                                    <a href="{{ path('app_activities_edit', {'id': activity.id}) }}" class="genric-btn warning-border small">Edit</a>
+                                    <form method="post" action="{{ path('app_activities_delete', {'id': activity.id}) }}" onsubmit="return confirm('Delete this activity?');" style="display:inline;">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ activity.id) }}">
+                                        <button type="submit" class="genric-btn danger-border small">Delete</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </article>
+                    </div>
+                {% endfor %}
+            </div>
+
+            {% if totalPages > 1 %}
+                <nav aria-label="Activities pagination">
+                    <ul class="pagination justify-content-center mt-4">
+                        {% if currentPage > 1 %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ path('app_activities_index', {'page': currentPage - 1}) }}">Previous</a>
                             </li>
                         {% endif %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ path('app_activities_index', {'page': totalPages}) }}">{{ totalPages }}</a>
-                        </li>
-                    {% endif %}
 
-                    <!-- Page suivante -->
-                    {% if currentPage < totalPages %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ path('app_activities_index', {'page': currentPage + 1}) }}">
-                                <i class="fas fa-chevron-right"></i>
-                            </a>
-                        </li>
-                    {% endif %}
-                </ul>
-            </nav>
+                        {% for page in 1..totalPages %}
+                            <li class="page-item {% if page == currentPage %}active{% endif %}">
+                                {% if page == currentPage %}
+                                    <span class="page-link">{{ page }}</span>
+                                {% else %}
+                                    <a class="page-link" href="{{ path('app_activities_index', {'page': page}) }}">{{ page }}</a>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+
+                        {% if currentPage < totalPages %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ path('app_activities_index', {'page': currentPage + 1}) }}">Next</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% endif %}
         {% endif %}
-    {% endif %}
-</div>
-{% endblock %}
-
-{% block javascripts %}
-{{ parent() }}
-<script>
-// Fonction pour confirmer la suppression d'une activité
-function confirmDeleteActivity(activityId, activityTitle) {
-    // Créer une modal personnalisée
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
-    
-    const modalContent = document.createElement('div');
-    modalContent.style.cssText = `
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        max-width: 400px;
-        width: 90%;
-        text-align: center;
-        animation: slideIn 0.3s ease;
-    `;
-    
-    modalContent.innerHTML = `
-        <div style="margin-bottom: 1.5rem;">
-            <div style="width: 60px; height: 60px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem;">
-                ⚠️
-            </div>
-            <h3 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.25rem; font-weight: 600;">Confirmer la suppression</h3>
-            <p style="margin: 0; color: #6b7280; line-height: 1.5;">
-                Êtes-vous sûr de vouloir supprimer l'activité <strong>"${activityTitle}"</strong> ?<br>
-                Cette action est <strong>irréversible</strong>.
-            </p>
-        </div>
-        <div style="display: flex; gap: 1rem; justify-content: center;">
-            <button onclick="closeDeleteModal()" style="
-                background: #f3f4f6;
-                color: #374151;
-                border: none;
-                padding: 0.75rem 1.5rem;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 500;
-                transition: all 0.2s ease;
-            " onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">
-                Annuler
-            </button>
-            <button onclick="confirmDelete(${activityId})" style="
-                background: #dc2626;
-                color: white;
-                border: none;
-                padding: 0.75rem 1.5rem;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 500;
-                transition: all 0.2s ease;
-            " onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
-                Supprimer
-            </button>
-        </div>
-    `;
-    
-    modal.appendChild(modalContent);
-    document.body.appendChild(modal);
-    
-    // Ajouter l'animation CSS
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-// Fonction pour fermer la modal
-function closeDeleteModal() {
-    const modal = document.querySelector('div[style*="position: fixed"]');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// Fonction pour afficher une alerte de succès
-function showSuccessModal(message) {
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
-    
-    const modalContent = document.createElement('div');
-    modalContent.style.cssText = `
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        max-width: 400px;
-        width: 90%;
-        text-align: center;
-        animation: slideIn 0.3s ease;
-    `;
-    
-    modalContent.innerHTML = `
-        <div style="margin-bottom: 1.5rem;">
-            <div style="width: 60px; height: 60px; background: #dcfce7; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem;">
-                🎉
-            </div>
-            <h3 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.25rem; font-weight: 600;">Succès !</h3>
-            <p style="margin: 0; color: #6b7280; line-height: 1.5;">
-                ${message}
-            </p>
-        </div>
-        <div style="display: flex; gap: 1rem; justify-content: center;">
-            <button onclick="closeSuccessModal()" style="
-                background: #10b981;
-                color: white;
-                border: none;
-                padding: 0.75rem 1.5rem;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 500;
-                transition: all 0.2s ease;
-            " onmouseover="this.style.background='#059669'" onmouseout="this.style.background='#10b981'">
-                OK
-            </button>
-        </div>
-    `;
-    
-    modal.appendChild(modalContent);
-    document.body.appendChild(modal);
-    
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-// Fonction pour afficher une alerte d'erreur
-function showErrorModal(message) {
-    const modal = document.createElement('div');
-    modal.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    `;
-    
-    const modalContent = document.createElement('div');
-    modalContent.style.cssText = `
-        background: white;
-        padding: 2rem;
-        border-radius: 12px;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-        max-width: 400px;
-        width: 90%;
-        text-align: center;
-        animation: slideIn 0.3s ease;
-    `;
-    
-    modalContent.innerHTML = `
-        <div style="margin-bottom: 1.5rem;">
-            <div style="width: 60px; height: 60px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-size: 2rem;">
-                ❌
-            </div>
-            <h3 style="margin: 0 0 0.5rem 0; color: #1f2937; font-size: 1.25rem; font-weight: 600;">Erreur !</h3>
-            <p style="margin: 0; color: #6b7280; line-height: 1.5;">
-                ${message}
-            </p>
-        </div>
-        <div style="display: flex; gap: 1rem; justify-content: center;">
-            <button onclick="closeErrorModal()" style="
-                background: #dc2626;
-                color: white;
-                border: none;
-                padding: 0.75rem 1.5rem;
-                border-radius: 8px;
-                cursor: pointer;
-                font-weight: 500;
-                transition: all 0.2s ease;
-            " onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">
-                OK
-            </button>
-        </div>
-    `;
-    
-    modal.appendChild(modalContent);
-    document.body.appendChild(modal);
-    
-    const style = document.createElement('style');
-    style.textContent = `
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9) translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
-        }
-    `;
-    document.head.appendChild(style);
-}
-
-function closeSuccessModal() {
-    const modal = document.querySelector('div[style*="position: fixed"]');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-function closeErrorModal() {
-    const modal = document.querySelector('div[style*="position: fixed"]');
-    if (modal) {
-        modal.remove();
-    }
-}
-
-// Fonction pour confirmer la suppression
-function confirmDelete(activityId) {
-    // Trouver le formulaire et le soumettre
-    const form = document.querySelector(`form[action*="${activityId}"]`);
-    if (form) {
-        form.submit();
-    }
-}
-
-// Animation au chargement
-document.addEventListener('DOMContentLoaded', function() {
-    // Afficher les alertes de succès
-    const successMessages = document.querySelectorAll('#success-message');
-    successMessages.forEach(element => {
-        const message = element.getAttribute('data-message');
-        if (message) {
-            setTimeout(() => {
-                showSuccessModal(message);
-            }, 500);
-        }
-    });
-    
-    // Afficher les alertes d'erreur
-    const errorMessages = document.querySelectorAll('#error-message');
-    errorMessages.forEach(element => {
-        const message = element.getAttribute('data-message');
-        if (message) {
-            setTimeout(() => {
-                showErrorModal(message);
-            }, 500);
-        }
-    });
-    
-    const cards = document.querySelectorAll('.activity-card');
-    cards.forEach((card, index) => {
-        card.style.opacity = '0';
-        card.style.transform = 'translateY(30px)';
-        
-        setTimeout(() => {
-            card.style.transition = 'all 0.6s ease';
-            card.style.opacity = '1';
-            card.style.transform = 'translateY(0)';
-        }, index * 100);
-    });
-});
-</script>
+    </div>
+</section>
 {% endblock %}
