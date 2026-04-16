@@ -1,156 +1,194 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}WanderLust — Explore the World{% endblock %}
+{% block title %}Wanderlust - Home{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .home-banner {
+            min-height: calc(78vh + 96px);
+            padding-top: 96px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            isolation: isolate;
+            background: #0f172a;
+        }
+
+        .home-banner-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -2;
+        }
+
+        .home-banner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.52)),
+                radial-gradient(circle at 22% 30%, rgba(246, 33, 75, 0.24), transparent 44%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .home-banner .container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .home-banner h1 {
+            color: #fff;
+            font-size: 54px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            line-height: 1.1;
+        }
+
+        .home-banner p {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 18px;
+            max-width: 680px;
+            margin-bottom: 30px;
+        }
+
+        .module-card {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+            transition: transform .25s ease, box-shadow .25s ease;
+            height: 100%;
+        }
+
+        .module-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+        }
+
+        .module-card .thumb {
+            height: 220px;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .module-card .body {
+            padding: 20px;
+        }
+
+        .module-card h4 {
+            margin-bottom: 10px;
+        }
+
+        .facts-wrap {
+            background: #f9f9ff;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 28px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .facts-wrap h2 {
+            margin-bottom: 8px;
+            color: #f6214b;
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
+<section class="home-banner">
+    <video class="home-banner-video" autoplay muted loop playsinline preload="metadata" poster="{{ asset('adventure/img/slider1.jpg') }}">
+        <source src="{{ asset('adventure/Mountains, Fog, Clouds. Free Stock Video_2.mp4') }}" type="video/mp4">
+    </video>
+    <div class="container">
+        <h1>Start Your Next Adventure</h1>
+        <p>Explore events, activities, reservations and stories in one platform inspired by the Adventure travel theme.</p>
+        <a href="{{ path('app_events_index') }}" class="primary-btn text-uppercase mr-2">Explore Events</a>
+        <a href="{{ path('app_activities_index') }}" class="primary-btn text-uppercase">Explore Activities</a>
+    </div>
+</section>
 
-<!-- Hero Section -->
-<section class="relative min-h-[85vh] flex items-center justify-center overflow-hidden">
-    <img
-        src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&q=80&w=2000"
-        alt="Stunning mountain landscape"
-        class="absolute inset-0 w-full h-full object-cover"
-    />
-    <div class="absolute inset-0 bg-gradient-to-b from-foreground/40 via-foreground/20 to-foreground/60"></div>
+<section class="section-gap">
+    <div class="container">
+        <div class="row d-flex justify-content-center mb-40">
+            <div class="menu-content pb-20 col-lg-8">
+                <div class="title text-center">
+                    <h1 class="mb-10">Browse Main Modules</h1>
+                    <p>All core pages now share the Adventure visual language.</p>
+                </div>
+            </div>
+        </div>
 
-    <div class="relative z-10 text-center px-4 max-w-4xl mx-auto">
-        <h1 class="text-4xl sm:text-5xl md:text-7xl font-heading font-bold text-white mb-4 leading-tight">
-            Your Next Adventure
-            <br />
-            <span class="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                Starts Here
-            </span>
-        </h1>
-        <p class="text-lg md:text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-            Discover unique stays, vibrant experiences, and a global community of travelers.
-        </p>
-
-        <!-- Search Bar -->
-        <div class="glass-strong rounded-2xl p-2 max-w-3xl mx-auto">
-            <div class="flex flex-col sm:flex-row gap-2">
-                <div class="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer">
-                    <svg class="w-5 h-5 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                    <div class="text-left">
-                        <p class="text-xs font-medium text-muted-foreground uppercase">Where</p>
-                        <p class="text-sm text-foreground font-semibold">Search destinations</p>
+        <div class="row">
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="module-card">
+                    <img class="thumb" src="{{ asset('adventure/img/g1.jpg') }}" alt="Events">
+                    <div class="body">
+                        <h4>Events</h4>
+                        <p>Create and manage event experiences.</p>
+                        <a href="{{ path('app_events_index') }}" class="primary-btn text-uppercase">Open</a>
                     </div>
                 </div>
-                <div class="hidden sm:block w-px bg-border my-2"></div>
-                <div class="flex-1 flex items-center gap-2 px-4 py-3 rounded-xl hover:bg-secondary/50 transition-colors cursor-pointer">
-                    <svg class="w-5 h-5 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                    <div class="text-left">
-                        <p class="text-xs font-medium text-muted-foreground uppercase">When</p>
-                        <p class="text-sm text-foreground font-semibold">Add dates</p>
+            </div>
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="module-card">
+                    <img class="thumb" src="{{ asset('adventure/img/g2.jpg') }}" alt="Activities">
+                    <div class="body">
+                        <h4>Activities</h4>
+                        <p>Discover or publish local activities.</p>
+                        <a href="{{ path('app_activities_index') }}" class="primary-btn text-uppercase">Open</a>
                     </div>
                 </div>
-                <button class="bg-primary hover:bg-primary/90 text-white px-8 py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all">
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                    <span>Search</span>
-                </button>
+            </div>
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="module-card">
+                    <img class="thumb" src="{{ asset('adventure/img/g3.jpg') }}" alt="Reservations">
+                    <div class="body">
+                        <h4>Reservations</h4>
+                        <p>Track your reservation lifecycle quickly.</p>
+                        <a href="{{ path('app_reservations_index') }}" class="primary-btn text-uppercase">Open</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3 mb-4">
+                <div class="module-card">
+                    <img class="thumb" src="{{ asset('adventure/img/g4.jpg') }}" alt="Marketplace">
+                    <div class="body">
+                        <h4>Marketplace</h4>
+                        <p>Browse and publish travel items.</p>
+                        <a href="{{ path('app_marketplace') }}" class="primary-btn text-uppercase">Open</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </section>
 
-<!-- Featured Stays -->
-<section class="py-20 px-4 bg-background">
-    <div class="container mx-auto">
-        <div class="flex items-end justify-between mb-10">
-            <div>
-                <p class="text-sm font-bold text-primary mb-1 uppercase tracking-wider">Featured Stays</p>
-                <h2 class="text-3xl md:text-4xl font-heading font-bold text-foreground">
-                    Places to stay
-                </h2>
+<section class="section-gap pt-0">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="facts-wrap">
+                    <h2>100%</h2>
+                    <p>Symfony-integrated theme migration</p>
+                </div>
             </div>
-            <a href="{{ path('app_booking') }}" class="text-sm font-semibold text-primary hover:underline hidden sm:block">
-                View all →
-            </a>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            <!-- Property 1 -->
-            <div class="group cursor-pointer">
-                <div class="relative aspect-[4/3] overflow-hidden rounded-2xl mb-4">
-                    <img src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=800" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                    <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground shadow-sm">Villa</div>
+            <div class="col-md-4">
+                <div class="facts-wrap">
+                    <h2>Auth-safe</h2>
+                    <p>Ownership and access rules preserved</p>
                 </div>
-                <div class="flex justify-between items-start mb-1">
-                    <h3 class="font-heading font-bold text-lg group-hover:text-primary transition-colors">Oceanview Infinity Villa</h3>
-                    <div class="flex items-center gap-1 text-sm font-bold">
-                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <span>4.9</span>
-                    </div>
-                </div>
-                <p class="text-muted-foreground text-sm mb-2">Bali, Indonesia</p>
-                <p class="text-foreground"><span class="font-bold text-lg">$285</span> <span class="text-muted-foreground text-sm">/ night</span></p>
             </div>
-
-            <!-- Property 2 -->
-            <div class="group cursor-pointer">
-                <div class="relative aspect-[4/3] overflow-hidden rounded-2xl mb-4">
-                    <img src="https://images.unsplash.com/photo-1510798831971-661eb04b3739?auto=format&fit=crop&q=80&w=800" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                    <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground shadow-sm">Cabin</div>
+            <div class="col-md-4">
+                <div class="facts-wrap">
+                    <h2>Responsive</h2>
+                    <p>Desktop and mobile friendly layout</p>
                 </div>
-                <div class="flex justify-between items-start mb-1">
-                    <h3 class="font-heading font-bold text-lg group-hover:text-primary transition-colors">Alpine Pine Lodge</h3>
-                    <div class="flex items-center gap-1 text-sm font-bold">
-                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <span>4.8</span>
-                    </div>
-                </div>
-                <p class="text-muted-foreground text-sm mb-2">Zermatt, Switzerland</p>
-                <p class="text-foreground"><span class="font-bold text-lg">$195</span> <span class="text-muted-foreground text-sm">/ night</span></p>
-            </div>
-
-            <!-- Property 3 -->
-            <div class="group cursor-pointer">
-                <div class="relative aspect-[4/3] overflow-hidden rounded-2xl mb-4">
-                    <img src="https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&q=80&w=800" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-                    <div class="absolute top-4 left-4 bg-white/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold text-foreground shadow-sm">Loft</div>
-                </div>
-                <div class="flex justify-between items-start mb-1">
-                    <h3 class="font-heading font-bold text-lg group-hover:text-primary transition-colors">Manhattan Skyline Loft</h3>
-                    <div class="flex items-center gap-1 text-sm font-bold">
-                        <svg class="w-4 h-4 text-accent fill-accent" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        <span>4.7</span>
-                    </div>
-                </div>
-                <p class="text-muted-foreground text-sm mb-2">New York, USA</p>
-                <p class="text-foreground"><span class="font-bold text-lg">$320</span> <span class="text-muted-foreground text-sm">/ night</span></p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- Why Choose Us -->
-<section class="py-20 bg-secondary/20">
-    <div class="container mx-auto px-4">
-        <div class="text-center max-w-2xl mx-auto mb-16">
-            <h2 class="text-3xl md:text-4xl font-heading font-bold mb-4 text-foreground">Why choose Wanderlust?</h2>
-            <p class="text-muted-foreground">We provide everything you need for an unforgettable journey.</p>
-        </div>
-
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-            <div class="text-center">
-                <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 text-primary">
-                    <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-                </div>
-                <h3 class="text-xl font-bold mb-3">Safe & Secure</h3>
-                <p class="text-muted-foreground text-sm">Your safety is our top priority. We verify every host and property.</p>
-            </div>
-            <div class="text-center">
-                <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 text-primary">
-                    <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                </div>
-                <h3 class="text-xl font-bold mb-3">24/7 Support</h3>
-                <p class="text-muted-foreground text-sm">Our team is always here to help you, no matter where you are in the world.</p>
-            </div>
-            <div class="text-center">
-                <div class="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6 text-primary">
-                    <svg class="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-                </div>
-                <h3 class="text-xl font-bold mb-3">Global Community</h3>
-                <p class="text-muted-foreground text-sm">Connect with millions of travelers and share your experiences.</p>
             </div>
         </div>
     </div>

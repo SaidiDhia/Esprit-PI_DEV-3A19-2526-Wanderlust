@@ -399,10 +399,9 @@
 
     /* Main chat container */
     .msg-page {
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        background: #f8f9fa;
+        display: block;
+        min-height: 0;
+        background: transparent;
     }
 
     #messagesContainer {
@@ -779,6 +778,190 @@
             opacity: 1;
             transform: scale(1) translateY(0);
         }
+    }
+
+    .msg-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 32px;
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+
+    .msg-search-form {
+        display: flex;
+        gap: 8px;
+    }
+
+    .msg-pill-input {
+        flex: 1;
+        padding: 10px 16px;
+        border: 1px solid var(--msg-border);
+        border-radius: 24px;
+        outline: none;
+        background: #fff;
+    }
+
+    .msg-pill-btn {
+        border-radius: 24px;
+    }
+
+    .msg-section-heading {
+        margin: 24px 0 16px;
+    }
+
+    .msg-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .msg-list-card {
+        background: #fff;
+        border-radius: 12px;
+        border: 1px solid var(--msg-border);
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .msg-list-card.pinned {
+        border-left: 4px solid #f59e0b;
+    }
+
+    .msg-list-card.archived {
+        background: #f5f5f5;
+    }
+
+    .msg-list-main h3 {
+        margin: 0 0 4px;
+    }
+
+    .msg-list-meta {
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .msg-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+
+    .msg-btn-compact {
+        padding: 6px 16px;
+    }
+
+    .msg-btn-danger-compact {
+        padding: 6px 16px;
+        background: #ef4444;
+        color: #fff;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .msg-btn-neutral-compact {
+        padding: 8px 16px;
+        background: #e5e7eb;
+        color: #1f2937;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .msg-dialog-backdrop {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .msg-dialog {
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        width: 400px;
+        max-width: 90%;
+    }
+
+    .msg-dialog-title {
+        margin: 0 0 16px;
+        font-size: 18px;
+        color: #1f2937;
+    }
+
+    .msg-dialog-text {
+        color: #6b7280;
+        margin: 0 0 24px;
+    }
+
+    .msg-dialog-actions {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+
+    .msg-page-content-narrow {
+        max-width: 800px;
+    }
+
+    .msg-card-section {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid var(--msg-border);
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+
+    .msg-card-list {
+        background: #fff;
+        border-radius: 16px;
+        border: 1px solid var(--msg-border);
+        overflow: hidden;
+    }
+
+    .msg-card-list-head {
+        padding: 16px 20px;
+        background: #f8fafc;
+        border-bottom: 1px solid var(--msg-border);
+    }
+
+    .msg-row {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .msg-row-title {
+        font-weight: 600;
+    }
+
+    .msg-row-subtitle {
+        font-size: 12px;
+        color: #94a3b8;
+    }
+
+    .msg-actions-tight {
+        display: flex;
+        gap: 8px;
+    }
+
+    .msg-center-action {
+        margin-top: 24px;
+        text-align: center;
     }
 
 </style>

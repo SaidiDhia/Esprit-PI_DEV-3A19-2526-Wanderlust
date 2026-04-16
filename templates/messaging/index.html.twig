@@ -2,198 +2,290 @@
 
 {% block title %}Messaging - WanderLust{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .module-hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url('{{ asset('adventure/img/slider1.jpg') }}') center center/cover no-repeat;
+            padding: 120px 0 80px;
+            color: #fff;
+            margin-bottom: 50px;
+        }
+
+        .msg-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .msg-search {
+            margin-bottom: 24px;
+        }
+
+        .msg-search form {
+            display: flex;
+            gap: 10px;
+        }
+
+        .msg-search input {
+            flex: 1;
+            border: 1px solid #e5e7eb;
+            border-radius: 999px;
+            padding: 10px 16px;
+            outline: none;
+        }
+
+        .conversation-card {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+            margin-bottom: 12px;
+            padding: 16px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .conversation-card.pinned {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .conversation-meta {
+            font-size: 12px;
+            color: #777;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .conversation-actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .conversation-actions .genric-btn {
+            margin: 0;
+        }
+
+        .msg-section-title {
+            margin: 24px 0 14px;
+        }
+
+        .archive-wrap {
+            opacity: 0.78;
+        }
+
+        .msg-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1100;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .msg-modal-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 24px;
+            width: 420px;
+            max-width: 92%;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.24);
+        }
+
+        .msg-modal-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 14px;
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<div class="page-hero">
-    <div class="page-hero-content">
-        <span class="page-hero-icon">💬</span>
-        <h1 class="page-hero-title">Messaging</h1>
-        <p class="page-hero-subtitle">Connect with fellow adventurers</p>
+<section class="module-hero">
+    <div class="container">
+        <h1 class="mb-10">Messaging</h1>
+        <p class="mb-20">Connect with fellow adventurers using the same WanderLust style.</p>
+        <a href="{{ path('messaging_conversation_new') }}" class="primary-btn text-uppercase">Start New Conversation</a>
+    </div>
+</section>
+
+<section class="section-gap pt-0">
+    <div class="container">
+        <div class="msg-toolbar">
+            <h2 class="mb-0">Your Conversations</h2>
+            <a href="{{ path('messaging_conversation_new') }}" class="genric-btn primary">+ New Conversation</a>
+        </div>
+
+        <div class="msg-search">
+            <form method="GET" action="">
+                <input type="text" name="search" placeholder="Search conversations..." value="{{ app.request.query.get('search') }}">
+                <button type="submit" class="genric-btn primary circle">Search</button>
+                {% if app.request.query.get('search') %}
+                    <a href="{{ path('app_messaging') }}" class="genric-btn default circle">Clear</a>
+                {% endif %}
+            </form>
+        </div>
+
+        {% for message in app.flashes('success') %}
+            <div class="alert alert-success">{{ message }}</div>
+        {% endfor %}
+        {% for message in app.flashes('error') %}
+            <div class="alert alert-danger">{{ message }}</div>
+        {% endfor %}
+
+        <h4 class="msg-section-title">Active</h4>
+        {% if conversations is empty %}
+            <div class="text-center p-5 border rounded bg-white">
+                <h5>No active conversations</h5>
+                <p class="text-muted mb-3">Start a new one to begin chatting.</p>
+                <a href="{{ path('messaging_conversation_new') }}" class="primary-btn text-uppercase">New Conversation</a>
+            </div>
+        {% else %}
+            {% for conv in conversations %}
+                <article class="conversation-card{% if conv.is_pinned %} pinned{% endif %}">
+                    <div>
+                        <h5 class="mb-1">
+                            {{ conv.name ?: 'Conversation #' ~ conv.id }}
+                            {% if conv.is_pinned %} 📌{% endif %}
+                        </h5>
+                        <div class="conversation-meta">{{ conv.type }}</div>
+                    </div>
+
+                    <div class="conversation-actions">
+                        <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="genric-btn info-border small">Open</a>
+
+                        <form method="POST" action="{{ path('messaging_conversation_pin', {id: conv.id}) }}" style="display:inline;">
+                            <button type="submit" class="genric-btn default-border small">{{ conv.is_pinned ? 'Unpin' : 'Pin' }}</button>
+                        </form>
+
+                        <form method="POST" action="{{ path('messaging_conversation_archive', {id: conv.id}) }}" style="display:inline;">
+                            <button type="submit" class="genric-btn default-border small">Archive</button>
+                        </form>
+
+                        <button onclick="renameConversation({{ conv.id }}, '{{ conv.name|e('js') }}')" class="genric-btn warning-border small">Rename</button>
+
+                        {% if conv.user_role == 'CREATOR' %}
+                            <form method="POST" id="deleteForm_{{ conv.id }}" action="{{ path('messaging_conversation_delete', {id: conv.id}) }}" style="display:none;"></form>
+                            <button type="button" class="genric-btn danger-border small" onclick="prepareDeleteConversation({{ conv.id }})">Delete</button>
+                        {% endif %}
+                    </div>
+                </article>
+            {% endfor %}
+        {% endif %}
+
+        {% if archivedConversations is not empty %}
+            <h4 class="msg-section-title">Archived</h4>
+            <div class="archive-wrap">
+                {% for conv in archivedConversations %}
+                    <article class="conversation-card">
+                        <div>
+                            <h5 class="mb-1">{{ conv.name ?: 'Conversation #' ~ conv.id }}</h5>
+                            <div class="conversation-meta">{{ conv.type }}</div>
+                        </div>
+                        <div class="conversation-actions">
+                            <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="genric-btn info-border small">View</a>
+                            <form method="POST" action="{{ path('messaging_conversation_archive', {id: conv.id}) }}" style="display:inline;">
+                                <button type="submit" class="genric-btn success-border small">Unarchive</button>
+                            </form>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</section>
+
+<div id="renameModal" class="msg-modal">
+    <div class="msg-modal-card">
+        <h4 class="mb-3">Rename Conversation</h4>
+        <input type="text" id="renameInput" class="form-control" style="margin-bottom: 14px;">
+        <div class="msg-modal-actions">
+            <button onclick="closeRenameModal()" class="genric-btn default-border small">Cancel</button>
+            <button onclick="submitRename()" class="genric-btn primary small">Save</button>
+        </div>
+        <form id="renameForm" method="POST" style="display:none;">
+            <input type="hidden" name="name" id="renameFormName">
+        </form>
     </div>
 </div>
 
-<div class="page-content">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px;">
-        <h2 style="font-family: var(--font-display);">Your Conversations</h2>
-        <a href="{{ path('messaging_conversation_new') }}" class="btn btn-primary">➕ New Conversation</a>
-    </div>
-
-    <!-- Search Conversations -->
-    <div style="margin-bottom: 24px;">
-        <form method="GET" action="" style="display: flex; gap: 8px;">
-            <input type="text" name="search" placeholder="🔍 Search conversations..."
-                   value="{{ app.request.query.get('search') }}"
-                   style="flex: 1; padding: 10px 16px; border: 1px solid var(--gray-200); border-radius: 24px; outline: none;">
-            <button type="submit" class="btn btn-primary" style="border-radius: 24px;">Search</button>
-            {% if app.request.query.get('search') %}
-                <a href="{{ path('app_messaging') }}" class="btn btn-outline" style="border-radius: 24px;">Clear</a>
-            {% endif %}
-        </form>
-    </div>
-    
-    {% for message in app.flashes('success') %}
-        <div class="flash flash-success">{{ message }}</div>
-    {% endfor %}
-    {% for message in app.flashes('error') %}
-        <div class="flash flash-error">{{ message }}</div>
-    {% endfor %}
-    
-    <!-- Active Conversations -->
-    <h3 style="margin: 24px 0 16px 0;">Active</h3>
-    {% if conversations is empty %}
-        <div class="mp-empty" style="padding: 40px;">
-            <div style="font-size: 48px;">💬</div>
-            <p>No active conversations. Start a new one!</p>
-        </div>
-    {% else %}
-        <div style="display: flex; flex-direction: column; gap: 12px;">
-            {% for conv in conversations %}
-                <div style="background: white; border-radius: 12px; border: 1px solid var(--gray-200); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; {% if conv.is_pinned %}border-left: 4px solid #F59E0B;{% endif %}">
-                    <div>
-                        <h3 style="margin-bottom: 4px;">
-                            {{ conv.name ?: 'Conversation #' ~ conv.id }}
-                            {% if conv.is_pinned %} 📌{% endif %}
-                        </h3>
-                        <span style="font-size: 12px; color: var(--gray-400);">{{ conv.type }}</span>
-                    </div>
-                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="btn btn-primary" style="padding: 6px 16px;">Open</a>
-                        
-                        <!-- Pin/Unpin Button -->
-                        <form method="POST" action="{{ path('messaging_conversation_pin', {id: conv.id}) }}" style="display: inline;">
-                            <button type="submit" class="btn btn-outline" style="padding: 6px 16px;" title="{{ conv.is_pinned ? 'Unpin' : 'Pin' }}">
-                                {{ conv.is_pinned ? '📌 Unpin' : '📍 Pin' }}
-                            </button>
-                        </form>
-                        
-                        <!-- Archive Button -->
-                        <form method="POST" action="{{ path('messaging_conversation_archive', {id: conv.id}) }}" style="display: inline;">
-                            <button type="submit" class="btn btn-outline" style="padding: 6px 16px;" title="Archive">
-                                📦 Archive
-                            </button>
-                        </form>
-                        
-                        <!-- Rename Button -->
-                        <button onclick="renameConversation({{ conv.id }}, '{{ conv.name|e('js') }}')" class="btn btn-outline" style="padding: 6px 16px;">✏️ Rename</button>
-                        
-                        <!-- Delete Button (only for creator) -->
-                        {% if conv.user_role == 'CREATOR' %}
-                            <form method="POST" id="deleteForm_{{ conv.id }}" action="{{ path('messaging_conversation_delete', {id: conv.id}) }}" style="display: none;">
-                            </form>
-                            <button type="button" class="btn" style="padding: 6px 16px; background: #EF4444; color: white; border: none; border-radius: 8px; cursor: pointer;" onclick="prepareDeleteConversation({{ conv.id }})">🗑️ Delete</button>
-                        {% endif %}
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-    
-    <!-- Archived Conversations Section -->
-    {% if archivedConversations is not empty %}
-        <h3 style="margin: 32px 0 16px 0;">Archived 📦</h3>
-        <div style="display: flex; flex-direction: column; gap: 12px; opacity: 0.7;">
-            {% for conv in archivedConversations %}
-                <div style="background: #f5f5f5; border-radius: 12px; border: 1px solid var(--gray-200); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <h3 style="margin-bottom: 4px;">{{ conv.name ?: 'Conversation #' ~ conv.id }}</h3>
-                        <span style="font-size: 12px; color: var(--gray-400);">{{ conv.type }}</span>
-                    </div>
-                    <div style="display: flex; gap: 8px;">
-                        <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="btn btn-primary" style="padding: 6px 16px;">View</a>
-                        
-                        <!-- Unarchive Button -->
-                        <form method="POST" action="{{ path('messaging_conversation_archive', {id: conv.id}) }}" style="display: inline;">
-                            <button type="submit" class="btn btn-outline" style="padding: 6px 16px;">📤 Unarchive</button>
-                        </form>
-                    </div>
-                </div>
-            {% endfor %}
-        </div>
-    {% endif %}
-
-    <!-- Rename Modal -->
-    <div id="renameModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-        <div style="background: white; border-radius: 16px; padding: 24px; width: 400px; max-width: 90%;">
-            <h3 style="margin-bottom: 16px;">Rename Conversation</h3>
-            <input type="text" id="renameInput" style="width: 100%; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; margin-bottom: 16px;">
-            <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                <button onclick="closeRenameModal()" style="padding: 8px 16px; border: 1px solid var(--gray-200); background: white; border-radius: 8px; cursor: pointer;">Cancel</button>
-                <button onclick="submitRename()" style="padding: 8px 16px; background: var(--blue-primary); color: white; border: none; border-radius: 8px; cursor: pointer;">Save</button>
-            </div>
-            <form id="renameForm" method="POST" style="display: none;">
-                <input type="hidden" name="name" id="renameFormName">
-            </form>
+<div id="deleteModal" class="msg-modal">
+    <div class="msg-modal-card" style="max-width: 430px;">
+        <h4 class="mb-3">Delete Conversation</h4>
+        <p class="text-muted">Are you sure you want to delete this conversation and all messages? This cannot be undone.</p>
+        <div class="msg-modal-actions">
+            <button type="button" onclick="closeDeleteModal()" class="genric-btn default-border small">Cancel</button>
+            <button type="button" onclick="submitDelete()" class="genric-btn danger small">Delete</button>
         </div>
     </div>
+</div>
 
-    <!-- Delete Confirmation Modal -->
-    <div id="deleteModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center;">
-        <div style="background: white; border-radius: 16px; padding: 32px; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);">
-            <h2 style="margin: 0 0 16px 0; font-size: 18px; color: #1f2937;">Delete Conversation</h2>
-            <p style="color: #6b7280; margin: 0 0 24px 0;">Are you sure you want to delete this conversation and all messages? This cannot be undone.</p>
-            <div style="display: flex; gap: 12px; justify-content: flex-end;">
-                <button type="button" onclick="closeDeleteModal()" class="btn" style="padding: 8px 16px; background: #e5e7eb; color: #1f2937; border: none; border-radius: 8px; cursor: pointer;">Cancel</button>
-                <button type="button" onclick="submitDelete()" class="btn" style="padding: 8px 16px; background: #ef4444; color: white; border: none; border-radius: 8px; cursor: pointer;">Delete</button>
-            </div>
-        </div>
-    </div>
+<script>
+    let currentConversationId = null;
+    let deleteConversationId = null;
 
-    <script>
-        let currentConversationId = null;
-        let deleteConversationId = null;
-        
-        function renameConversation(id, currentName) {
-            currentConversationId = id;
-            document.getElementById('renameInput').value = currentName;
-            document.getElementById('renameModal').style.display = 'flex';
+    function renameConversation(id, currentName) {
+        currentConversationId = id;
+        document.getElementById('renameInput').value = currentName;
+        document.getElementById('renameModal').style.display = 'flex';
+    }
+
+    function closeRenameModal() {
+        document.getElementById('renameModal').style.display = 'none';
+        currentConversationId = null;
+    }
+
+    function submitRename() {
+        if (!currentConversationId) {
+            return;
         }
-        
-        function closeRenameModal() {
-            document.getElementById('renameModal').style.display = 'none';
-            currentConversationId = null;
-        }
-        
-        function submitRename() {
-            if (currentConversationId) {
-                const newName = document.getElementById('renameInput').value;
-                const form = document.getElementById('renameForm');
-                form.action = '{{ path("messaging_conversation_rename", {id: 0}) }}'.replace('0', currentConversationId);
-                document.getElementById('renameFormName').value = newName;
+
+        const newName = document.getElementById('renameInput').value;
+        const form = document.getElementById('renameForm');
+        form.action = '{{ path("messaging_conversation_rename", {id: 0}) }}'.replace('0', currentConversationId);
+        document.getElementById('renameFormName').value = newName;
+        form.submit();
+    }
+
+    function prepareDeleteConversation(id) {
+        deleteConversationId = id;
+        document.getElementById('deleteModal').style.display = 'flex';
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'none';
+        deleteConversationId = null;
+    }
+
+    function submitDelete() {
+        if (deleteConversationId) {
+            const form = document.getElementById('deleteForm_' + deleteConversationId);
+            if (form) {
                 form.submit();
             }
         }
-        
-        function prepareDeleteConversation(id) {
-            deleteConversationId = id;
-            document.getElementById('deleteModal').style.display = 'flex';
+        closeDeleteModal();
+    }
+
+    document.getElementById('renameModal')?.addEventListener('click', function (e) {
+        if (e.target === this) {
+            closeRenameModal();
         }
-        
-        function closeDeleteModal() {
-            document.getElementById('deleteModal').style.display = 'none';
-            deleteConversationId = null;
-        }
-        
-        function submitDelete() {
-            if (deleteConversationId) {
-                const form = document.getElementById('deleteForm_' + deleteConversationId);
-                if (form) {
-                    form.submit();
-                }
-            }
+    });
+
+    document.getElementById('deleteModal')?.addEventListener('click', function (e) {
+        if (e.target === this) {
             closeDeleteModal();
         }
-        
-        // Close modals when clicking outside
-        document.getElementById('renameModal')?.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeRenameModal();
-            }
-        });
-        
-        document.getElementById('deleteModal')?.addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeDeleteModal();
-            }
-        });
-    </script>
-</div>
+    });
+</script>
 {% endblock %}

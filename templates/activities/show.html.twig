@@ -15,17 +15,11 @@
         --border-radius: 20px;
     }
 
-    /* Text color - all black for clarity */
-    body, h1, h2, h3, h4, h5, h6, p, label, span {
-        color: #000 !important;
-    }
-
     /* Hero Section */
     .show-hero {
-        background: var(--primary-gradient);
-        border-radius: 0 0 80px 80px;
-        padding: 4rem 0;
-        margin-bottom: 3rem;
+        background: linear-gradient(rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.46)), url('{{ asset('adventure/img/slider3.jpg') }}') center center/cover no-repeat;
+        padding: 120px 0 80px;
+        margin-bottom: 50px;
         position: relative;
         overflow: hidden;
     }
@@ -82,10 +76,6 @@
         position: relative;
         width: 100%;
         margin: 0;
-    }
-
-    .activity-show-card * {
-        color: #000 !important;
     }
 
     .activity-show-card::before {
@@ -639,6 +629,7 @@
 {% endblock %}
 
 {% block javascripts %}
+{{ parent() }}
 <script>
 // Pas de JavaScript nécessaire pour le moment
 </script>

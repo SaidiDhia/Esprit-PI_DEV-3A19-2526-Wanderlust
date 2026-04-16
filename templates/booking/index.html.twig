@@ -1,103 +1,182 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Stay Explorer — Wanderlust{% endblock %}
+{% block title %}Stays - Wanderlust{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .module-hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.46)), url('{{ asset('adventure/img/slider3.jpg') }}') center center/cover no-repeat;
+            padding: 120px 0 80px;
+            color: #fff;
+            margin-bottom: 50px;
+        }
+
+        .stay-filter {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.06);
+            padding: 18px;
+            margin-bottom: 30px;
+        }
+
+        .stay-filter .form-control {
+            border-radius: 10px;
+            border-color: #e5e7eb;
+            min-height: 44px;
+        }
+
+        .stay-card {
+            border: 1px solid #eee;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stay-card .thumb {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            background: #f7f7f7;
+        }
+
+        .stay-body {
+            padding: 18px;
+            flex: 1;
+        }
+
+        .stay-actions {
+            border-top: 1px solid #f0f0f0;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .stay-meta {
+            font-size: 13px;
+            color: #777;
+            margin-bottom: 6px;
+        }
+
+        .pending-box {
+            border: 1px solid #fde68a;
+            background: #fffbeb;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 28px;
+        }
+
+        .pending-item {
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            background: #fff;
+            padding: 10px 12px;
+            margin-bottom: 8px;
+        }
+    </style>
+{% endblock %}
 
 {% block content %}
-<section class="relative overflow-hidden text-white">
-    <div class="absolute inset-0 bg-cover bg-center" style="background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.72), rgba(15, 23, 42, 0.38)), url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1920&q=80');"></div>
-    <div class="relative container mx-auto px-4 py-20 md:py-28">
-        <div class="max-w-4xl">
-            <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-sky-100/90">
-                Curated stays
-            </span>
-            <h1 class="mt-6 text-4xl font-heading font-bold tracking-tight md:text-6xl">Find a stay that feels designed, not listed.</h1>
-            <p class="mt-5 max-w-2xl text-base leading-7 text-slate-200 md:text-lg">Browse approved places, send booking requests, and switch into host or admin review flows from the same booking module.</p>
-            <div class="mt-8 flex flex-wrap gap-3">
-                <a href="#explore" class="rounded-xl bg-sky-400 px-5 py-3 text-sm font-bold text-slate-950 transition-colors hover:bg-sky-300">Explore stays</a>
-                <a href="{{ path('app_booking_host') }}" class="rounded-xl border border-white/15 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/10">Become a host</a>
-            </div>
+<section class="module-hero">
+    <div class="container">
+        <h1 class="mb-10">Stays</h1>
+        <p class="mb-20">Discover approved places, book quickly, and manage hosting flows from one module.</p>
+        <div class="d-flex flex-wrap" style="gap:10px;">
+            <a href="#explore" class="primary-btn text-uppercase">Explore Stays</a>
+            <a href="{{ path('app_booking_host') }}" class="primary-btn text-uppercase">Create Stay</a>
+            <a href="{{ path('app_booking_host') }}" class="genric-btn info-border">Host Dashboard</a>
         </div>
-
     </div>
 </section>
 
-<section id="explore" class="bg-slate-50 py-14 md:py-20">
-    <div class="container mx-auto px-4">
+<section id="explore" class="section-gap pt-0">
+    <div class="container">
         {% if myPendingPlaces is not empty %}
-            <div class="mb-8 rounded-[2rem] border border-amber-200 bg-amber-50 p-6">
-                <h2 class="text-xl font-heading font-bold text-amber-900">Your places waiting review</h2>
-                <p class="mt-1 text-sm text-amber-700">These are not bookable yet. Admin approval is required first.</p>
-                <div class="mt-4 grid gap-3 md:grid-cols-2">
+            <div class="pending-box">
+                <h5 class="mb-2">Your places waiting review</h5>
+                <p class="text-muted mb-3">These are not bookable until admin approval.</p>
+                <div class="row">
                     {% for place in myPendingPlaces %}
-                        <div class="rounded-2xl border border-amber-200 bg-white p-4">
-                            <p class="font-semibold text-slate-900">{{ place.title }}</p>
-                            <p class="mt-1 text-xs uppercase tracking-[0.18em] text-amber-700">{{ place.status }}</p>
+                        <div class="col-md-6">
+                            <div class="pending-item">
+                                <strong>{{ place.title }}</strong>
+                                <div class="small text-warning text-uppercase">{{ place.status }}</div>
+                            </div>
                         </div>
                     {% endfor %}
                 </div>
             </div>
         {% endif %}
 
-        <form method="get" class="glass-strong rounded-[2rem] border border-border/60 p-5 shadow-sm md:p-6">
-            <div class="grid gap-4 md:grid-cols-[2fr_1fr_1fr_auto]">
-                <div>
-                    <label class="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Search</label>
-                    <input name="q" value="{{ filters.q ?? '' }}" type="text" placeholder="Hotel, riad, camp, villa..." class="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none ring-0 transition focus:border-primary" />
+        <form method="get" class="stay-filter">
+            <div class="row">
+                <div class="col-md-5 mb-3">
+                    <label class="small text-uppercase">Search</label>
+                    <input name="q" value="{{ filters.q ?? '' }}" type="text" placeholder="Hotel, camp, villa..." class="form-control">
                 </div>
-                <div>
-                    <label class="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">City</label>
-                    <input name="city" value="{{ filters.city ?? '' }}" type="text" placeholder="Tunis" class="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary" />
+                <div class="col-md-3 mb-3">
+                    <label class="small text-uppercase">City</label>
+                    <input name="city" value="{{ filters.city ?? '' }}" type="text" placeholder="Tunis" class="form-control">
                 </div>
-                <div>
-                    <label class="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Category</label>
-                    <input name="category" value="{{ filters.category ?? '' }}" type="text" placeholder="Resort" class="w-full rounded-2xl border border-border bg-white px-4 py-3 text-sm outline-none transition focus:border-primary" />
+                <div class="col-md-2 mb-3">
+                    <label class="small text-uppercase">Category</label>
+                    <input name="category" value="{{ filters.category ?? '' }}" type="text" placeholder="Resort" class="form-control">
                 </div>
-                <div class="flex items-end">
-                    <button class="w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Search</button>
+                <div class="col-md-2 mb-3 d-flex align-items-end">
+                    <button class="primary-btn text-uppercase w-100" style="border:none;">Search</button>
                 </div>
             </div>
         </form>
 
-        <div class="mt-10 grid gap-8 md:grid-cols-2 xl:grid-cols-3">
-            {% for place in places %}
-                <article class="group overflow-hidden rounded-[2rem] bg-white transition duration-300 hover:-translate-y-1">
-                    <div class="relative aspect-[4/3] overflow-hidden rounded-[2rem] bg-slate-100 shadow-sm">
-                        {% set previewImage = placePreviewImages[place.id]|default(place.imageUrl) %}
-                        {% if previewImage %}
-                            <img src="{{ previewImage starts with('http') ? previewImage : asset('uploads/places/' ~ previewImage) }}" alt="{{ place.title }}" class="h-full w-full object-cover transition duration-500 group-hover:scale-105">
-                        {% else %}
-                            <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-sky-100 via-white to-amber-100 text-6xl">✦</div>
-                        {% endif %}
-                        <div class="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-900 shadow-sm">{{ place.category ?? 'Stay' }}</div>
-                    </div>
-                    <div class="space-y-3 px-2 pt-5">
-                        <div class="flex items-start justify-between gap-4">
-                            <div>
-                                <h2 class="text-[1.35rem] font-heading font-bold text-slate-950 transition group-hover:text-sky-700">{{ place.title }}</h2>
-                                <p class="mt-1 text-sm text-slate-500">{{ place.city }}</p>
-                            </div>
-                            {% if place.avgRating %}
-                                <div class="flex items-center gap-1 pt-1 text-sm font-bold text-slate-950">
-                                    <svg class="h-4 w-4 fill-amber-500 text-amber-500" viewBox="0 0 24 24" aria-hidden="true">
-                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                                    </svg>
-                                    <span>{{ place.avgRating }}</span>
-                                </div>
-                            {% endif %}
-                        </div>
-                        <div class="flex items-end justify-between gap-4 border-t border-slate-100 pt-4">
-                            <p class="text-2xl font-heading font-bold text-slate-950">${{ place.pricePerDay }} <span class="text-sm font-medium text-slate-500">/ night</span></p>
-                            <a href="{{ path('app_booking_place', { id: place.id }) }}" class="rounded-full bg-slate-950 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800">View</a>
-                        </div>
-                    </div>
-                </article>
-            {% else %}
-                <div class="col-span-full rounded-[2rem] border border-dashed border-border bg-white p-10 text-center">
-                    <p class="text-lg font-heading font-bold text-slate-950">No approved places yet.</p>
-                    <p class="mt-2 text-sm text-slate-500">Use the host flow to submit a place, then approve it from the admin dashboard.</p>
+        {% if places is empty %}
+            <div class="text-center p-5 border rounded bg-white">
+                <h4>No approved stays yet</h4>
+                <p class="text-muted mb-3">Use host dashboard to submit a place, then admin can approve it.</p>
+                <div class="d-flex justify-content-center flex-wrap" style="gap:10px;">
+                    <a href="{{ path('app_booking_host') }}" class="primary-btn text-uppercase">Create Stay</a>
+                    <a href="{{ path('app_booking_host') }}" class="genric-btn info-border text-uppercase">Host Dashboard</a>
                 </div>
-            {% endfor %}
-        </div>
+            </div>
+        {% else %}
+            <div class="row">
+                {% for place in places %}
+                    {% set previewImage = placePreviewImages[place.id]|default(place.imageUrl) %}
+                    <div class="col-md-6 col-lg-4 d-flex">
+                        <article class="stay-card w-100">
+                            {% if previewImage %}
+                                <img class="thumb" src="{{ previewImage starts with('http') ? previewImage : asset('uploads/places/' ~ previewImage) }}" alt="{{ place.title }}">
+                            {% else %}
+                                <img class="thumb" src="{{ asset('adventure/img/g6.jpg') }}" alt="Stay placeholder">
+                            {% endif %}
+
+                            <div class="stay-body">
+                                <h5 class="mb-2">{{ place.title }}</h5>
+                                <div class="stay-meta"><i class="fa fa-map-marker"></i> {{ place.city }}</div>
+                                <div class="stay-meta"><i class="fa fa-users"></i> Up to {{ place.maxGuests }} guests</div>
+                                {% if place.avgRating %}
+                                    <div class="stay-meta"><i class="fa fa-star" style="color:#f59e0b;"></i> {{ place.avgRating }}/5</div>
+                                {% endif %}
+                                <p class="mb-0 mt-2"><strong>${{ place.pricePerDay }}</strong> / night</p>
+                            </div>
+
+                            <div class="stay-actions">
+                                <span class="small text-muted">{{ place.category ?? 'Stay' }}</span>
+                                <a href="{{ path('app_booking_place', { id: place.id }) }}" class="genric-btn info-border small">View</a>
+                            </div>
+                        </article>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
     </div>
 </section>
 {% endblock %}

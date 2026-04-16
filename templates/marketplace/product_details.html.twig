@@ -1,61 +1,116 @@
 {% extends 'base.html.twig' %}
-{% block title %}{{ product.title }} — WanderLust{% endblock %}
-{% block content %}
-<section class="min-h-[calc(100vh-64px)] bg-gradient-to-b from-sky-50/70 via-white to-white px-4 py-8">
-    <div class="mx-auto max-w-6xl space-y-6">
-        <div class="flex flex-wrap items-center justify-between gap-2">
-            <a href="{{ path('app_marketplace_buyer') }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Back to Products</a>
-            <a href="{{ path('app_marketplace_cart') }}" class="rounded-xl bg-sky-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-sky-700">Cart ({{ cartCount }})</a>
-        </div>
 
+{% block title %}{{ product.title }} - WanderLust{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .module-hero {
+            background: linear-gradient(rgba(0, 0, 0, 0.50), rgba(0, 0, 0, 0.50)), url('{{ asset('adventure/img/g2.jpg') }}') center center/cover no-repeat;
+            padding: 120px 0 80px;
+            color: #fff;
+            margin-bottom: 50px;
+        }
+
+        .product-panel {
+            border: 1px solid #eee;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .product-image-wrap {
+            background: #f7f7f7;
+            padding: 20px;
+            height: 100%;
+        }
+
+        .product-image-wrap img {
+            width: 100%;
+            height: 100%;
+            min-height: 320px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+
+        .detail-pill {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<section class="module-hero">
+    <div class="container">
+        <div class="d-flex flex-wrap" style="gap:10px; margin-bottom:14px;">
+            <a href="{{ path('app_marketplace_buyer') }}" class="genric-btn default-border">Back To Products</a>
+            <a href="{{ path('app_marketplace_cart') }}" class="genric-btn info-border">Cart ({{ cartCount }})</a>
+        </div>
+        <h1 class="mb-10">{{ product.title }}</h1>
+        <p class="mb-0">Detailed product view with inventory-aware purchase flow.</p>
+    </div>
+</section>
+
+<section class="section-gap pt-0">
+    <div class="container">
         {% for msg in app.flashes('success') %}
-            <div class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-800">{{ msg }}</div>
+            <div class="alert alert-success">{{ msg }}</div>
         {% endfor %}
 
-        <article class="grid grid-cols-1 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm lg:grid-cols-2">
-            <div class="min-h-[340px] bg-slate-100 p-6">
-                {% if product.image %}
-                    <img src="{{ product.image }}" alt="{{ product.title }}" class="h-full w-full rounded-2xl object-cover" onerror="this.src='https://dummyimage.com/800x600/d1d5db/64748b&text=No+Photo'">
-                {% else %}
-                    <div class="flex h-full min-h-[300px] items-center justify-center rounded-2xl border border-dashed border-slate-300 text-sm font-semibold text-slate-400">No image available</div>
-                {% endif %}
-            </div>
-
-            <div class="space-y-4 p-6">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider {{ product.type == 'For Rent' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800' }}">{{ product.type }}</span>
-                    <span class="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-slate-600">{{ product.category }}</span>
+        <article class="product-panel">
+            <div class="row no-gutters">
+                <div class="col-lg-6">
+                    <div class="product-image-wrap">
+                        {% if product.image %}
+                            <img src="{{ product.image }}" alt="{{ product.title }}" onerror="this.src='https://dummyimage.com/800x600/d1d5db/64748b&text=No+Photo'">
+                        {% else %}
+                            <img src="{{ asset('adventure/img/g5.jpg') }}" alt="No image">
+                        {% endif %}
+                    </div>
                 </div>
-
-                <h1 class="text-2xl font-heading font-bold text-slate-900">{{ product.title }}</h1>
-                <p class="text-sm leading-relaxed text-slate-600">{{ product.description }}</p>
-
-                <div class="flex items-center justify-between border-y border-slate-100 py-4">
-                    <p class="text-3xl font-heading font-bold text-slate-900">{{ product.price|number_format(2) }} TND</p>
-                    {% if product.available_quantity > 0 %}
-                        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">{{ product.available_quantity }} available</span>
-                    {% else %}
-                        <span class="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">Out of stock</span>
-                    {% endif %}
-                </div>
-
-                {% if product.available_quantity > 0 %}
-                    <form method="POST" action="{{ path('app_marketplace_cart_add') }}" class="space-y-3">
-                        <input type="hidden" name="product_id" value="{{ product.id }}">
-                        <div class="flex items-center gap-3">
-                            <label class="text-sm font-semibold text-slate-700">Quantity</label>
-                            <input type="number" name="quantity" value="1" min="1" max="{{ product.available_quantity }}" class="w-24 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-100">
+                <div class="col-lg-6">
+                    <div style="padding:24px;">
+                        <div class="mb-3">
+                            <span class="detail-pill" style="background: {{ product.type == 'For Rent' ? '#fef3c7' : '#dcfce7' }}; color: {{ product.type == 'For Rent' ? '#92400e' : '#166534' }};">{{ product.type }}</span>
+                            <span class="detail-pill" style="background:#f1f5f9; color:#334155;">{{ product.category }}</span>
                         </div>
-                        <button type="submit" class="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white transition-colors hover:bg-slate-800">Add to Cart</button>
-                    </form>
-                {% else %}
-                    <button type="button" disabled class="w-full cursor-not-allowed rounded-xl bg-slate-200 px-4 py-3 text-sm font-semibold text-slate-500">Unavailable</button>
-                {% endif %}
 
-                <p class="text-xs text-slate-500">Listed on {{ product.created_date|date('d M Y') }}</p>
+                        <h3 class="mb-3">{{ product.title }}</h3>
+                        <p class="text-muted mb-3">{{ product.description }}</p>
+
+                        <div class="d-flex justify-content-between align-items-center" style="border-top:1px solid #eee; border-bottom:1px solid #eee; padding:14px 0; margin:16px 0;">
+                            <h4 class="mb-0">{{ product.price|number_format(2) }} TND</h4>
+                            {% if product.available_quantity > 0 %}
+                                <span class="badge badge-success">{{ product.available_quantity }} available</span>
+                            {% else %}
+                                <span class="badge badge-danger">Out of stock</span>
+                            {% endif %}
+                        </div>
+
+                        {% if product.available_quantity > 0 %}
+                            <form method="POST" action="{{ path('app_marketplace_cart_add') }}">
+                                <input type="hidden" name="product_id" value="{{ product.id }}">
+                                <div class="form-group">
+                                    <label>Quantity</label>
+                                    <input type="number" name="quantity" value="1" min="1" max="{{ product.available_quantity }}" class="form-control" style="max-width:140px;">
+                                </div>
+                                <button type="submit" class="primary-btn text-uppercase" style="border:none;">Add To Cart</button>
+                            </form>
+                        {% else %}
+                            <button type="button" class="genric-btn disable" disabled>Unavailable</button>
+                        {% endif %}
+
+                        <p class="small text-muted mt-3 mb-0">Listed on {{ product.created_date|date('d M Y') }}</p>
+                    </div>
+                </div>
             </div>
         </article>
     </div>
 </section>
-
 {% endblock %}

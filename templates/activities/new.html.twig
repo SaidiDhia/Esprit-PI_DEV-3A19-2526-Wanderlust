@@ -535,6 +535,7 @@
 {% endblock %}
 
 {% block javascripts %}
+{{ parent() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Image upload preview
@@ -570,62 +571,35 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Gestion de la dépendance catégorie -> type d'activité
-        
-        // DEBUG: Vérifier tous les éléments présents
-        console.log('🔍 DEBUG: Tous les select présents:', document.querySelectorAll('select'));
-        console.log('🔍 DEBUG: Éléments avec ID contenant categorie:', document.querySelectorAll('[id*="categorie"]'));
-        console.log('🔍 DEBUG: Éléments avec ID contenant type:', document.querySelectorAll('[id*="type"]'));
-        console.log('🔍 DEBUG: Éléments avec ID contenant activite:', document.querySelectorAll('[id*="activite"]'));
-        
-        const categorieSelect = document.getElementById('activities_categorie');
-        const typeSelect = document.getElementById('activities_type_activite');
-        
-        console.log('🔍 DEBUG: Recherche par ID exact:', {
-            'activite_categorie': document.getElementById('activite_categorie'),
-            'activite_type': document.getElementById('activite_type'),
-            'categorie': document.getElementById('categorie'),
-            'type_activite': document.getElementById('type_activite')
-        });
+        const categorieSelect = document.getElementById('activite_categorie');
+        const typeSelect = document.getElementById('activite_type');
         
         if (categorieSelect && typeSelect) {
             categorieSelect.addEventListener('change', function() {
                 let selectedCategorie = this.value;
-                console.log('Catégorie sélectionnée (brute):', selectedCategorie);
-                
                 // Normaliser: supprimer les accents et mettre en minuscules
                 selectedCategorie = selectedCategorie
                     .toLowerCase()
                     .normalize('NFD')
                     .replace(/[\u0300-\u036f]/g, ''); // Supprime les accents
-                
-                console.log('Catégorie normalisée:', selectedCategorie);
+
                 loadTypesByCategorie(selectedCategorie);
             });
             
             // Charger les types au chargement de la page si une catégorie est déjà sélectionnée
             if (categorieSelect.value) {
                 let selectedCategorie = categorieSelect.value;
-                console.log('Catégorie déjà sélectionnée au chargement (brute):', selectedCategorie);
-                
                 // Normaliser: supprimer les accents et mettre en minuscules
                 selectedCategorie = selectedCategorie
                     .toLowerCase()
                     .normalize('NFD')
                     .replace(/[\u0300-\u036f]/g, ''); // Supprime les accents
-                
-                console.log('Catégorie déjà sélectionnée au chargement (normalisée):', selectedCategorie);
+
                 loadTypesByCategorie(selectedCategorie);
             }
-        } else {
-            console.error('❌ Éléments non trouvés:', {
-                categorieSelect: !!categorieSelect,
-                typeSelect: !!typeSelect
-            });
         }
         
         async function loadTypesByCategorie(categorie) {
-            console.log('🚀 loadTypesByCategorie appelé avec:', categorie);
-            
             if (!categorie) {
                 // Réinitialiser le champ type
                 typeSelect.innerHTML = '<option value="">Choisir d\'abord une catégorie</option>';
@@ -688,7 +662,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 
                 typeSelect.disabled = false;
-                console.log('✅ Types chargés:', types.length);
             } catch (error) {
                 console.error('Erreur lors du chargement des types:', error);
                 typeSelect.innerHTML = '<option value="">Erreur au chargement</option>';
