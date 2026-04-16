@@ -6,10 +6,15 @@
     {{ parent() }}
     <style>
         .module-hero {
-            background: linear-gradient(rgba(0, 0, 0, 0.52), rgba(0, 0, 0, 0.52)), url('{{ asset('adventure/img/banner-bg.jpg') }}') center/cover no-repeat;
+            background: linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.38)), url('{{ asset('adventure/img/video-bg.jpg') }}') center center/cover no-repeat;
             color: #fff;
             padding: 120px 0 80px;
             margin-bottom: 40px;
+        }
+
+        .module-hero h1,
+        .module-hero p {
+            text-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
         }
 
         .reservation-card {
