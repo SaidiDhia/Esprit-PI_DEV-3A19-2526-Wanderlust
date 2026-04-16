@@ -2,62 +2,140 @@
 
 {% block title %}My Bookings — Wanderlust{% endblock %}
 
+{% block stylesheets %}
+    {{ parent() }}
+    <style>
+        .bookings-shell { background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); padding: 36px 0 72px; }
+        .bookings-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 12px; margin-bottom: 24px; }
+        .eyebrow { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: #94a3b8; }
+        .page-title { margin: 10px 0 8px; font-size: clamp(2rem, 3.4vw, 2.7rem); line-height: 1.1; color: #020617; font-weight: 700; }
+        .page-subtitle { margin: 0; color: #64748b; font-size: 14px; }
+        .browse-link { display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; background: #020617; color: #fff; font-size: 13px; font-weight: 700; padding: 10px 14px; }
+        .browse-link:hover { background: #1e293b; color: #fff; }
+
+        .flash { margin-bottom: 10px; border-radius: 14px; padding: 10px 14px; font-size: 14px; font-weight: 600; border: 1px solid transparent; }
+        .flash-success { border-color: #a7f3d0; background: #ecfdf5; color: #047857; }
+        .flash-error { border-color: #fecdd3; background: #fff1f2; color: #be123c; }
+
+        .booking-list { display: grid; gap: 18px; }
+        .booking-card { border-radius: 24px; border: 1px solid #e2e8f0; background: #fff; padding: 22px; box-shadow: 0 12px 28px rgba(15, 23, 42, .07); }
+        .booking-top { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 12px; }
+        .booking-title { margin: 0; color: #020617; font-size: 1.5rem; font-weight: 700; }
+        .booking-address { margin: 7px 0 2px; color: #64748b; font-size: 14px; }
+        .booking-date { margin: 0; font-size: 11px; color: #94a3b8; text-transform: uppercase; letter-spacing: .16em; font-weight: 700; }
+        .status-pill { border-radius: 999px; background: #f1f5f9; color: #475569; padding: 6px 10px; font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+
+        .booking-meta { margin-top: 16px; display: grid; gap: 10px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .meta-label { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #94a3b8; }
+        .meta-value { margin-top: 5px; margin-bottom: 0; color: #0f172a; font-weight: 600; font-size: 14px; }
+
+        .refund-box { margin-top: 14px; border-radius: 14px; border: 1px solid #a7f3d0; background: #ecfdf5; color: #065f46; padding: 10px 12px; font-size: 14px; }
+        .refund-box p { margin: 0; }
+        .refund-box p + p { margin-top: 4px; font-size: 12px; }
+
+        .cancel-form { margin-top: 14px; }
+        .cancel-btn { border: 0; border-radius: 12px; background: #e11d48; color: #fff; font-size: 13px; font-weight: 700; padding: 9px 14px; transition: .2s ease; }
+        .cancel-btn:hover { background: #be123c; }
+        .policy-text { margin: 8px 0 0; font-size: 12px; color: #64748b; }
+
+        .edit-panel { margin-top: 16px; border-radius: 18px; border: 1px solid #cbd5e1; background: #f8fafc; padding: 14px; }
+        .edit-top { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; align-items: center; }
+        .edit-title { margin: 0; color: #0f172a; font-size: 15px; font-weight: 700; }
+        .edit-subtitle { margin: 2px 0 0; color: #64748b; font-size: 12px; }
+        .edit-pill { border-radius: 999px; background: #fef3c7; color: #92400e; padding: 5px 10px; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+        .edit-grid { margin-top: 12px; display: grid; gap: 10px; grid-template-columns: 1fr; }
+        .edit-field label { display: block; margin-bottom: 5px; font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #94a3b8; }
+        .edit-field input { width: 100%; border: 1px solid #cbd5e1; border-radius: 12px; padding: 10px 11px; font-size: 14px; color: #0f172a; }
+        .edit-field input:focus { outline: none; border-color: #0ea5e9; }
+        .save-btn { width: 100%; border: 0; border-radius: 12px; background: #020617; color: #fff; font-size: 13px; font-weight: 700; padding: 10px 12px; }
+        .save-btn:hover { background: #1e293b; }
+
+        .panel { margin-top: 30px; border-radius: 24px; border: 1px solid #e2e8f0; background: #fff; padding: 20px; box-shadow: 0 12px 28px rgba(15, 23, 42, .07); }
+        .panel h2 { margin: 0; font-size: 1.55rem; color: #020617; }
+        .panel p { margin: 6px 0 0; color: #64748b; font-size: 14px; }
+        .places-grid { margin-top: 16px; display: grid; gap: 14px; grid-template-columns: repeat(1, minmax(0, 1fr)); }
+        .place-card { overflow: hidden; border-radius: 20px; border: 1px solid #e2e8f0; background: #f8fafc; }
+        .place-cover { height: 190px; background: #e2e8f0; }
+        .place-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .place-body { padding: 14px; }
+        .place-title { margin: 0; font-size: 1.15rem; font-weight: 700; color: #020617; }
+        .place-info { margin: 5px 0 0; color: #64748b; font-size: 13px; }
+        .place-link { display: inline-flex; margin-top: 8px; font-size: 13px; font-weight: 700; color: #0f172a; }
+        .place-link:hover { color: #0369a1; }
+
+        .empty-box { border: 1px dashed #cbd5e1; border-radius: 20px; background: #fff; text-align: center; padding: 36px 20px; }
+        .empty-box h3 { margin: 0 0 6px; font-size: 1.05rem; color: #0f172a; }
+        .empty-box p { margin: 0; color: #64748b; font-size: 14px; }
+
+        @media (min-width: 768px) {
+            .booking-meta { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+            .edit-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; }
+            .places-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+
+        @media (min-width: 1200px) {
+            .places-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+        }
+    </style>
+{% endblock %}
+
 {% block content %}
-<section class="bg-slate-50 py-16">
-    <div class="container mx-auto px-4">
+<section class="bookings-shell">
+    <div class="container px-4">
         {% for message in app.flashes('success') %}
-            <div class="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{{ message }}</div>
+            <div class="flash flash-success">{{ message }}</div>
         {% endfor %}
         {% for message in app.flashes('error') %}
-            <div class="mb-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700">{{ message }}</div>
+            <div class="flash flash-error">{{ message }}</div>
         {% endfor %}
 
-        <div class="mb-8 flex items-end justify-between gap-4">
+        <div class="bookings-header">
             <div>
-                <p class="text-xs font-bold uppercase tracking-[0.3em] text-slate-400">Trips</p>
-                <h1 class="mt-3 text-4xl font-heading font-bold text-slate-950">My bookings</h1>
-                <p class="mt-2 text-sm text-slate-500">Edit dates while a booking is still pending, then review the places you've booked below.</p>
+                <p class="eyebrow">Trips</p>
+                <h1 class="page-title">My bookings</h1>
+                <p class="page-subtitle">Edit dates while a booking is still pending, then review the places you've booked below.</p>
             </div>
-            <a href="{{ path('app_booking') }}" class="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white">Browse stays</a>
+            <a href="{{ path('app_booking') }}" class="browse-link">Browse stays</a>
         </div>
 
-        <div class="grid gap-6">
+        <div class="booking-list">
             {% for booking in bookings %}
-                <article class="rounded-[2rem] border border-border bg-white p-6 shadow-sm">
-                    <div class="flex flex-wrap items-start justify-between gap-4">
+                <article class="booking-card">
+                    <div class="booking-top">
                         <div>
-                            <h2 class="text-2xl font-heading font-bold text-slate-950">{{ booking.place.title }}</h2>
-                            <p class="mt-2 text-sm text-slate-500">{{ booking.place.city }} · {{ booking.place.address }}</p>
-                            <p class="mt-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Booked on {{ booking.createdAt|date('M d, Y') }}</p>
+                            <h2 class="booking-title">{{ booking.place.title }}</h2>
+                            <p class="booking-address">{{ booking.place.city }} · {{ booking.place.address }}</p>
+                            <p class="booking-date">Booked on {{ booking.createdAt|date('M d, Y') }}</p>
                         </div>
-                        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-600">{{ booking.status }}</span>
+                        <span class="status-pill">{{ booking.status }}</span>
                     </div>
-                    <div class="mt-5 grid gap-4 md:grid-cols-4">
+
+                    <div class="booking-meta">
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Start</p>
-                            <p class="mt-2 text-sm font-medium text-slate-950">{{ booking.startDate|date('M d, Y') }}</p>
+                            <p class="meta-label">Start</p>
+                            <p class="meta-value">{{ booking.startDate|date('M d, Y') }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">End</p>
-                            <p class="mt-2 text-sm font-medium text-slate-950">{{ booking.endDate|date('M d, Y') }}</p>
+                            <p class="meta-label">End</p>
+                            <p class="meta-value">{{ booking.endDate|date('M d, Y') }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Guests</p>
-                            <p class="mt-2 text-sm font-medium text-slate-950">{{ booking.guestsCount }}</p>
+                            <p class="meta-label">Guests</p>
+                            <p class="meta-value">{{ booking.guestsCount }}</p>
                         </div>
                         <div>
-                            <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Total</p>
-                            <p class="mt-2 text-sm font-medium text-slate-950">{{ booking.totalPrice|number_format(2, '.', ' ') }}</p>
+                            <p class="meta-label">Total</p>
+                            <p class="meta-value">{{ booking.totalPrice|number_format(2, '.', ' ') }}</p>
                         </div>
                     </div>
 
                     {% if booking.status == 'CANCELLED' %}
                         {% set totalPriceValue = booking.totalPrice + 0 %}
                         {% set refundAmountValue = booking.refundAmount + 0 %}
-                        <div class="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                        <div class="refund-box">
                             <p class="font-bold">Refund amount: {{ booking.refundAmount|number_format(2, '.', ' ') }}</p>
                             {% if totalPriceValue > 0 %}
-                                <p class="mt-1 text-xs">
+                                <p>
                                     Refund rate: {{ ((refundAmountValue / totalPriceValue) * 100)|number_format(0, '.', ' ') }}%
                                 </p>
                             {% endif %}
@@ -65,77 +143,77 @@
                     {% endif %}
 
                     {% if booking.status in ['PENDING', 'CONFIRMED'] %}
-                        <form method="post" action="{{ path('app_booking_my_booking_cancel', { id: booking.id }) }}" class="mt-5" onsubmit="return confirm('Cancel this booking?');">
+                        <form method="post" action="{{ path('app_booking_my_booking_cancel', { id: booking.id }) }}" class="cancel-form" onsubmit="return confirm('Cancel this booking?');">
                             <input type="hidden" name="_token" value="{{ csrf_token('booking_cancel_' ~ booking.id) }}">
-                            <button type="submit" class="rounded-2xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-rose-700">Cancel booking</button>
+                            <button type="submit" class="cancel-btn">Cancel booking</button>
                             {% if booking.status == 'CONFIRMED' %}
-                                <p class="mt-2 text-xs text-slate-500">Refund policy: 100% (>=7 days), 50% (3-6 days), 0% (<3 days before start).</p>
+                                <p class="policy-text">Refund policy: 100% (>=7 days), 50% (3-6 days), 0% (<3 days before start).</p>
                             {% endif %}
                         </form>
                     {% endif %}
 
                     {% if booking.status == 'PENDING' %}
-                        <form method="post" action="{{ path('app_booking_my_booking_edit', { id: booking.id }) }}" class="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-4">
-                            <div class="flex flex-wrap items-center justify-between gap-3">
+                        <form method="post" action="{{ path('app_booking_my_booking_edit', { id: booking.id }) }}" class="edit-panel">
+                            <div class="edit-top">
                                 <div>
-                                    <p class="text-sm font-bold text-slate-950">Edit pending dates</p>
-                                    <p class="text-xs text-slate-500">You can only change a booking while it is still pending.</p>
+                                    <p class="edit-title">Edit pending dates</p>
+                                    <p class="edit-subtitle">You can only change a booking while it is still pending.</p>
                                 </div>
-                                <span class="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-amber-700">Pending editable</span>
+                                <span class="edit-pill">Pending editable</span>
                             </div>
                             <input type="hidden" name="_token" value="{{ csrf_token('booking_edit_' ~ booking.id) }}">
-                            <div class="mt-4 grid gap-4 md:grid-cols-3">
-                                <div>
-                                    <label class="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Start date</label>
-                                    <input type="date" name="start_date" value="{{ booking.startDate|date('Y-m-d') }}" min="{{ 'now'|date('Y-m-d') }}" class="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none transition focus:border-primary" required>
+                            <div class="edit-grid">
+                                <div class="edit-field">
+                                    <label>Start date</label>
+                                    <input type="date" name="start_date" value="{{ booking.startDate|date('Y-m-d') }}" min="{{ 'now'|date('Y-m-d') }}" required>
+                                </div>
+                                <div class="edit-field">
+                                    <label>End date</label>
+                                    <input type="date" name="end_date" value="{{ booking.endDate|date('Y-m-d') }}" min="{{ 'now'|date('Y-m-d') }}" required>
                                 </div>
                                 <div>
-                                    <label class="mb-2 block text-xs font-bold uppercase tracking-[0.2em] text-slate-400">End date</label>
-                                    <input type="date" name="end_date" value="{{ booking.endDate|date('Y-m-d') }}" min="{{ 'now'|date('Y-m-d') }}" class="w-full rounded-2xl border border-border px-4 py-3 text-sm outline-none transition focus:border-primary" required>
-                                </div>
-                                <div class="flex items-end">
-                                    <button type="submit" class="w-full rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800">Save dates</button>
+                                    <button type="submit" class="save-btn">Save dates</button>
                                 </div>
                             </div>
                         </form>
                     {% endif %}
                 </article>
             {% else %}
-                <div class="rounded-[2rem] border border-dashed border-border bg-white p-10 text-center">
-                    <p class="text-lg font-heading font-bold text-slate-950">No bookings yet.</p>
-                    <p class="mt-2 text-sm text-slate-500">Book a stay to see your trips here.</p>
+                <div class="empty-box">
+                    <h3>No bookings yet.</h3>
+                    <p>Book a stay to see your trips here.</p>
                 </div>
             {% endfor %}
         </div>
 
-        <div class="mt-12 rounded-[2rem] border border-border bg-white p-6 shadow-sm">
-            <div class="flex flex-wrap items-center justify-between gap-4">
+        <div class="panel">
+            <div>
                 <div>
-                    <h2 class="text-2xl font-heading font-bold text-slate-950">Places you visited</h2>
-                    <p class="mt-1 text-sm text-slate-500">The places tied to your bookings appear here underneath your trips.</p>
+                    <h2>Places you visited</h2>
+                    <p>The places tied to your bookings appear here underneath your trips.</p>
                 </div>
             </div>
 
-            <div class="mt-5 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            <div class="places-grid">
                 {% for place in visitedPlaces %}
                     {% set previewImage = place.imageUrl %}
                     {% if place.images is not empty %}
                         {% set previewImage = place.images|first.url %}
                     {% endif %}
-                    <article class="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50">
-                        <div class="h-48 bg-slate-100">
+                    <article class="place-card">
+                        <div class="place-cover">
                             {% if previewImage %}
-                                <img src="{{ previewImage starts with('http') ? previewImage : asset('uploads/places/' ~ previewImage) }}" alt="{{ place.title }}" class="h-full w-full object-cover">
+                                <img src="{{ previewImage starts with('http') ? previewImage : asset('uploads/places/' ~ previewImage) }}" alt="{{ place.title }}">
                             {% endif %}
                         </div>
-                        <div class="space-y-2 p-5">
-                            <h3 class="text-xl font-heading font-bold text-slate-950">{{ place.title }}</h3>
-                            <p class="text-sm text-slate-500">{{ place.city }} · {{ place.address }}</p>
-                            <a href="{{ path('app_booking_place', { id: place.id }) }}" class="inline-flex text-sm font-bold text-slate-950 hover:text-sky-700">View place</a>
+                        <div class="place-body">
+                            <h3 class="place-title">{{ place.title }}</h3>
+                            <p class="place-info">{{ place.city }} · {{ place.address }}</p>
+                            <a href="{{ path('app_booking_place', { id: place.id }) }}" class="place-link">View place</a>
                         </div>
                     </article>
                 {% else %}
-                    <p class="text-sm text-slate-500">No booked places yet.</p>
+                    <p class="page-subtitle">No booked places yet.</p>
                 {% endfor %}
             </div>
         </div>
