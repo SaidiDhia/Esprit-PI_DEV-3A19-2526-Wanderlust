@@ -174,75 +174,11 @@
 
     {% endfor %}
 
+    {{ form_errors(form) }}
+
 
 
     {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'enctype': 'multipart/form-data', 'id': 'event-form'}}) }}
-
-
-
-        {# Section activités avec interface moderne de sélection par modale #}
-
-        <div class="form-section">
-
-            <h2>Activités associées</h2>
-
-            <div class="form-group">
-
-                <button type="button" class="btn-add-activity" id="openActivitiesModal">
-
-                    ➕ Ajouter des activités
-
-                </button>
-
-                <div id="selected-activities" class="activities-grid mt-3"></div>
-
-                <div id="selectedActivitiesInputs"></div>
-
-            </div>
-
-        </div>
-
-
-
-        <div id="activitiesModal" class="modal-overlay" aria-hidden="true">
-
-            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="activitiesModalTitle">
-
-                <div class="modal-header">
-
-                    <div class="modal-title" id="activitiesModalTitle">Sélectionner des activités</div>
-
-                    <button class="modal-close" id="closeModalBtn" type="button">&times;</button>
-
-                </div>
-
-                <div class="modal-body">
-
-                    <input type="text" id="searchActivities" class="form-control mb-3" placeholder="🔍 Rechercher une activité...">
-
-                    <div class="modal-activities" id="modalActivitiesList"></div>
-
-                </div>
-
-                <div class="modal-footer">
-
-                    <span class="modal-count" id="selectedCount">0 activité(s) sélectionnée(s)</span>
-
-                    <div class="modal-buttons">
-
-                        <button class="modal-btn modal-btn-cancel" id="cancelModalBtn" type="button">Annuler</button>
-
-                        <button class="modal-btn modal-btn-confirm" id="confirmModalBtn" type="button">Confirmer</button>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-
 
         {# ── 1. Lieu + Map ── #}
 
@@ -314,7 +250,57 @@
 
         </div>
 
+        {# ── 3.5 Activités associées ── #}
+        <div class="form-section">
+            <h2>Activités associées</h2>
+            <div class="form-group">
+                <button type="button" class="btn-add-activity" id="openActivitiesModal">
+                    ➕ Ajouter des activités
+                </button>
+                <div id="selected-activities" class="activities-grid mt-3"></div>
+                <div id="selectedActivitiesInputs"></div>
+            </div>
+        </div>
 
+        {# Modal pour sélectionner les activités #}
+
+        <div id="activitiesModal" class="modal-overlay" aria-hidden="true">
+
+            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="activitiesModalTitle">
+
+                <div class="modal-header">
+
+                    <div class="modal-title" id="activitiesModalTitle">Sélectionner des activités</div>
+
+                    <button class="modal-close" id="closeModalBtn" type="button">&times;</button>
+
+                </div>
+
+                <div class="modal-body">
+
+                    <input type="text" id="searchActivities" class="form-control mb-3" placeholder="🔍 Rechercher une activité...">
+
+                    <div class="modal-activities" id="modalActivitiesList"></div>
+
+                </div>
+
+                <div class="modal-footer">
+
+                    <span class="modal-count" id="selectedCount">0 activité(s) sélectionnée(s)</span>
+
+                    <div class="modal-buttons">
+
+                        <button class="modal-btn modal-btn-cancel" id="cancelModalBtn" type="button">Annuler</button>
+
+                        <button class="modal-btn modal-btn-confirm" id="confirmModalBtn" type="button">Confirmer</button>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
 
         {# ── 4. Infos pratiques ── #}
 
@@ -502,9 +488,11 @@
 
         <button type="submit" class="btn-submit">Créer l'événement</button>
 
+        {{ form_row(form._token) }}
 
 
-    {{ form_end(form) }}
+
+    {{ form_end(form, {'render_rest': false}) }}
 
 </div>
 
@@ -965,8 +953,6 @@ function escapeHtml(text) {
             eventForm.addEventListener('submit', function () {
 
                 updateActivitiesInput();
-
-                alert('Événement ajouté avec succès !');
 
             });
 

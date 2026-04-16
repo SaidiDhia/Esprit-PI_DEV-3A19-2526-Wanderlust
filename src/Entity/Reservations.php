@@ -20,6 +20,10 @@ class Reservations
     #[ORM\JoinColumn(name: 'id_event', nullable: false, onDelete: 'CASCADE')]
     private ?Events $event = null;
 
+    #[ORM\ManyToOne(targetEntity: User::class)]
+    #[ORM\JoinColumn(name: 'user_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
+    private ?User $user = null;
+
     #[ORM\Column(length: 255)]
     private ?string $nomComplet = null;
 
@@ -61,6 +65,9 @@ class Reservations
 
     public function getEvent(): ?Events { return $this->event; }
     public function setEvent(?Events $event): static { $this->event = $event; return $this; }
+
+    public function getUser(): ?User { return $this->user; }
+    public function setUser(?User $user): static { $this->user = $user; return $this; }
 
     public function getNomComplet(): ?string { return $this->nomComplet; }
     public function setNomComplet(string $v): static { $this->nomComplet = $v; return $this; }

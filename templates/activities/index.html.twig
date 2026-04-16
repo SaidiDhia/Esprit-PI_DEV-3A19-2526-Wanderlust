@@ -26,6 +26,10 @@
         overflow: hidden;
     }
 
+    .activities-header .header-content {
+        text-align: center;
+    }
+
     .activities-header::before {
         content: '';
         position: absolute;
@@ -60,7 +64,7 @@
     /* Activity Cards Grid */
     .activities-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
         gap: 2rem;
         margin-bottom: 3rem;
     }
@@ -163,14 +167,21 @@
         background: #f8fafc;
         border-top: 1px solid #e2e8f0;
         display: flex;
-        justify-content: space-between;
-        align-items: center;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
     }
 
     .card-actions {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.5rem;
-        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .card-actions form {
+        grid-column: 1 / -1;
+        margin: 0;
     }
 
     /* Buttons */
@@ -185,6 +196,7 @@
         transition: all 0.3s ease;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.5rem;
     }
 
@@ -199,6 +211,7 @@
         transition: all 0.3s ease;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.5rem;
     }
 
@@ -213,7 +226,9 @@
         transition: all 0.3s ease;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.5rem;
+        width: 100%;
     }
 
     .btn-primary-custom:hover {
@@ -363,6 +378,14 @@
             grid-template-columns: 1fr;
             gap: 1.5rem;
         }
+
+        .card-actions {
+            grid-template-columns: 1fr;
+        }
+
+        .card-actions form {
+            grid-column: auto;
+        }
         
         .activities-header {
             padding: 3rem 0;
@@ -453,17 +476,24 @@
 </div>
 
 <!-- Main Content -->
-<div class="container mb-5">
+<div class="container mb-5" style="max-width: 1500px; margin-left: auto; margin-right: auto;">
     <!-- Header with Add Button -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">
             <i class="fas fa-hiking me-2 text-primary"></i>
             Toutes les activités
         </h1>
-        <a href="{{ path('app_activities_new') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>
-            Ajouter une activité
-        </a>
+        {% if app.user %}
+            <a href="{{ path('app_activities_new') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>
+                Ajouter une activité
+            </a>
+        {% else %}
+            <a href="{{ path('app_login') }}" class="btn btn-outline-primary">
+                <i class="fas fa-sign-in-alt me-2"></i>
+                Se connecter pour créer
+            </a>
+        {% endif %}
     </div>
 
     <!-- Flash Messages -->
@@ -489,6 +519,7 @@
     {% else %}
         <div class="activities-grid">
             {% for activity in activities %}
+                {% set canManage = app.user and activity.createdBy and activity.createdBy.id == app.user.id %}
                 <div class="activity-card">
                     <!-- Card Image -->
                     <div class="card-image-container">
@@ -530,21 +561,23 @@
                     
                     <!-- Card Footer -->
                     <div class="card-footer">
-                        {% if activity.status.value == 'en_attente' %}
-                            <div class="status-badge status-en_attente">
-                                <i class="fas fa-clock me-1"></i>
-                                En attente
-                            </div>
-                        {% elseif activity.status.value == 'accepte' %}
-                            <div class="status-badge status-accepte">
-                                <i class="fas fa-check me-1"></i>
-                                Acceptée
-                            </div>
-                        {% elseif activity.status.value == 'refuse' %}
-                            <div class="status-badge status-refuse">
-                                <i class="fas fa-times me-1"></i>
-                                Refusée
-                            </div>
+                        {% if canManage %}
+                            {% if activity.status.value == 'en_attente' %}
+                                <div class="status-badge status-en_attente">
+                                    <i class="fas fa-clock me-1"></i>
+                                    En attente
+                                </div>
+                            {% elseif activity.status.value == 'accepte' %}
+                                <div class="status-badge status-accepte">
+                                    <i class="fas fa-check me-1"></i>
+                                    Acceptée
+                                </div>
+                            {% elseif activity.status.value == 'refuse' %}
+                                <div class="status-badge status-refuse">
+                                    <i class="fas fa-times me-1"></i>
+                                    Refusée
+                                </div>
+                            {% endif %}
                         {% endif %}
                         <div class="card-actions">
                             <a href="{{ path('app_activities_show', {'id': activity.id}) }}" 
@@ -552,18 +585,20 @@
                                 <i class="fas fa-eye"></i>
                                 Voir
                             </a>
-                            <a href="{{ path('app_activities_edit', {'id': activity.id}) }}" 
-                               class="btn-warning-custom">
-                                <i class="fas fa-edit"></i>
-                                Modifier
-                            </a>
-                            <form method="post" action="{{ path('app_activities_delete', {'id': activity.id}) }}" style="display: inline;">
-                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ activity.id) }}">
-                                <button type="button" class="btn-danger-custom" onclick="confirmDeleteActivity({{ activity.id }}, '{{ activity.titre|e('js') }}')">
-                                    <i class="fas fa-trash"></i>
-                                    Supprimer
-                                </button>
-                            </form>
+                            {% if canManage %}
+                                <a href="{{ path('app_activities_edit', {'id': activity.id}) }}" 
+                                   class="btn-warning-custom">
+                                    <i class="fas fa-edit"></i>
+                                    Modifier
+                                </a>
+                                <form method="post" action="{{ path('app_activities_delete', {'id': activity.id}) }}" style="display: inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ activity.id) }}">
+                                    <button type="button" class="btn-danger-custom" onclick="confirmDeleteActivity({{ activity.id }}, '{{ activity.titre|e('js') }}')">
+                                        <i class="fas fa-trash"></i>
+                                        Supprimer
+                                    </button>
+                                </form>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

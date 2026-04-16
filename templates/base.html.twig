@@ -10,6 +10,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{{ asset('css/style.css') }}">
@@ -129,6 +132,7 @@
             <a href="{{ path('app_messaging') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Chat</a>
             <a href="{{ path('app_blog') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Stories</a>
             <a href="{{ path('app_marketplace') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Marketplace</a>
+            <a href="{{ path('app_reservations_index') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Reservations</a>
             {% if app.user and app.user.isAdmin %}
                 <a href="{{ path('app_admin_dashboard') }}" class="text-sm font-semibold text-primary hover:text-primary/80 transition-colors">Admin Dashboard</a>
             {% endif %}
@@ -231,7 +235,6 @@
     </div>
 </footer>
 
-<script src="{{ asset('js/main.js') }}"></script>
 {% block javascripts %}{% endblock %}
             {% block importmap %}{{ importmap('app') }}{% endblock %}
 </body>

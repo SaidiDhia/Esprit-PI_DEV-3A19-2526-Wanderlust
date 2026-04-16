@@ -49,7 +49,7 @@
     .hero-content {
         position: relative;
         z-index: 2;
-        text-align: center;
+        text-align: left;
         color: white;
     }
 
@@ -73,6 +73,11 @@
         max-width: 1400px;
         margin: 0 auto;
         padding: 0 1rem;
+    }
+
+    /* Text color - all black for clarity */
+    body, .main-container, .event-card, h1, h2, h3, h4, h5, h6, p, label {
+        color: #000 !important;
     }
 
     /* Cards */
@@ -656,13 +661,19 @@
                             {% set eventDate = event.getDateDebut() %}
                             {% set now = "now"|date("Y-m-d H:i:s") %}
                             {% if event.placesDisponibles > 0 and eventDate > now %}
-                                <a href="{{ path('app_reservations_new', {'event_id': event.id}) }}" class="btn-custom btn-primary-custom w-100">
-                                    <i class="fas fa-calendar-plus"></i>Réserver cet événement
-                                </a>
-                                <p class="text-success mt-3 mb-0">
-                                    <i class="fas fa-check-circle me-1"></i>
-                                    {{ event.placesDisponibles }} places disponibles
-                                </p>
+                                {% if app.user %}
+                                    <a href="{{ path('app_reservations_new', {'event_id': event.id}) }}" class="btn-custom btn-primary-custom w-100">
+                                        <i class="fas fa-calendar-plus"></i>Réserver cet événement
+                                    </a>
+                                    <p class="text-success mt-3 mb-0">
+                                        <i class="fas fa-check-circle me-1"></i>
+                                        {{ event.placesDisponibles }} places disponibles
+                                    </p>
+                                {% else %}
+                                    <a href="{{ path('app_login') }}" class="btn-custom btn-secondary-custom w-100">
+                                        <i class="fas fa-sign-in-alt"></i>Se connecter pour réserver
+                                    </a>
+                                {% endif %}
                             {% else %}
                                 {% if event.placesDisponibles <= 0 %}
                                     <button class="btn-custom btn-disabled-custom w-100" disabled>

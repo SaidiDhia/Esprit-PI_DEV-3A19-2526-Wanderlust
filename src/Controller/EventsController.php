@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Events;
 use App\Entity\EventImages;
+use App\Entity\User;
 use App\Form\EventsType;
 use App\Repository\EventsRepository;
 use App\Repository\ActivitiesRepository;
@@ -19,6 +20,27 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 #[Route('/events')]
 final class EventsController extends AbstractController
 {
+    private function getAuthenticatedUser(): User
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException('Authentication required.');
+        }
+
+        return $user;
+    }
+
+    private function denyUnlessEventOwner(Events $event): void
+    {
+        $user = $this->getAuthenticatedUser();
+        $ownerId = $event->getCreatedBy()?->getId();
+
+        if ($ownerId === null || $ownerId !== $user->getId()) {
+            throw $this->createAccessDeniedException('Only the creator can modify or delete this event.');
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────
     //  INDEX
     // ─────────────────────────────────────────────────────────────────
@@ -40,7 +62,10 @@ public function new(
     SluggerInterface $slugger,
     ActivitiesRepository $activitiesRepo
 ): Response {
+    $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
     $event = new Events();
+    $event->setCreatedBy($this->getAuthenticatedUser());
     $form = $this->createForm(EventsType::class, $event);
     $form->handleRequest($request);
 
@@ -149,6 +174,12 @@ public function new(
         return $this->redirectToRoute('app_events_index', [], Response::HTTP_SEE_OTHER);
     }
 
+    if ($form->isSubmitted() && !$form->isValid()) {
+        foreach ($form->getErrors(true) as $error) {
+            $this->addFlash('error', $error->getMessage());
+        }
+    }
+
     return $this->render('events/new.html.twig', [
         'event' => $event,
         'form' => $form,
@@ -180,6 +211,9 @@ public function new(
         SluggerInterface $slugger,
         ActivitiesRepository $activitiesRepo
     ): Response {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyUnlessEventOwner($event);
+
         $form = $this->createForm(EventsType::class, $event);
         $form->handleRequest($request);
 
@@ -303,6 +337,9 @@ public function new(
         Events $event,
         EntityManagerInterface $entityManager
     ): Response {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyUnlessEventOwner($event);
+
         if ($this->isCsrfTokenValid('delete' . $event->getId(), $request->request->get('_token'))) {
             $this->deleteImages($event->getImages());
             $entityManager->remove($event);

@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Activities;
+use App\Entity\User;
 use App\Form\ActivitiesType;
 use App\Repository\ActivitiesRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -17,6 +18,27 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 #[Route('/activities')]
 class ActivitiesController extends AbstractController
 {
+    private function getAuthenticatedUser(): User
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException('Authentication required.');
+        }
+
+        return $user;
+    }
+
+    private function denyUnlessActivityOwner(Activities $activity): void
+    {
+        $user = $this->getAuthenticatedUser();
+        $ownerId = $activity->getCreatedBy()?->getId();
+
+        if ($ownerId === null || $ownerId !== $user->getId()) {
+            throw $this->createAccessDeniedException('Only the creator can modify or delete this activity.');
+        }
+    }
+
     #[Route('/', name: 'app_activities_index', methods: ['GET'])]
     public function index(Request $request, ActivitiesRepository $activitiesRepository): Response
     {
@@ -38,7 +60,10 @@ class ActivitiesController extends AbstractController
     #[Route('/new', name: 'app_activities_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager, SluggerInterface $slugger): Response
     {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+
         $activity = new Activities();
+        $activity->setCreatedBy($this->getAuthenticatedUser());
         $form = $this->createForm(ActivitiesType::class, $activity);
         $form->handleRequest($request);
 
@@ -173,6 +198,9 @@ class ActivitiesController extends AbstractController
     #[Route('/{id}/edit', name: 'app_activities_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Activities $activity, EntityManagerInterface $entityManager, SluggerInterface $slugger): Response
     {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyUnlessActivityOwner($activity);
+
         $form = $this->createForm(ActivitiesType::class, $activity);
         $form->handleRequest($request);
 
@@ -283,6 +311,9 @@ class ActivitiesController extends AbstractController
     #[Route('/{id}', name: 'app_activities_delete', methods: ['POST'])]
     public function delete(Request $request, Activities $activity, EntityManagerInterface $entityManager): Response
     {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyUnlessActivityOwner($activity);
+
         if ($this->isCsrfTokenValid('delete'.$activity->getId(), $request->request->get('_token'))) {
             // Supprimer physiquement l'image
             $image = $activity->getImage();

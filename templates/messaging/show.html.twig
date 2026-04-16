@@ -3,6 +3,8 @@
 {% block title %}{{ conversation.name }} - WanderLust{% endblock %}
 
 {% block content %}
+{% include 'messaging/_ui_theme.html.twig' %}
+
 <div class="page-hero" style="padding: 30px 40px;">
     <div class="page-hero-content">
         <a href="{{ path('app_messaging') }}" style="color: white; text-decoration: none; display: inline-block; margin-bottom: 16px;">← Back to conversations</a>
@@ -18,16 +20,36 @@
     {% for message in app.flashes('error') %}
         <div class="flash flash-error">{{ message }}</div>
     {% endfor %}
-    
+
     <!-- Manage Members Button (for GROUP conversations) -->
     {% if conversation.type == 'GROUP' %}
+        <div style="margin-bottom: 20px; display: flex; gap: 12px;">
+            <a href="{{ path('messaging_conversation_participants', {id: conversation.id}) }}" class="btn btn-outline msg-btn-action" style="padding: 10px 18px; font-weight: 600; border: 2px solid #cbd5e1; color: #0f172a; background: #f8fafc; border-radius: 8px; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px;">👥 Manage Members</a>
+            <a href="{{ path('messaging_export', {id: conversation.id}) }}" class="btn msg-btn-export" style="padding: 10px 18px; font-weight: 600; border: 2px solid #2554d9; color: #ffffff; background: linear-gradient(135deg, #2554d9 0%, #1e40af 100%); border-radius: 8px; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37, 84, 217, 0.25);">📥 Export Chat</a>
+        </div>
+    {% else %}
         <div style="margin-bottom: 20px;">
-            <a href="{{ path('messaging_conversation_participants', {id: conversation.id}) }}" class="btn btn-outline" style="padding: 8px 16px;">👥 Manage Members</a>
+            <a href="{{ path('messaging_export', {id: conversation.id}) }}" class="btn msg-btn-export" style="padding: 10px 18px; font-weight: 600; border: 2px solid #2554d9; color: #ffffff; background: linear-gradient(135deg, #2554d9 0%, #1e40af 100%); border-radius: 8px; transition: all 0.2s ease; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37, 84, 217, 0.25);">📥 Export Chat</a>
         </div>
     {% endif %}
-    
+
+    <!-- Search Bar -->
+    <div style="margin-bottom: 20px;">
+        <form method="GET" action="{{ path('messaging_search', {id: conversation.id}) }}" style="display: flex; gap: 8px;">
+            <input type="text" name="q" placeholder="🔍 Search messages, senders, or files..."
+                   value="{{ app.request.query.get('q') }}"
+                   style="flex: 1; padding: 10px 16px; border: 1px solid var(--gray-200); border-radius: 24px; outline: none;">
+            <button type="submit" class="btn btn-primary" style="border-radius: 24px;">Search</button>
+            {% if app.request.query.get('q') %}
+                <a href="{{ path('messaging_conversation_show', {id: conversation.id}) }}" class="btn btn-outline" style="border-radius: 24px;">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Chat Wrapper -->
+    <div style="border-radius: 16px; display: flex; flex-direction: column; height: 100%; overflow: hidden; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08); background: white; border: 1px solid #f0f0f0;">
     <!-- Messages Area -->
-<div style="background: white; border-radius: 16px; border: 1px solid var(--gray-200); min-height: 400px; max-height: 500px; overflow-y: auto; padding: 20px; margin-bottom: 20px;">
+    <div id="messagesContainer" style="background: white; border-radius: 0; border: none; flex: 1; overflow-y: auto; padding: 24px;">
     {% if messages is empty %}
         <div style="text-align: center; padding: 60px; color: var(--gray-400);">
             <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
@@ -35,56 +57,145 @@
         </div>
     {% else %}
         {% for msg in messages %}
-            <div style="margin-bottom: 16px; display: flex; justify-content: {% if msg.sender_id == currentUserId %}flex-end{% else %}flex-start{% endif %};">
-                <div style="max-width: 70%; background: {% if msg.sender_id == currentUserId %}var(--blue-primary){% else %}var(--gray-100){% endif %}; color: {% if msg.sender_id == currentUserId %}white{% else %}var(--gray-900){% endif %}; border-radius: 16px; padding: 10px 16px;">
-                    <div style="font-size: 11px; opacity: 0.7; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: center;">
-                        <span>{{ msg.sender_name ?: 'User ' ~ msg.sender_id|slice(0,8) }} • {{ msg.created_at|date('H:i') }}</span>
+            <div id="msg-{{ msg.id }}" class="message-item" style="margin-bottom: 20px; display: flex; align-items: flex-start; gap: 0; justify-content: {% if msg.sender_id == currentUserId %}flex-end{% else %}flex-start{% endif %};">
+                <!-- Message bubble and button grouped together -->
+                <div style="display: flex; align-items: flex-start; gap: 6px;">
+                    <!-- Action menu (appears next to message) -->
+                    <div class="msg-action-wrapper" onclick="event.stopPropagation()" style="margin-top: 2px; flex-shrink: 0; position: relative;">
+                        <!-- Reaction trigger button with picker -->
+                        <button class="msg-menu-trigger" type="button" onclick="toggleReactionPicker({{ msg.id }})" style="font-size: 18px;">😊</button>
                         
-                        {% if msg.sender_id == currentUserId %}
-                            <div style="display: flex; gap: 8px; margin-left: 12px;">
-                                <!-- Edit Button -->
-                                <button onclick="editMessage({{ msg.id }}, '{{ msg.content|e('js') }}')" 
-                                        style="background: none; border: none; color: inherit; cursor: pointer; font-size: 12px; opacity: 0.7;"
-                                        title="Edit">✏️</button>
-                                <!-- Delete Button -->
-                                <form method="POST" action="{{ path('messaging_message_delete', {id: msg.id}) }}" 
-                                      style="display: inline; margin: 0; padding: 0;"
-                                      onsubmit="return confirm('Delete this message?')">
-                                    <button type="submit" style="background: none; border: none; color: inherit; cursor: pointer; font-size: 12px; opacity: 0.7;" title="Delete">🗑️</button>
+                        <!-- Reaction picker popup (hidden by default) -->
+                        <div id="reaction-picker-{{ msg.id }}" style="display: none; position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); z-index: 1000; background: white; border-radius: 30px; padding: 8px 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); flex-direction: row; gap: 4px;">
+                            <button onclick="addReaction({{ msg.id }}, '👍')" class="reaction-popup-btn" style="font-size: 18px; background: none; border: none; cursor: pointer; padding: 4px 6px;">👍</button>
+                            <button onclick="addReaction({{ msg.id }}, '❤️')" class="reaction-popup-btn" style="font-size: 18px; background: none; border: none; cursor: pointer; padding: 4px 6px;">❤️</button>
+                            <button onclick="addReaction({{ msg.id }}, '😂')" class="reaction-popup-btn" style="font-size: 18px; background: none; border: none; cursor: pointer; padding: 4px 6px;">😂</button>
+                            <button onclick="addReaction({{ msg.id }}, '😮')" class="reaction-popup-btn" style="font-size: 18px; background: none; border: none; cursor: pointer; padding: 4px 6px;">😮</button>
+                            <button onclick="addReaction({{ msg.id }}, '😢')" class="reaction-popup-btn" style="font-size: 18px; background: none; border: none; cursor: pointer; padding: 4px 6px;">😢</button>
+                            <button onclick="addReaction({{ msg.id }}, '😡')" class="reaction-popup-btn" style="font-size: 18px; background: none; border: none; cursor: pointer; padding: 4px 6px;">😡</button>
+                        </div>
+                        
+                        <!-- 3 dot menu button -->
+                        <button class="msg-menu-trigger" type="button" onclick="toggleMessageMenu(event, {{ msg.id }})" title="Message options">⋯</button>
+                        
+                        <!-- Dropdown menu -->
+                        <div id="menu-{{ msg.id }}" class="msg-dropdown-menu">
+                            <button class="msg-dropdown-item" onclick="openReplyModal({{ msg.id }}, '{{ msg.content|e('js') }}', '{{ msg.sender_name|e('js') }}')">
+                                <span>↩️</span> Reply
+                            </button>
+                            <button class="msg-dropdown-item" onclick="openForwardModal({{ msg.id }}, '{{ msg.content|e('js') }}')">
+                                <span>↗️</span> Forward
+                            </button>
+                            {% if msg.sender_id == currentUserId %}
+                                <div class="msg-dropdown-divider"></div>
+                                <button class="msg-dropdown-item" onclick="editMessage({{ msg.id }}, '{{ msg.content|e('js') }}')">
+                                    <span>✏️</span> Edit
+                                </button>
+                                <div class="msg-dropdown-divider"></div>
+                                <form method="POST" action="{{ path('messaging_message_delete', {id: msg.id}) }}" style="display: contents;" onsubmit="return confirm('Delete this message? This action cannot be undone.')">
+                                    <button type="submit" class="msg-dropdown-item danger">
+                                        <span>🗑️</span> Delete
+                                    </button>
                                 </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Message bubble -->
+                    <div style="flex-shrink: 0;">
+                        <div class="msg-bubble-content {% if msg.sender_id == currentUserId %}msg-bubble-own{% else %}msg-bubble-other{% endif %}" style="transition: all 0.3s ease;">
+                            <div class="msg-bubble-info">
+                                <span>{{ msg.sender_name ?: 'User ' ~ msg.sender_id|slice(0,8) }} • {{ msg.created_at|date('H:i') }}</span>
                             </div>
-                        {% endif %}
+                            <div id="message-content-{{ msg.id }}" style="margin-top: 6px; word-wrap: break-word; word-break: break-word;">
+                                {% if msg.message_type == 'IMAGE' %}
+                                    📷 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit; text-decoration: underline;">{{ msg.file_name ?: 'Image' }}</a>
+                                {% elseif msg.message_type == 'VIDEO' %}
+                                    🎥 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit; text-decoration: underline;">{{ msg.file_name ?: 'Video' }}</a>
+                                {% elseif msg.message_type == 'AUDIO' %}
+                                    🎵 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit; text-decoration: underline;">{{ msg.file_name ?: 'Audio' }}</a>
+                                {% elseif msg.message_type == 'FILE' %}
+                                    📎 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit; text-decoration: underline;">{{ msg.file_name ?: 'File' }}</a>
+                                {% else %}
+                                    {% set msgLines = msg.content|split('\n') %}
+                                    {% set hasReplyMarker = msgLines[0] starts with '**Replying to' %}
+                                    
+                                    {% if hasReplyMarker %}
+                                        {% set fullContent = msg.content %}
+                                        {% set doubleNewline = '\n\n' %}
+                                        {% set parts = fullContent|split(doubleNewline, 2) %}
+                                        {% set headerPart = parts[0] %}
+                                        {% set replyPart = parts[1] ?? '' %}
+                                        
+                                        {# Extract sender name from "**Replying to SenderName:**" #}
+                                        {% set senderName = headerPart|replace({'**Replying to ': '', ':**': ''}) %}
+                                        
+                                        {# Extract the first quoted message line #}
+                                        {% set quotedMsg = msg.content|split('\n> ')|slice(1, 1)|join('') %}
+                                        {% if quotedMsg %}
+                                            {% set quotedMsgTrimmed = quotedMsg|split('\n\n')|first %}
+                                            <div style="font-size: 12px; color: #ffffff; margin-bottom: 8px; font-style: italic; opacity: 0.85;">
+                                                ↩️ {{ senderName }}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        {{ replyPart|trim|nl2br }}
+                                    {% else %}
+                                        {{ msg.content|nl2br }}
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                            {% if msg.edited_at %}
+                                <div style="font-size: 9px; opacity: 0.5; margin-top: 6px; font-style: italic;">edited</div>
+                            {% endif %}
+                            
+                            <!-- Reaction badges (loaded from database) -->
+                            <div id="reactions-{{ msg.id }}" style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; align-items: center;">
+                                {% set reactionsData = get_message_reactions(msg.id) %}
+                                {% for reactionData in reactionsData %}
+                                    <span onclick="toggleReaction({{ msg.id }}, '{{ reactionData.reaction }}')" 
+                                          style="background: #e8e8e8; border-radius: 30px; padding: 2px 8px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; transition: all 0.2s ease; user-select: none;">
+                                        {{ reactionData.reaction }} <span style="font-size: 10px; color: #666;">{{ reactionData.count }}</span>
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
                     </div>
-                    <div id="message-content-{{ msg.id }}">
-                        {% if msg.message_type == 'IMAGE' %}
-                            📷 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit;">{{ msg.file_name ?: 'Image' }}</a>
-                        {% elseif msg.message_type == 'VIDEO' %}
-                            🎥 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit;">{{ msg.file_name ?: 'Video' }}</a>
-                        {% elseif msg.message_type == 'AUDIO' %}
-                            🎵 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit;">{{ msg.file_name ?: 'Audio' }}</a>
-                        {% elseif msg.message_type == 'FILE' %}
-                            📎 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit;">{{ msg.file_name ?: 'File' }}</a>
-                        {% else %}
-                            {{ msg.content }}
-                        {% endif %}
-                    </div>
-                    {% if msg.edited_at %}
-                        <div style="font-size: 9px; opacity: 0.5; margin-top: 4px;">edited</div>
-                    {% endif %}
                 </div>
             </div>
         {% endfor %}
     {% endif %}
-</div>
+    </div>
+    <!-- Input Area Wrapper -->
+    <div style="padding: 16px 24px; border-top: 1px solid #e8e8e8; background: white;">
+        <!-- Message Input -->
+        <form method="POST" action="{{ path('messaging_message_send') }}" class="msg-input-group" style="margin-bottom: 12px;">
+            <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
+            <input type="text" name="content" placeholder="💬 Type your message..." class="msg-input" required>
+            <button type="submit" class="msg-btn msg-btn-primary" style="background: #2554d9; border-color: #2554d9;">Send</button>
+        </form>
+        
+        <!-- File Upload -->
+        <form method="POST" action="{{ path('messaging_message_upload') }}" enctype="multipart/form-data" class="msg-input-group">
+            <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
+            <input type="file" name="file" style="flex: 1; padding: 10px 12px; border: 1px solid var(--msg-border); border-radius: 10px; cursor: pointer; font-size: 13px;">
+            <button type="submit" class="msg-btn msg-btn-secondary">📎 Upload</button>
+        </form>
+    </div>
+    </div>
 
 <!-- Edit Message Modal (hidden by default) -->
-<div id="editModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center;">
-    <div style="background: white; border-radius: 16px; padding: 24px; width: 400px; max-width: 90%;">
-        <h3 style="margin-bottom: 16px;">Edit Message</h3>
-        <textarea id="editContent" style="width: 100%; padding: 12px; border: 1px solid var(--gray-200); border-radius: 8px; margin-bottom: 16px; font-family: inherit;" rows="3"></textarea>
-        <div style="display: flex; gap: 12px; justify-content: flex-end;">
-            <button onclick="closeEditModal()" style="padding: 8px 16px; border: 1px solid var(--gray-200); background: white; border-radius: 8px; cursor: pointer;">Cancel</button>
-            <button onclick="submitEdit()" style="padding: 8px 16px; background: var(--blue-primary); color: white; border: none; border-radius: 8px; cursor: pointer;">Save</button>
+<div id="editModal" class="msg-modal-backdrop" onclick="if(event.target === this) closeEditModal()">
+    <div class="msg-modal">
+        <div class="msg-modal-head">
+            <h3 class="msg-modal-title">✏️ Edit Message</h3>
+        </div>
+        <div class="msg-modal-body">
+            <textarea id="editContent" class="msg-textarea" placeholder="Edit your message..." rows="4"></textarea>
+        </div>
+        <div class="msg-modal-actions">
+            <button onclick="closeEditModal()" class="msg-btn msg-btn-secondary msg-btn-sm">Cancel</button>
+            <button onclick="submitEdit()" class="msg-btn msg-btn-primary msg-btn-sm">Save Changes</button>
         </div>
         <form id="editForm" method="POST" style="display: none;">
             <input type="hidden" name="content" id="editFormContent">
@@ -92,50 +203,470 @@
     </div>
 </div>
 
+<!-- Forward Modal -->
+<div id="forwardModal" class="msg-modal-backdrop" onclick="if(event.target === this) closeForwardModal()">
+    <div class="msg-modal">
+        <div class="msg-modal-head">
+            <h3 class="msg-modal-title">↗️ Forward Message</h3>
+        </div>
+        <div class="msg-modal-body">
+            <div class="msg-reply-quote">
+                <div class="msg-reply-quote-content" id="forwardPreview"></div>
+            </div>
+            <label style="display: block; font-weight: 600; margin-bottom: 8px; font-size: 13px; color: var(--gray-900);">Select Conversation:</label>
+            <div style="position: relative;">
+                <input type="text" id="forwardConversationSearch" class="msg-input" placeholder="🔍 Search or type conversation name..." style="font-size: 14px; padding: 10px 12px;" oninput="filterConversations()">
+                <div id="forwardConversationDropdown" style="position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; max-height: 200px; overflow-y: auto; display: none; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                    {% for conv in conversations %}
+                        <div class="forward-conv-option" data-id="{{ conv.id }}" data-name="{{ conv.name ?: 'Conversation #' ~ conv.id }}" style="padding: 12px 14px; border-bottom: 1px solid #f0f0f0; cursor: pointer; transition: all 0.2s; font-size: 14px; user-select: none; color: #0f172a;">
+                            {{ conv.name ?: 'Conversation #' ~ conv.id }}
+                        </div>
+                    {% endfor %}
+                </div>
+                <input type="hidden" id="forwardConversation" name="forwardConversation">
+            </div>
+        </div>
+        <div class="msg-modal-actions">
+            <button onclick="closeForwardModal()" class="msg-btn msg-btn-secondary msg-btn-sm">Cancel</button>
+            <button onclick="submitForward()" class="msg-btn msg-btn-primary msg-btn-sm">Forward</button>
+        </div>
+        <form id="forwardForm" method="POST" style="display: none;">
+            <input type="hidden" name="message_id" id="forwardMessageId">
+            <input type="hidden" name="target_conversation_id" id="forwardTargetId">
+        </form>
+    </div>
+</div>
+
+<!-- Reply Modal -->
+<div id="replyModal" class="msg-modal-backdrop" onclick="if(event.target === this) closeReplyModal()">
+    <div class="msg-modal">
+        <div class="msg-modal-head">
+            <h3 class="msg-modal-title">↩️ Reply to Message</h3>
+        </div>
+        <div class="msg-modal-body">
+            <label style="display: block; font-weight: 600; margin-bottom: 10px; font-size: 12px; color: var(--msg-muted); text-transform: uppercase; letter-spacing: 0.5px;">Original Message:</label>
+            <div class="msg-reply-quote">
+                <div class="msg-reply-quote-sender" id="replySender"></div>
+                <div class="msg-reply-quote-content" id="replyContent"></div>
+            </div>
+            <label style="display: block; font-weight: 600; margin-bottom: 10px; font-size: 12px; color: var(--msg-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 16px;">Your Reply:</label>
+            <textarea id="replyInput" class="msg-textarea" placeholder="Type your reply..." rows="4"></textarea>
+        </div>
+        <div class="msg-modal-actions">
+            <button onclick="closeReplyModal()" class="msg-btn msg-btn-secondary msg-btn-sm">Cancel</button>
+            <button onclick="submitReply()" class="msg-btn msg-btn-primary msg-btn-sm">Send Reply</button>
+        </div>
+        <form id="replyForm" method="POST" action="{{ path('messaging_message_reply') }}" style="display: none;">
+            <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
+            <input type="hidden" name="reply_to_id" id="replyToId">
+            <input type="hidden" name="content" id="replyFormContent">
+        </form>
+    </div>
+</div>
+
 <script>
     let currentMessageId = null;
+    let forwardMessageId = null;
+    let replyToId = null;
+    let activeMenuId = null;
     
+    // Filter conversations in forward modal
+    function filterConversations() {
+        const searchInput = document.getElementById('forwardConversationSearch');
+        const query = searchInput.value.toLowerCase();
+        const options = document.querySelectorAll('.forward-conv-option');
+        const dropdown = document.getElementById('forwardConversationDropdown');
+        
+        let visibleCount = 0;
+        options.forEach(option => {
+            const name = option.getAttribute('data-name').toLowerCase();
+            if (name.includes(query) || query === '') {
+                option.style.display = 'block';
+                visibleCount++;
+            } else {
+                option.style.display = 'none';
+            }
+        });
+        
+        if (query.length > 0 && visibleCount > 0) {
+            dropdown.style.display = 'block';
+        } else if (query.length === 0) {
+            dropdown.style.display = 'block';
+        } else {
+            dropdown.style.display = 'none';
+        }
+    }
+    
+    // Select conversation from dropdown
+    function selectConversation(element) {
+        const id = element.getAttribute('data-id');
+        const name = element.getAttribute('data-name');
+        document.getElementById('forwardConversationSearch').value = name;
+        document.getElementById('forwardConversation').value = id;
+        document.getElementById('forwardConversationDropdown').style.display = 'none';
+        console.log('Selected conversation:', id, name);
+    }
+    
+    // Show dropdown when input is focused
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('forwardConversationSearch');
+        const dropdown = document.getElementById('forwardConversationDropdown');
+        
+        if (searchInput) {
+            searchInput.addEventListener('focus', function() {
+                dropdown.style.display = 'block';
+            });
+            
+            // Close dropdown when clicking outside
+            document.addEventListener('click', function(e) {
+                if (!searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+            });
+            
+            // Allow clicking inside dropdown without closing
+            dropdown.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                if (e.target.classList.contains('forward-conv-option')) {
+                    selectConversation(e.target);
+                }
+            });
+        }
+    });
+
+    // Auto-scroll to last message on load
+    window.addEventListener('load', function() {
+        const container = document.getElementById('messagesContainer');
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+            
+            // Highlight the last message (newly sent reply)
+            const messages = container.querySelectorAll('.message-item');
+            if (messages.length > 0) {
+                const lastMsg = messages[messages.length - 1];
+                const bubble = lastMsg.querySelector('.msg-bubble-content');
+                if (bubble) {
+                    bubble.classList.add('reply-highlight');
+                    setTimeout(() => {
+                        bubble.classList.remove('reply-highlight');
+                    }, 4000);
+                }
+            }
+        }
+    });
+
+    // Highlight message if URL has hash
+    window.addEventListener('load', function() {
+        const hash = window.location.hash;
+        if (hash.startsWith('#msg-')) {
+            const messageId = hash.substring(5);
+            highlightMessage(messageId);
+        }
+    });
+
+    function highlightMessage(messageId) {
+        const msgElement = document.getElementById('msg-' + messageId);
+        if (msgElement) {
+            msgElement.style.backgroundColor = '#FFEB3B';
+            msgElement.style.padding = '8px';
+            msgElement.style.borderRadius = '8px';
+            msgElement.style.animation = 'pulse 2s ease-in-out';
+
+            // Scroll to the message
+            msgElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            // Remove highlight after 3 seconds
+            setTimeout(() => {
+                msgElement.style.backgroundColor = '';
+                msgElement.style.padding = '';
+            }, 3000);
+        }
+    }
+
+    // Add pulse animation
+    const style = document.createElement('style');
+    style.textContent = `
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(255, 235, 59, 0.7); }
+            50% { box-shadow: 0 0 0 10px rgba(255, 235, 59, 0); }
+        }
+    `;
+    document.head.appendChild(style);
+
+    // Toggle message menu
+    function toggleMessageMenu(event, messageId) {
+        event.stopPropagation();
+        const menu = document.getElementById('menu-' + messageId);
+        
+        if (activeMenuId !== null && activeMenuId !== messageId) {
+            const activeMenu = document.getElementById('menu-' + activeMenuId);
+            if (activeMenu) {
+                activeMenu.classList.remove('active');
+            }
+        }
+        
+        menu.classList.toggle('active');
+        activeMenuId = menu.classList.contains('active') ? messageId : null;
+    }
+
+    // Close all menus when clicking outside
+    document.addEventListener('click', function(event) {
+        if (activeMenuId !== null) {
+            const activeMenu = document.getElementById('menu-' + activeMenuId);
+            if (activeMenu && !activeMenu.contains(event.target)) {
+                activeMenu.classList.remove('active');
+                activeMenuId = null;
+            }
+        }
+    });
+
     function editMessage(id, content) {
+        closeAllMenus();
         currentMessageId = id;
         document.getElementById('editContent').value = content;
-        document.getElementById('editModal').style.display = 'flex';
+        document.getElementById('editModal').classList.add('active');
     }
-    
+
     function closeEditModal() {
-        document.getElementById('editModal').style.display = 'none';
+        document.getElementById('editModal').classList.remove('active');
         currentMessageId = null;
     }
-    
+
     function submitEdit() {
         if (currentMessageId) {
-            const newContent = document.getElementById('editContent').value;
+            const newContent = document.getElementById('editContent').value.trim();
+            if (!newContent) {
+                alert('Message cannot be empty');
+                return;
+            }
             const form = document.getElementById('editForm');
             form.action = '{{ path("messaging_message_edit", {id: 0}) }}'.replace('0', currentMessageId);
             document.getElementById('editFormContent').value = newContent;
             form.submit();
         }
     }
-    
-    // Close modal when clicking outside
+
+    // Forward functionality
+    function openForwardModal(id, content) {
+        closeAllMenus();
+        forwardMessageId = id;
+        const preview = content.length > 150 ? content.substring(0, 150) + '...' : content;
+        document.getElementById('forwardPreview').innerText = preview;
+        document.getElementById('forwardModal').classList.add('active');
+    }
+
+    function closeForwardModal() {
+        document.getElementById('forwardModal').classList.remove('active');
+        forwardMessageId = null;
+    }
+
+    function submitForward() {
+        const targetId = document.getElementById('forwardConversation').value;
+        if (!targetId) {
+            alert('Please select a conversation');
+            return;
+        }
+
+        const form = document.getElementById('forwardForm');
+        form.action = '{{ path("messaging_message_forward") }}';
+        document.getElementById('forwardMessageId').value = forwardMessageId;
+        document.getElementById('forwardTargetId').value = targetId;
+        form.submit();
+    }
+
+    // Reply functionality
+    function openReplyModal(id, content, senderName) {
+        closeAllMenus();
+        replyToId = id;
+        const displayName = (senderName || 'User').trim();
+        document.getElementById('replySender').textContent = displayName;
+        
+        // Format content for display
+        let preview = content;
+        if (preview.length > 250) {
+            preview = preview.substring(0, 250) + '...';
+        }
+        
+        // Handle if content starts with quote (from reply chain)
+        if (preview.startsWith('> ')) {
+            preview = preview.split('\n').filter(l => l.startsWith('> ')).slice(0, 3).map(l => l.replace(/^> /, '')).join('\n');
+            if (preview.length > 150) {
+                preview = preview.substring(0, 150) + '...';
+            }
+        }
+        
+        document.getElementById('replyContent').textContent = preview;
+        document.getElementById('replyModal').classList.add('active');
+        document.getElementById('replyInput').focus();
+    }
+
+    function closeReplyModal() {
+        document.getElementById('replyModal').classList.remove('active');
+        replyToId = null;
+        document.getElementById('replyInput').value = '';
+    }
+
+    function submitReply() {
+        const replyText = document.getElementById('replyInput').value.trim();
+        if (!replyText) {
+            alert('Please enter a reply');
+            return;
+        }
+
+        const form = document.getElementById('replyForm');
+        document.getElementById('replyToId').value = replyToId;
+        document.getElementById('replyFormContent').value = replyText;
+        
+        // Add visual feedback before submitting
+        const submitBtn = event.target;
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = '⏳ Sending...';
+        submitBtn.disabled = true;
+        
+        setTimeout(() => {
+            form.submit();
+        }, 300);
+    }
+
+    function closeAllMenus() {
+        if (activeMenuId !== null) {
+            const menu = document.getElementById('menu-' + activeMenuId);
+            if (menu) {
+                menu.classList.remove('active');
+            }
+            activeMenuId = null;
+        }
+    }
+
+    // Make reply quotes clickable to scroll to original message
+    function initializeReplyQuotes() {
+        const replyQuotes = document.querySelectorAll('[data-reply-to-id]');
+        replyQuotes.forEach(quote => {
+            quote.style.cursor = 'pointer';
+            quote.addEventListener('click', function() {
+                const replyToId = this.getAttribute('data-reply-to-id');
+                const originalMsg = document.getElementById('msg-' + replyToId);
+                if (originalMsg) {
+                    const bubble = originalMsg.querySelector('.msg-bubble-content');
+                    bubble.classList.add('reply-highlight');
+                    originalMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => {
+                        bubble.classList.remove('reply-highlight');
+                    }, 3000);
+                }
+            });
+        });
+    }
+
+    window.addEventListener('load', initializeReplyQuotes);
+
+    // Close modals when clicking on backdrop
     document.getElementById('editModal')?.addEventListener('click', function(e) {
         if (e.target === this) {
             closeEditModal();
         }
     });
+
+    document.getElementById('forwardModal')?.addEventListener('click', function(e) {
+        if (e.target === this) closeForwardModal();
+    });
+
+    document.getElementById('replyModal')?.addEventListener('click', function(e) {
+        if (e.target === this) closeReplyModal();
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeEditModal();
+            closeForwardModal();
+            closeReplyModal();
+            closeAllMenus();
+        }
+    });
+
+    // Reaction system
+    let activePicker = null;
+
+    // Toggle reaction on/off (for clicking existing badge)
+    function toggleReaction(messageId, reaction) {
+        console.log('🔄 Toggling reaction:', reaction, 'for message:', messageId);
+        fetch('{{ path('messaging_message_react', {id: 0}) }}'.replace('0', messageId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'reaction=' + encodeURIComponent(reaction)
+        })
+        .then(response => {
+            console.log('📨 Response status:', response.status);
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                return response.json();
+            }
+        })
+        .then(data => {
+            if (data) {
+                console.log('✅ Reaction toggled, reloading page...');
+                location.reload();
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // Add new reaction (from picker)
+    function addReaction(messageId, reaction) {
+        console.log('➕ Adding reaction:', reaction, 'to message:', messageId);
+        fetch('{{ path('messaging_message_react', {id: 0}) }}'.replace('0', messageId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'reaction=' + encodeURIComponent(reaction)
+        })
+        .then(response => {
+            console.log('📨 Response status:', response.status);
+            if (response.redirected) {
+                window.location.href = response.url;
+            } else {
+                return response.json();
+            }
+        })
+        .then(data => {
+            if (data) {
+                console.log('✅ Reaction added, reloading page...');
+                location.reload();
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
+    // Toggle reaction picker visibility
+    function toggleReactionPicker(messageId) {
+        const picker = document.getElementById('reaction-picker-' + messageId);
+        
+        // Close other pickers
+        if (activePicker && activePicker !== picker) {
+            activePicker.style.display = 'none';
+        }
+        
+        // Toggle current picker
+        if (picker.style.display === 'none' || picker.style.display === '') {
+            picker.style.display = 'flex';
+            activePicker = picker;
+        } else {
+            picker.style.display = 'none';
+            activePicker = null;
+        }
+    }
+
+    // Close picker when clicking outside
+    document.addEventListener('click', function(event) {
+        if (activePicker && !event.target.closest('#' + activePicker.id) && !event.target.closest('button[onclick*="toggleReactionPicker"]')) {
+            activePicker.style.display = 'none';
+            activePicker = null;
+        }
+    });
 </script>
-    
-    <!-- Message Input -->
-    <form method="POST" action="{{ path('messaging_message_send') }}" style="display: flex; gap: 12px; margin-bottom: 12px;">
-        <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
-        <input type="text" name="content" placeholder="Type your message..." style="flex: 1; padding: 12px; border: 1px solid var(--gray-200); border-radius: 24px; outline: none;" required>
-        <button type="submit" class="btn btn-primary" style="border-radius: 24px;">Send</button>
-    </form>
-    
-    <!-- File Upload -->
-    <form method="POST" action="{{ path('messaging_message_upload') }}" enctype="multipart/form-data" style="display: flex; gap: 12px;">
-        <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
-        <input type="file" name="file" style="flex: 1; padding: 8px;">
-        <button type="submit" class="btn btn-outline">📎 Upload</button>
-    </form>
-</div>
 {% endblock %}

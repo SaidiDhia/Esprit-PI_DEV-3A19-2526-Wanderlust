@@ -29,6 +29,10 @@
         overflow: hidden;
     }
 
+    .events-header .header-content {
+        text-align: center;
+    }
+
     .events-header::before {
         content: '';
         position: absolute;
@@ -63,7 +67,7 @@
     /* Event Cards Grid */
     .events-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
         gap: 2rem;
         margin-bottom: 3rem;
     }
@@ -213,9 +217,10 @@
         padding: 1rem 1.5rem;
         background: #f8fafc;
         border-top: 1px solid #e2e8f0;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+        gap: 0.75rem;
+        align-items: end;
     }
 
     .card-info {
@@ -236,9 +241,15 @@
     }
 
     .card-actions {
-        display: flex;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0.5rem;
-        flex-wrap: wrap;
+        width: 100%;
+    }
+
+    .card-actions form {
+        grid-column: 1 / -1;
+        margin: 0;
     }
 
     /* Buttons */
@@ -253,6 +264,7 @@
         transition: all 0.3s ease;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.5rem;
     }
 
@@ -272,6 +284,7 @@
         transition: all 0.3s ease;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.5rem;
     }
 
@@ -290,7 +303,9 @@
         transition: all 0.3s ease;
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 0.5rem;
+        width: 100%;
     }
 
     .btn-danger-custom:hover {
@@ -367,9 +382,17 @@
             gap: 1.5rem;
         }
         
+        .card-footer {
+            grid-template-columns: 1fr;
+        }
+
         .card-actions {
-            flex-direction: column;
+            grid-template-columns: 1fr;
             width: 100%;
+        }
+
+        .card-actions form {
+            grid-column: auto;
         }
         
         .btn-primary-custom,
@@ -399,17 +422,24 @@
 </div>
 
 <!-- Main Content -->
-<div class="container mb-5">
+<div class="container mb-5" style="max-width: 1500px; margin-left: auto; margin-right: auto;">
     <!-- Header with Add Button -->
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">
             <i class="fas fa-calendar-alt me-2 text-primary"></i>
             Tous les événements
         </h1>
-        <a href="{{ path('app_events_new') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>
-            Ajouter un événement
-        </a>
+        {% if app.user %}
+            <a href="{{ path('app_events_new') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>
+                Ajouter un événement
+            </a>
+        {% else %}
+            <a href="{{ path('app_login') }}" class="btn btn-outline-primary">
+                <i class="fas fa-sign-in-alt me-2"></i>
+                Se connecter pour créer
+            </a>
+        {% endif %}
     </div>
 
     <!-- Flash Messages -->
@@ -444,6 +474,7 @@
     {% else %}
         <div class="events-grid">
             {% for event in events %}
+                {% set canManage = app.user and event.createdBy and event.createdBy.id == app.user.id %}
                 <div class="event-card">
                     <!-- Card Image -->
                     <div class="card-image-container">
@@ -468,24 +499,26 @@
                             <span>{{ event.dateDebut ? event.dateDebut|date('d/m') : 'N/A' }}</span>
                         </div>
                         
-                        <!-- Status Badge -->
-                        {% set eventDate = event.getDateDebut() %}
-                        {% set now = "now"|date("Y-m-d H:i:s") %}
-                        {% if event.placesDisponibles > 0 and eventDate > now %}
-                            <div class="status-badge available">
-                                <i class="fas fa-check-circle"></i>
-                                Disponible
-                            </div>
-                        {% elseif event.placesDisponibles <= 0 %}
-                            <div class="status-badge full">
-                                <i class="fas fa-times-circle"></i>
-                                Complet
-                            </div>
-                        {% else %}
-                            <div class="status-badge ended">
-                                <i class="fas fa-clock"></i>
-                                Terminé
-                            </div>
+                        {% if canManage %}
+                            <!-- Status Badge -->
+                            {% set eventDate = event.getDateDebut() %}
+                            {% set now = "now"|date("Y-m-d H:i:s") %}
+                            {% if event.placesDisponibles > 0 and eventDate > now %}
+                                <div class="status-badge available">
+                                    <i class="fas fa-check-circle"></i>
+                                    Disponible
+                                </div>
+                            {% elseif event.placesDisponibles <= 0 %}
+                                <div class="status-badge full">
+                                    <i class="fas fa-times-circle"></i>
+                                    Complet
+                                </div>
+                            {% else %}
+                                <div class="status-badge ended">
+                                    <i class="fas fa-clock"></i>
+                                    Terminé
+                                </div>
+                            {% endif %}
                         {% endif %}
                     </div>
                     
@@ -523,18 +556,20 @@
                                 <i class="fas fa-eye"></i>
                                 Voir
                             </a>
-                            <a href="{{ path('app_events_edit', {'id': event.id}) }}" 
-                               class="btn-warning-custom">
-                                <i class="fas fa-edit"></i>
-                                Modifier
-                            </a>
-                            <form method="post" action="{{ path('app_events_delete', {'id': event.id}) }}" style="display: inline;">
-                                <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ event.id) }}">
-                                <button type="button" class="btn-danger-custom" onclick="confirmDeleteEvent({{ event.id }}, '{{ event.lieu|e('js') }}')">
-                                    <i class="fas fa-trash"></i>
-                                    Supprimer
-                                </button>
-                            </form>
+                            {% if canManage %}
+                                <a href="{{ path('app_events_edit', {'id': event.id}) }}" 
+                                   class="btn-warning-custom">
+                                    <i class="fas fa-edit"></i>
+                                    Modifier
+                                </a>
+                                <form method="post" action="{{ path('app_events_delete', {'id': event.id}) }}" style="display: inline;">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ event.id) }}">
+                                    <button type="button" class="btn-danger-custom" onclick="confirmDeleteEvent({{ event.id }}, '{{ event.lieu|e('js') }}')">
+                                        <i class="fas fa-trash"></i>
+                                        Supprimer
+                                    </button>
+                                </form>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Reservations;
 use App\Entity\Events;
+use App\Entity\User;
 use App\Form\ReservationsType;
 use App\Repository\ReservationsRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -15,14 +16,38 @@ use Symfony\Component\Routing\Annotation\Route;
 #[Route('/reservations')]
 class ReservationsController extends AbstractController
 {
+    private function getAuthenticatedUser(): User
+    {
+        $user = $this->getUser();
+
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException('Authentication required.');
+        }
+
+        return $user;
+    }
+
+    private function denyUnlessReservationOwner(Reservations $reservation): void
+    {
+        $user = $this->getAuthenticatedUser();
+        $ownerId = $reservation->getUser()?->getId();
+
+        if ($ownerId === null || $ownerId !== $user->getId()) {
+            throw $this->createAccessDeniedException('You can only access your own reservations.');
+        }
+    }
+
     // ─────────────────────────────────────────────────────────────────
     //  INDEX
     // ─────────────────────────────────────────────────────────────────
     #[Route('/', name: 'app_reservations_index', methods: ['GET'])]
     public function index(ReservationsRepository $repository): Response
     {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $currentUser = $this->getAuthenticatedUser();
+
         return $this->render('reservations/index.html.twig', [
-            'reservations' => $repository->findAll(),
+            'reservations' => $repository->findBy(['user' => $currentUser], ['dateCreation' => 'DESC']),
         ]);
     }
 
@@ -32,6 +57,9 @@ class ReservationsController extends AbstractController
     #[Route('/new', name: 'app_reservations_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $em): Response
     {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $currentUser = $this->getAuthenticatedUser();
+
         $eventId = $request->query->get('event_id');
         $event   = $em->find(Events::class, $eventId);
 
@@ -47,6 +75,7 @@ class ReservationsController extends AbstractController
 
         $reservation = new Reservations();
         $reservation->setEvent($event);
+        $reservation->setUser($currentUser);
 
         $form = $this->createForm(ReservationsType::class, $reservation, [
             'max_places' => $event->getPlacesDisponibles(),
@@ -114,6 +143,9 @@ class ReservationsController extends AbstractController
     #[Route('/{id}', name: 'app_reservations_show', methods: ['GET'])]
     public function show(Reservations $reservation): Response
     {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyUnlessReservationOwner($reservation);
+
         return $this->render('reservations/show.html.twig', [
             'reservation' => $reservation,
             'event'       => $reservation->getEvent(),
@@ -129,6 +161,9 @@ class ReservationsController extends AbstractController
         Reservations $reservation,
         EntityManagerInterface $em
     ): Response {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyUnlessReservationOwner($reservation);
+
         $event = $reservation->getEvent();
 
         $form = $this->createForm(ReservationsType::class, $reservation, [
@@ -173,6 +208,9 @@ class ReservationsController extends AbstractController
         Reservations $reservation,
         EntityManagerInterface $em
     ): Response {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyUnlessReservationOwner($reservation);
+
         if ($this->isCsrfTokenValid('delete'.$reservation->getId(), $request->request->get('_token'))) {
             $event = $reservation->getEvent();
             if ($event) {
@@ -196,6 +234,9 @@ class ReservationsController extends AbstractController
     public function confirm(
         Request $request, Reservations $reservation, EntityManagerInterface $em
     ): Response {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyUnlessReservationOwner($reservation);
+
         if ($this->isCsrfTokenValid('confirm'.$reservation->getId(), $request->request->get('_token'))) {
             $reservation->setStatut('confirmee');
             $em->flush();
@@ -208,6 +249,9 @@ class ReservationsController extends AbstractController
     public function cancel(
         Request $request, Reservations $reservation, EntityManagerInterface $em
     ): Response {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+        $this->denyUnlessReservationOwner($reservation);
+
         if ($this->isCsrfTokenValid('cancel'.$reservation->getId(), $request->request->get('_token'))) {
             $reservation->setStatut('annulee');
             $em->flush();
