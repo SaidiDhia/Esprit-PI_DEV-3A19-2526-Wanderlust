@@ -69,11 +69,16 @@ public function new(
     $form = $this->createForm(EventsType::class, $event);
     $form->handleRequest($request);
 
+    $payload = $request->request->all();
+
     // Récupérer les conditions acceptées
-    $selectedConditions = $request->request->all('event_conditions', []);
+    $selectedConditions = $payload['event_conditions'] ?? [];
+    if (!is_array($selectedConditions)) {
+        $selectedConditions = [];
+    }
     
     // 🔥 Récupérer les activités sélectionnées depuis le formulaire
-    $eventActivities = $request->request->all('event_activities', []);
+    $eventActivities = $payload['event_activities'] ?? [];
     if (!is_array($eventActivities)) {
         $eventActivities = array_filter(explode(',', (string) $eventActivities), function ($id) {
             return $id !== '';
@@ -217,9 +222,14 @@ public function new(
         $form = $this->createForm(EventsType::class, $event);
         $form->handleRequest($request);
 
-        $selectedConditions = $request->request->all('event_conditions', []);
+        $payload = $request->request->all();
 
-        $eventActivities = $request->request->all('event_activities', []);
+        $selectedConditions = $payload['event_conditions'] ?? [];
+        if (!is_array($selectedConditions)) {
+            $selectedConditions = [];
+        }
+
+        $eventActivities = $payload['event_activities'] ?? [];
         if (!is_array($eventActivities)) {
             $eventActivities = array_filter(explode(',', (string) $eventActivities), function ($id) {
                 return $id !== '';
