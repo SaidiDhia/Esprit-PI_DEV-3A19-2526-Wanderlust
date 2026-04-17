@@ -4,6 +4,7 @@
 
 {% block stylesheets %}
     {{ parent() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         .relative { position: relative; }
         .absolute { position: absolute; }
@@ -108,6 +109,14 @@
         .grid.gap-4.sm\:grid-cols-3 { grid-template-columns: repeat(1, minmax(0, 1fr)); }
         .grid.gap-8.lg\:grid-cols-\[0\.9fr_1\.1fr\] { grid-template-columns: 1fr; }
         .grid.gap-4.md\:grid-cols-2 { grid-template-columns: 1fr; }
+        .place-map-card { margin-bottom: 2rem; }
+        .place-map {
+            width: 100%;
+            height: 380px;
+            border-radius: 1.25rem;
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
 
         .bg-gradient-to-br.from-slate-950\/75.via-slate-900\/55.to-slate-900\/45 {
             background: linear-gradient(135deg, rgba(2, 6, 23, .75) 0%, rgba(15, 23, 42, .55) 50%, rgba(15, 23, 42, .45) 100%);
@@ -213,6 +222,19 @@
             <p class="mt-2 text-2xl font-bold text-slate-950">{{ place.address }}</p>
             <p class="mt-1 text-sm text-slate-500">{{ place.city }}</p>
         </div>
+
+        {% if place.latitude is not null and place.longitude is not null %}
+            <div class="place-map-card rounded-[2rem] border border-border bg-white p-5 shadow-sm">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">Place location</p>
+                        <h2 class="mt-1 text-2xl font-heading font-bold text-slate-950">Map preview</h2>
+                    </div>
+                    <p class="text-sm text-slate-500">{{ place.latitude }}, {{ place.longitude }}</p>
+                </div>
+                <div id="place-location-map" class="place-map mt-4" data-place-lat="{{ place.latitude }}" data-place-lng="{{ place.longitude }}" data-place-title="{{ place.title|e('html_attr') }}"></div>
+            </div>
+        {% endif %}
 
         <div class="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
             <form id="booking-date-form" method="post" action="{{ path('app_booking_book', { id: place.id }) }}" class="rounded-[2rem] border border-border bg-white p-6 shadow-sm">
@@ -360,11 +382,16 @@
                                 {% set languageClass = languageQuality == 'GOOD'
                                     ? 'bg-emerald-100 text-emerald-700'
                                     : (languageQuality == 'BAD' ? 'bg-rose-100 text-rose-700' : 'bg-slate-200 text-slate-700') %}
+                                {% set aiSummaryRaw = (review.aiSummary ?? '')|trim %}
+                                {% set aiSummaryDisplay = aiSummaryRaw != '' ? aiSummaryRaw : 'No AI summary available for this review yet.' %}
+                                {% if aiSummaryRaw starts with('{') or aiSummaryRaw starts with('[') or '"sentiment"' in aiSummaryRaw %}
+                                    {% set aiSummaryDisplay = 'Resume non disponible.' %}
+                                {% endif %}
                                 <span class="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider {{ sentimentClass }}">{{ sentiment }}</span>
                                 <span class="rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider {{ languageClass }}">Language: {{ languageQuality }}</span>
                                 <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">AI review result</span>
                             </div>
-                            <p class="mt-2 text-xs leading-relaxed text-slate-600">{{ review.aiSummary ?? 'No AI summary available for this review yet.' }}</p>
+                            <p class="mt-2 text-xs leading-relaxed text-slate-600">{{ aiSummaryDisplay }}</p>
                         </div>
                     </article>
                 {% else %}
@@ -375,13 +402,45 @@
     </div>
 </section>
 
-<script>
-    const bookedRanges = {{ bookedRanges|json_encode|raw }};
-    const todayDate = '{{ todayDate }}';
-    const galleryUrls = {{ galleryUrls|json_encode|raw }};
+{% endblock %}
 
-    const liquidStyles = document.createElement('style');
-    liquidStyles.textContent = `
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        (function () {
+            const mapContainer = document.getElementById('place-location-map');
+            if (!mapContainer || typeof L === 'undefined') {
+                return;
+            }
+
+            const latitude = parseFloat(mapContainer.dataset.placeLat || '');
+            const longitude = parseFloat(mapContainer.dataset.placeLng || '');
+            if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+                return;
+            }
+
+            const map = L.map(mapContainer, {
+                scrollWheelZoom: false,
+                zoomControl: true,
+                maxZoom: 18,
+            }).setView([latitude, longitude], 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; OpenStreetMap contributors',
+            }).addTo(map);
+
+            L.marker([latitude, longitude]).addTo(map).bindPopup(mapContainer.dataset.placeTitle || 'Place location');
+            window.setTimeout(() => map.invalidateSize(), 200);
+        })();
+
+        const bookedRanges = {{ bookedRanges|default([])|json_encode|raw }};
+        const todayDate = {{ todayDate|default('now'|date('Y-m-d'))|json_encode|raw }};
+        const galleryUrls = [{% for image in images|default([]) %}{{ (image.url starts with('http') ? image.url : asset('uploads/places/' ~ image.url))|json_encode|raw }}{% if not loop.last or (mainImageUrl|default('') is not empty) %},{% endif %}{% endfor %}{% if (images|default([])) is empty and mainImageUrl|default('') %}{{ (mainImageUrl starts with('http') ? mainImageUrl : asset('uploads/places/' ~ mainImageUrl))|json_encode|raw }}{% endif %}];
+
+        const liquidStyles = document.createElement('style');
+        liquidStyles.textContent = `
         @keyframes heroLiquidFloat {
             0%, 100% { transform: translateY(0px) scale(1); }
             50% { transform: translateY(-3px) scale(1.03); }
@@ -408,200 +467,200 @@
             animation: heroLiquidPulse 2.8s ease-out infinite;
         }
     `;
-    document.head.appendChild(liquidStyles);
+        document.head.appendChild(liquidStyles);
 
-    function initHeroBackgroundSlider() {
-        if (!Array.isArray(galleryUrls) || galleryUrls.length <= 1) {
-            return;
-        }
+        function initHeroBackgroundSlider() {
+            if (!Array.isArray(galleryUrls) || galleryUrls.length <= 1) {
+                return;
+            }
 
-        const layerA = document.getElementById('hero-bg-a');
-        const layerB = document.getElementById('hero-bg-b');
-        const dotButtons = document.querySelectorAll('#hero-bg-dots [data-hero-slide-index]');
-        if (!layerA || !layerB) {
-            return;
-        }
+            const layerA = document.getElementById('hero-bg-a');
+            const layerB = document.getElementById('hero-bg-b');
+            const dotButtons = document.querySelectorAll('#hero-bg-dots [data-hero-slide-index]');
+            if (!layerA || !layerB) {
+                return;
+            }
 
-        let currentIndex = 0;
-        let activeLayerIsA = true;
-        let timerId = null;
+            let currentIndex = 0;
+            let activeLayerIsA = true;
+            let timerId = null;
 
-        const updateDots = () => {
+            const updateDots = () => {
+                dotButtons.forEach((button) => {
+                    const index = Number(button.getAttribute('data-hero-slide-index'));
+                    if (index === currentIndex) {
+                        button.classList.add('bg-white');
+                        button.classList.remove('bg-white/35');
+                    } else {
+                        button.classList.add('bg-white/35');
+                        button.classList.remove('bg-white');
+                    }
+                });
+            };
+
+            const goToSlide = (index) => {
+                currentIndex = (index + galleryUrls.length) % galleryUrls.length;
+                const incoming = activeLayerIsA ? layerB : layerA;
+                const outgoing = activeLayerIsA ? layerA : layerB;
+
+                incoming.style.backgroundImage = 'url("' + galleryUrls[currentIndex] + '")';
+                incoming.style.opacity = '1';
+                outgoing.style.opacity = '0';
+                activeLayerIsA = !activeLayerIsA;
+                updateDots();
+            };
+
+            const startAutoPlay = () => {
+                if (timerId) {
+                    clearInterval(timerId);
+                }
+
+                timerId = setInterval(() => {
+                    goToSlide(currentIndex + 1);
+                }, 4200);
+            };
+
             dotButtons.forEach((button) => {
-                const index = Number(button.getAttribute('data-hero-slide-index'));
-                if (index === currentIndex) {
-                    button.classList.add('bg-white');
-                    button.classList.remove('bg-white/35');
-                } else {
-                    button.classList.add('bg-white/35');
-                    button.classList.remove('bg-white');
+                button.addEventListener('click', () => {
+                    const index = Number(button.getAttribute('data-hero-slide-index'));
+                    goToSlide(index);
+                    startAutoPlay();
+                });
+            });
+
+            updateDots();
+            startAutoPlay();
+        }
+
+        function dateToTimestamp(dateStr) {
+            return new Date(dateStr + 'T00:00:00').getTime();
+        }
+
+        function overlapsReservedRange(startStr, endStr) {
+            if (!startStr || !endStr) {
+                return false;
+            }
+
+            const startTs = dateToTimestamp(startStr);
+            const endTs = dateToTimestamp(endStr);
+            return bookedRanges.some((range) => {
+                const rangeStart = dateToTimestamp(range.start);
+                const rangeEnd = dateToTimestamp(range.end);
+                return !(endTs <= rangeStart || startTs >= rangeEnd);
+            });
+        }
+
+        function isDateReserved(dateStr) {
+            if (!dateStr) {
+                return false;
+            }
+
+            const targetTs = dateToTimestamp(dateStr);
+            return bookedRanges.some((range) => {
+                const rangeStart = dateToTimestamp(range.start);
+                const rangeEnd = dateToTimestamp(range.end);
+                return targetTs >= rangeStart && targetTs <= rangeEnd;
+            });
+        }
+
+        function showDateError(elementId, message) {
+            const el = document.getElementById(elementId);
+            if (!el) {
+                return;
+            }
+
+            el.textContent = message;
+            el.classList.remove('hidden');
+        }
+
+        function hideDateError(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) {
+                return;
+            }
+
+            el.textContent = '';
+            el.classList.add('hidden');
+        }
+
+        function validateBookingDates() {
+            const startInput = document.getElementById('booking-start-date');
+            const endInput = document.getElementById('booking-end-date');
+            if (!startInput || !endInput) {
+                return true;
+            }
+
+            const start = startInput.value;
+            const end = endInput.value;
+            let valid = true;
+
+            hideDateError('booking-start-date-error');
+            hideDateError('booking-end-date-error');
+            startInput.setCustomValidity('');
+            endInput.setCustomValidity('');
+
+            if (start && start < todayDate) {
+                startInput.setCustomValidity('Start date cannot be before today.');
+                showDateError('booking-start-date-error', 'Start date cannot be before today.');
+                valid = false;
+            }
+
+            if (start && isDateReserved(start)) {
+                startInput.setCustomValidity('Selected start date is unavailable because it is already reserved.');
+                showDateError('booking-start-date-error', 'Selected start date is unavailable because it is already reserved.');
+                valid = false;
+            }
+
+            if (end && end <= todayDate) {
+                endInput.setCustomValidity('End date must be after today.');
+                showDateError('booking-end-date-error', 'End date must be after today.');
+                valid = false;
+            }
+
+            if (end && isDateReserved(end)) {
+                endInput.setCustomValidity('Selected end date is unavailable because it is already reserved.');
+                showDateError('booking-end-date-error', 'Selected end date is unavailable because it is already reserved.');
+                valid = false;
+            }
+
+            if (start && end && start >= end) {
+                endInput.setCustomValidity('End date must be after start date.');
+                showDateError('booking-end-date-error', 'End date must be after start date.');
+                valid = false;
+            }
+
+            if (start && end && overlapsReservedRange(start, end)) {
+                endInput.setCustomValidity('Selected dates overlap with reserved dates.');
+                showDateError('booking-end-date-error', 'Selected dates overlap with reserved dates.');
+                valid = false;
+            }
+
+            return valid;
+        }
+
+        const bookingForm = document.getElementById('booking-date-form');
+        const bookingStart = document.getElementById('booking-start-date');
+        const bookingEnd = document.getElementById('booking-end-date');
+
+        if (bookingStart) {
+            bookingStart.addEventListener('change', validateBookingDates);
+            bookingStart.addEventListener('input', validateBookingDates);
+        }
+
+        if (bookingEnd) {
+            bookingEnd.addEventListener('change', validateBookingDates);
+            bookingEnd.addEventListener('input', validateBookingDates);
+        }
+
+        if (bookingForm) {
+            bookingForm.addEventListener('submit', (event) => {
+                if (!validateBookingDates()) {
+                    event.preventDefault();
                 }
             });
-        };
-
-        const goToSlide = (index) => {
-            currentIndex = (index + galleryUrls.length) % galleryUrls.length;
-            const incoming = activeLayerIsA ? layerB : layerA;
-            const outgoing = activeLayerIsA ? layerA : layerB;
-
-            incoming.style.backgroundImage = 'url("' + galleryUrls[currentIndex] + '")';
-            incoming.style.opacity = '1';
-            outgoing.style.opacity = '0';
-            activeLayerIsA = !activeLayerIsA;
-            updateDots();
-        };
-
-        const startAutoPlay = () => {
-            if (timerId) {
-                clearInterval(timerId);
-            }
-
-            timerId = setInterval(() => {
-                goToSlide(currentIndex + 1);
-            }, 4200);
-        };
-
-        dotButtons.forEach((button) => {
-            button.addEventListener('click', () => {
-                const index = Number(button.getAttribute('data-hero-slide-index'));
-                goToSlide(index);
-                startAutoPlay();
-            });
-        });
-
-        updateDots();
-        startAutoPlay();
-    }
-
-    function dateToTimestamp(dateStr) {
-        return new Date(dateStr + 'T00:00:00').getTime();
-    }
-
-    function overlapsReservedRange(startStr, endStr) {
-        if (!startStr || !endStr) {
-            return false;
         }
 
-        const startTs = dateToTimestamp(startStr);
-        const endTs = dateToTimestamp(endStr);
-        return bookedRanges.some((range) => {
-            const rangeStart = dateToTimestamp(range.start);
-            const rangeEnd = dateToTimestamp(range.end);
-            return !(endTs <= rangeStart || startTs >= rangeEnd);
-        });
-    }
-
-    function isDateReserved(dateStr) {
-        if (!dateStr) {
-            return false;
-        }
-
-        const targetTs = dateToTimestamp(dateStr);
-        return bookedRanges.some((range) => {
-            const rangeStart = dateToTimestamp(range.start);
-            const rangeEnd = dateToTimestamp(range.end);
-            return targetTs >= rangeStart && targetTs <= rangeEnd;
-        });
-    }
-
-    function showDateError(elementId, message) {
-        const el = document.getElementById(elementId);
-        if (!el) {
-            return;
-        }
-
-        el.textContent = message;
-        el.classList.remove('hidden');
-    }
-
-    function hideDateError(elementId) {
-        const el = document.getElementById(elementId);
-        if (!el) {
-            return;
-        }
-
-        el.textContent = '';
-        el.classList.add('hidden');
-    }
-
-    function validateBookingDates() {
-        const startInput = document.getElementById('booking-start-date');
-        const endInput = document.getElementById('booking-end-date');
-        if (!startInput || !endInput) {
-            return true;
-        }
-
-        const start = startInput.value;
-        const end = endInput.value;
-        let valid = true;
-
-        hideDateError('booking-start-date-error');
-        hideDateError('booking-end-date-error');
-        startInput.setCustomValidity('');
-        endInput.setCustomValidity('');
-
-        if (start && start < todayDate) {
-            startInput.setCustomValidity('Start date cannot be before today.');
-            showDateError('booking-start-date-error', 'Start date cannot be before today.');
-            valid = false;
-        }
-
-        if (start && isDateReserved(start)) {
-            startInput.setCustomValidity('Selected start date is unavailable because it is already reserved.');
-            showDateError('booking-start-date-error', 'Selected start date is unavailable because it is already reserved.');
-            valid = false;
-        }
-
-        if (end && end <= todayDate) {
-            endInput.setCustomValidity('End date must be after today.');
-            showDateError('booking-end-date-error', 'End date must be after today.');
-            valid = false;
-        }
-
-        if (end && isDateReserved(end)) {
-            endInput.setCustomValidity('Selected end date is unavailable because it is already reserved.');
-            showDateError('booking-end-date-error', 'Selected end date is unavailable because it is already reserved.');
-            valid = false;
-        }
-
-        if (start && end && start >= end) {
-            endInput.setCustomValidity('End date must be after start date.');
-            showDateError('booking-end-date-error', 'End date must be after start date.');
-            valid = false;
-        }
-
-        if (start && end && overlapsReservedRange(start, end)) {
-            endInput.setCustomValidity('Selected dates overlap with reserved dates.');
-            showDateError('booking-end-date-error', 'Selected dates overlap with reserved dates.');
-            valid = false;
-        }
-
-        return valid;
-    }
-
-    const bookingForm = document.getElementById('booking-date-form');
-    const bookingStart = document.getElementById('booking-start-date');
-    const bookingEnd = document.getElementById('booking-end-date');
-
-    if (bookingStart) {
-        bookingStart.addEventListener('change', validateBookingDates);
-        bookingStart.addEventListener('input', validateBookingDates);
-    }
-
-    if (bookingEnd) {
-        bookingEnd.addEventListener('change', validateBookingDates);
-        bookingEnd.addEventListener('input', validateBookingDates);
-    }
-
-    if (bookingForm) {
-        bookingForm.addEventListener('submit', (event) => {
-            if (!validateBookingDates()) {
-                event.preventDefault();
-            }
-        });
-    }
-
-    initHeroBackgroundSlider();
-    validateBookingDates();
-</script>
+        initHeroBackgroundSlider();
+        validateBookingDates();
+    </script>
 {% endblock %}

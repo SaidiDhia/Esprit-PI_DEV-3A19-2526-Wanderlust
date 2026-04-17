@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use App\Entity\Booking;
 use App\Entity\Place;
 use App\Entity\PlaceImage;
@@ -11,7 +13,9 @@ use App\Enum\RoleEnum;
 use App\Service\AiReviewService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -21,6 +25,10 @@ class BookingController extends AbstractController
 {
     private const DEFAULT_LATITUDE = '36.80650000';
     private const DEFAULT_LONGITUDE = '10.18150000';
+    private const TUNISIA_SOUTH = 30.1;
+    private const TUNISIA_NORTH = 37.6;
+    private const TUNISIA_WEST = 7.4;
+    private const TUNISIA_EAST = 11.8;
 
     #[Route('', name: 'app_booking')]
     public function index(Request $request, EntityManagerInterface $em): Response
@@ -28,6 +36,21 @@ class BookingController extends AbstractController
         $search = trim((string) $request->query->get('q', ''));
         $city = trim((string) $request->query->get('city', ''));
         $category = trim((string) $request->query->get('category', ''));
+        $distanceInput = trim((string) $request->query->get('distance', ''));
+        $userLatInput = trim((string) $request->query->get('user_lat', ''));
+        $userLngInput = trim((string) $request->query->get('user_lng', ''));
+
+        $distanceKm = null;
+        if ($distanceInput !== '' && is_numeric($distanceInput)) {
+            $distanceKm = (float) $distanceInput;
+            if ($distanceKm <= 0) {
+                $distanceKm = null;
+            }
+        }
+
+        $hasUserCoordinates = is_numeric($userLatInput) && is_numeric($userLngInput);
+        $userLatitude = $hasUserCoordinates ? (float) $userLatInput : null;
+        $userLongitude = $hasUserCoordinates ? (float) $userLngInput : null;
 
         $qb = $em->createQueryBuilder()
             ->select('p')
@@ -37,7 +60,7 @@ class BookingController extends AbstractController
             ->orderBy('p.createdAt', 'DESC');
 
         if ($search !== '') {
-            $qb->andWhere('LOWER(p.title) LIKE :search OR LOWER(p.description) LIKE :search')
+            $qb->andWhere('LOWER(p.title) LIKE :search OR LOWER(p.description) LIKE :search OR LOWER(COALESCE(p.category, \'\')) LIKE :search')
                 ->setParameter('search', '%' . mb_strtolower($search) . '%');
         }
 
@@ -47,14 +70,43 @@ class BookingController extends AbstractController
         }
 
         if ($category !== '') {
-            $qb->andWhere('LOWER(p.category) = :category')
-                ->setParameter('category', mb_strtolower($category));
+            $qb->andWhere('LOWER(COALESCE(p.category, \'\')) LIKE :category')
+                ->setParameter('category', '%' . mb_strtolower($category) . '%');
         }
 
         $places = $qb->getQuery()->getResult();
+        $distanceByPlaceIdMeters = [];
+        if ($distanceKm !== null && $hasUserCoordinates && $userLatitude !== null && $userLongitude !== null) {
+            $distanceByPlaceIdMeters = $this->fetchOsrmDistancesFromOrigin($userLatitude, $userLongitude, $places);
+            $maxDistanceMeters = $distanceKm * 1000;
+
+            $places = array_values(array_filter($places, function ($place) use ($distanceByPlaceIdMeters, $maxDistanceMeters): bool {
+                if (!$place instanceof Place || $place->getId() === null) {
+                    return false;
+                }
+
+                $distanceMeters = $distanceByPlaceIdMeters[$place->getId()] ?? null;
+                return is_numeric($distanceMeters) && (float) $distanceMeters <= $maxDistanceMeters;
+            }));
+
+            $visiblePlaceIds = [];
+            foreach ($places as $place) {
+                if ($place instanceof Place && $place->getId() !== null) {
+                    $visiblePlaceIds[(int) $place->getId()] = true;
+                }
+            }
+
+            $distanceByPlaceIdMeters = array_filter(
+                $distanceByPlaceIdMeters,
+                static fn (string|int $placeId): bool => isset($visiblePlaceIds[(int) $placeId]),
+                ARRAY_FILTER_USE_KEY
+            );
+        }
+
         $placePreviewImages = $this->buildPlacePreviewImagesMap($em, $places);
 
         $mapPlaces = [];
+        $distanceByPlaceIdKm = [];
         foreach ($places as $place) {
             if (!$place instanceof Place) {
                 continue;
@@ -69,6 +121,11 @@ class BookingController extends AbstractController
             $placeId = $place->getId();
             if ($placeId === null) {
                 continue;
+            }
+
+            $distanceMeters = $distanceByPlaceIdMeters[$placeId] ?? null;
+            if (is_numeric($distanceMeters)) {
+                $distanceByPlaceIdKm[$placeId] = round(((float) $distanceMeters) / 1000, 2);
             }
 
             $previewImage = $placePreviewImages[$placeId] ?? $place->getImageUrl();
@@ -90,6 +147,7 @@ class BookingController extends AbstractController
                 'imageUrl' => $imageUrl,
                 'latitude' => (float) $latitude,
                 'longitude' => (float) $longitude,
+                'distanceKm' => $distanceByPlaceIdKm[$placeId] ?? null,
                 'url' => $this->generateUrl('app_booking_place', ['id' => $placeId]),
             ];
         }
@@ -127,7 +185,12 @@ class BookingController extends AbstractController
                 'q' => $search,
                 'city' => $city,
                 'category' => $category,
+                'distance' => $distanceInput,
+                'user_lat' => $userLatInput,
+                'user_lng' => $userLngInput,
             ],
+            'distanceByPlaceIdKm' => $distanceByPlaceIdKm,
+            'distanceFilterActive' => $distanceKm !== null,
         ]);
     }
 
@@ -347,6 +410,190 @@ class BookingController extends AbstractController
         ]);
     }
 
+    #[Route('/my-bookings/{id}/route-data', name: 'app_booking_my_booking_route_data', methods: ['POST'])]
+    public function myBookingRouteData(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $user = $this->requireUser();
+
+        $booking = $em->createQueryBuilder()
+            ->select('b', 'p')
+            ->from(Booking::class, 'b')
+            ->join('b.place', 'p')
+            ->where('b.id = :id')
+            ->andWhere('b.guest = :user')
+            ->setParameter('id', $id)
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$booking instanceof Booking || !$booking->getPlace() instanceof Place) {
+            return new JsonResponse(['error' => 'Booking not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $placeLat = $booking->getPlace()->getLatitude();
+        $placeLng = $booking->getPlace()->getLongitude();
+        if ($placeLat === null || $placeLng === null || !is_numeric($placeLat) || !is_numeric($placeLng)) {
+            return new JsonResponse(['error' => 'Place coordinates are not available.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $payload = json_decode((string) $request->getContent(), true);
+        if (!is_array($payload)) {
+            return new JsonResponse(['error' => 'Invalid request payload.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $userLat = $payload['userLat'] ?? null;
+        $userLng = $payload['userLng'] ?? null;
+        if (!is_numeric($userLat) || !is_numeric($userLng)) {
+            return new JsonResponse(['error' => 'Your coordinates are invalid.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $userLat = (float) $userLat;
+        $userLng = (float) $userLng;
+        $placeLatValue = (float) $placeLat;
+        $placeLngValue = (float) $placeLng;
+
+        // Tunisia bounds to keep route logic aligned with Tunisia-only mapping setup.
+        if (
+            $userLat < 30.1 || $userLat > 37.6 || $userLng < 7.4 || $userLng > 11.8
+            || $placeLatValue < 30.1 || $placeLatValue > 37.6 || $placeLngValue < 7.4 || $placeLngValue > 11.8
+        ) {
+            return new JsonResponse([
+                'error' => 'Route is available only when both points are in Tunisia.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $osrmUrl = sprintf(
+            'http://127.0.0.1:5001/route/v1/driving/%s,%s;%s,%s?overview=full&geometries=geojson&steps=true',
+            rawurlencode((string) $userLng),
+            rawurlencode((string) $userLat),
+            rawurlencode((string) $placeLngValue),
+            rawurlencode((string) $placeLatValue)
+        );
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 12,
+                'header' => "Accept: application/json\r\n",
+            ],
+        ]);
+
+        $response = @file_get_contents($osrmUrl, false, $context);
+        if (!is_string($response) || $response === '') {
+            return new JsonResponse(['error' => 'Unable to reach OSRM service.'], Response::HTTP_BAD_GATEWAY);
+        }
+
+        $decoded = json_decode($response, true);
+        if (!is_array($decoded) || ($decoded['code'] ?? '') !== 'Ok' || !isset($decoded['routes'][0])) {
+            return new JsonResponse(['error' => 'No route found.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $route = $decoded['routes'][0];
+
+        return new JsonResponse([
+            'route' => [
+                'distance' => (float) ($route['distance'] ?? 0),
+                'duration' => (float) ($route['duration'] ?? 0),
+                'geometry' => $route['geometry'] ?? null,
+            ],
+            'place' => [
+                'latitude' => $placeLatValue,
+                'longitude' => $placeLngValue,
+                'title' => $booking->getPlace()->getTitle(),
+            ],
+        ]);
+    }
+
+    #[Route('/my-bookings/{id}/invoice', name: 'app_booking_my_booking_invoice_pdf', methods: ['GET'])]
+    public function exportMyBookingInvoicePdf(int $id, EntityManagerInterface $em): Response
+    {
+        $user = $this->requireUser();
+        $booking = $em->createQueryBuilder()
+            ->select('b', 'p', 'g')
+            ->from(Booking::class, 'b')
+            ->join('b.place', 'p')
+            ->join('b.guest', 'g')
+            ->where('b.id = :id')
+            ->andWhere('b.guest = :user')
+            ->setParameter('id', $id)
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$booking instanceof Booking) {
+            throw $this->createNotFoundException('Booking not found.');
+        }
+
+        if ($booking->getStatus() !== Booking::STATUS_CONFIRMED) {
+            $this->addFlash('error', 'Invoice export is available only for confirmed bookings.');
+            return $this->redirectToRoute('app_booking_my_bookings');
+        }
+
+        $issuedAt = new \DateTimeImmutable();
+        $nights = max(1, (int) $booking->getStartDate()->diff($booking->getEndDate())->days);
+        $invoiceNumber = sprintf('RES-%s-%04d', $issuedAt->format('Ymd'), (int) $booking->getId());
+
+        $response = $this->withSuppressedIconvNotice(function () use ($booking, $issuedAt, $invoiceNumber, $nights): Response {
+            $html = $this->renderView('booking/invoice_pdf.html.twig', [
+                'booking' => $booking,
+                'issuedAt' => $issuedAt,
+                'invoiceNumber' => $invoiceNumber,
+                'nights' => $nights,
+            ]);
+
+            // Some legacy DB rows may contain invalid byte sequences; Dompdf uses iconv internally.
+            // Scrub the rendered HTML to valid UTF-8 before Dompdf processing.
+            $html = $this->scrubUtf8($html);
+
+            $options = new Options();
+            $options->set('isRemoteEnabled', true);
+            $options->setDefaultFont('DejaVu Sans');
+
+            $dompdf = new Dompdf($options);
+            $dompdf->loadHtml($html, 'UTF-8');
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            return new Response($dompdf->output());
+        });
+
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->headers->set(
+            'Content-Disposition',
+            sprintf('attachment; filename="reservation-invoice-%d.pdf"', (int) $booking->getId())
+        );
+
+        return $response;
+    }
+
+    #[Route('/my-bookings/{id}/calendar', name: 'app_booking_my_booking_google_calendar', methods: ['GET'])]
+    public function addMyBookingToGoogleCalendar(int $id, EntityManagerInterface $em): Response
+    {
+        $user = $this->requireUser();
+        $booking = $em->createQueryBuilder()
+            ->select('b', 'p')
+            ->from(Booking::class, 'b')
+            ->join('b.place', 'p')
+            ->where('b.id = :id')
+            ->andWhere('b.guest = :user')
+            ->setParameter('id', $id)
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$booking instanceof Booking) {
+            throw $this->createNotFoundException('Booking not found.');
+        }
+
+        if ($booking->getStatus() !== Booking::STATUS_CONFIRMED) {
+            $this->addFlash('error', 'Google Calendar planning is available only for confirmed bookings.');
+            return $this->redirectToRoute('app_booking_my_bookings');
+        }
+
+        $calendarUrl = $this->buildGoogleCalendarUrl($booking);
+        return new RedirectResponse($calendarUrl);
+    }
+
     #[Route('/my-bookings/{id}/edit', name: 'app_booking_my_booking_edit', methods: ['POST'])]
     public function editMyBooking(int $id, Request $request, EntityManagerInterface $em): Response
     {
@@ -487,6 +734,63 @@ class BookingController extends AbstractController
     {
         $user = $this->requireUser();
         return $this->renderHostDashboard($em, $user, $user);
+    }
+
+    #[Route('/location/search', name: 'app_booking_location_search', methods: ['GET'])]
+    public function searchLocations(Request $request): JsonResponse
+    {
+        $this->requireUser();
+
+        $query = trim((string) $request->query->get('q', ''));
+        if ($query === '' || mb_strlen($query) < 3) {
+            return new JsonResponse(['items' => []]);
+        }
+
+        $url = sprintf(
+            'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=tn&limit=8&q=%s',
+            rawurlencode($query)
+        );
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 8,
+                'header' => "User-Agent: Wanderlust/1.0 (Symfony geocoding)\r\nAccept: application/json\r\n",
+            ],
+        ]);
+
+        $response = @file_get_contents($url, false, $context);
+        if (!is_string($response) || $response === '') {
+            return new JsonResponse(['items' => []]);
+        }
+
+        $decoded = json_decode($response, true);
+        if (!is_array($decoded)) {
+            return new JsonResponse(['items' => []]);
+        }
+
+        $items = [];
+        foreach ($decoded as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $displayName = trim((string) ($item['display_name'] ?? ''));
+            $latitude = (string) ($item['lat'] ?? '');
+            $longitude = (string) ($item['lon'] ?? '');
+
+            if ($displayName === '' || !is_numeric($latitude) || !is_numeric($longitude)) {
+                continue;
+            }
+
+            $items[] = [
+                'name' => $displayName,
+                'latitude' => number_format((float) $latitude, 8, '.', ''),
+                'longitude' => number_format((float) $longitude, 8, '.', ''),
+            ];
+        }
+
+        return new JsonResponse(['items' => $items]);
     }
 
     #[Route('/host/{id}', name: 'app_booking_host_view', methods: ['GET'])]
@@ -915,6 +1219,80 @@ class BookingController extends AbstractController
             ->getSingleScalarResult();
     }
 
+    private function scrubUtf8(string $value): string
+    {
+        if (preg_match('//u', $value) === 1) {
+            return $value;
+        }
+
+        set_error_handler(static function (): bool {
+            // Prevent iconv warnings from being converted into exceptions by Symfony.
+            return true;
+        });
+
+        try {
+            $clean = iconv('UTF-8', 'UTF-8//IGNORE', $value);
+        } finally {
+            restore_error_handler();
+        }
+
+        if ($clean === false) {
+            return '';
+        }
+
+        return $clean;
+    }
+
+    private function withSuppressedIconvNotice(callable $callback): mixed
+    {
+        set_error_handler(static function (int $severity, string $message): bool {
+            if (str_contains($message, 'iconv(): Detected an incomplete multibyte character')) {
+                return true;
+            }
+
+            return false;
+        });
+
+        try {
+            return $callback();
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    private function buildGoogleCalendarUrl(Booking $booking): string
+    {
+        $place = $booking->getPlace();
+        $title = sprintf('Wanderlust Stay - %s', $place instanceof Place ? $place->getTitle() : 'Reservation');
+        $location = '';
+        if ($place instanceof Place) {
+            $location = trim(($place->getAddress() ?? '') . ' ' . ($place->getCity() ?? ''));
+        }
+
+        $details = sprintf(
+            "Reservation #%d\nGuests: %d\nTotal: %s\nGenerated from Wanderlust.",
+            (int) $booking->getId(),
+            (int) $booking->getGuestsCount(),
+            $booking->getTotalPrice()
+        );
+
+        $dates = sprintf(
+            '%s/%s',
+            $booking->getStartDate()->format('Ymd'),
+            $booking->getEndDate()->format('Ymd')
+        );
+
+        $query = http_build_query([
+            'action' => 'TEMPLATE',
+            'text' => $title,
+            'dates' => $dates,
+            'details' => $details,
+            'location' => $location,
+        ], '', '&', PHP_QUERY_RFC3986);
+
+        return 'https://calendar.google.com/calendar/render?' . $query;
+    }
+
     private function defaultHostFormData(): array
     {
         return [
@@ -1207,6 +1585,132 @@ class BookingController extends AbstractController
         }
 
         return $previewMap;
+    }
+
+    private function fetchOsrmDistancesFromOrigin(float $originLat, float $originLng, array $places): array
+    {
+        $destinations = [];
+        foreach ($places as $place) {
+            if (!$place instanceof Place || $place->getId() === null) {
+                continue;
+            }
+
+            $latitude = $place->getLatitude();
+            $longitude = $place->getLongitude();
+            if ($latitude === null || $longitude === null || !is_numeric($latitude) || !is_numeric($longitude)) {
+                continue;
+            }
+
+            $latValue = (float) $latitude;
+            $lngValue = (float) $longitude;
+
+            $destinations[] = [
+                'id' => (int) $place->getId(),
+                'lat' => $latValue,
+                'lng' => $lngValue,
+            ];
+        }
+
+        if ($destinations === []) {
+            return [];
+        }
+
+        $distanceByPlaceId = [];
+        foreach (array_chunk($destinations, 60) as $chunk) {
+            $coordinates = [
+                sprintf('%.8F,%.8F', $originLng, $originLat),
+            ];
+
+            foreach ($chunk as $destination) {
+                $coordinates[] = sprintf('%.8F,%.8F', $destination['lng'], $destination['lat']);
+            }
+
+            $destinationsParam = implode(',', range(1, count($chunk)));
+            $osrmUrl = sprintf(
+                'http://127.0.0.1:5001/table/v1/driving/%s?sources=0&destinations=%s&annotations=distance',
+                implode(';', $coordinates),
+                $destinationsParam
+            );
+
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'timeout' => 12,
+                    'header' => "Accept: application/json\r\n",
+                ],
+            ]);
+
+            $response = @file_get_contents($osrmUrl, false, $context);
+
+            $fallbackDistances = [];
+            foreach ($chunk as $destination) {
+                $fallbackDistances[$destination['id']] = $this->calculateHaversineDistanceMeters(
+                    $originLat,
+                    $originLng,
+                    (float) $destination['lat'],
+                    (float) $destination['lng']
+                );
+            }
+
+            if (!is_string($response) || $response === '') {
+                foreach ($fallbackDistances as $destinationId => $fallbackDistance) {
+                    $distanceByPlaceId[$destinationId] = $fallbackDistance;
+                }
+                continue;
+            }
+
+            $decoded = json_decode($response, true);
+            if (!is_array($decoded) || ($decoded['code'] ?? '') !== 'Ok') {
+                foreach ($fallbackDistances as $destinationId => $fallbackDistance) {
+                    $distanceByPlaceId[$destinationId] = $fallbackDistance;
+                }
+                continue;
+            }
+
+            $distances = $decoded['distances'][0] ?? null;
+            if (!is_array($distances)) {
+                foreach ($fallbackDistances as $destinationId => $fallbackDistance) {
+                    $distanceByPlaceId[$destinationId] = $fallbackDistance;
+                }
+                continue;
+            }
+
+            foreach ($chunk as $index => $destination) {
+                $distanceValue = $distances[$index] ?? null;
+                if (is_numeric($distanceValue)) {
+                    $distanceByPlaceId[$destination['id']] = (float) $distanceValue;
+                    continue;
+                }
+
+                $distanceByPlaceId[$destination['id']] = $fallbackDistances[$destination['id']];
+            }
+        }
+
+        return $distanceByPlaceId;
+    }
+
+    private function calculateHaversineDistanceMeters(float $fromLat, float $fromLng, float $toLat, float $toLng): float
+    {
+        $earthRadiusMeters = 6371000.0;
+
+        $latFromRad = deg2rad($fromLat);
+        $latToRad = deg2rad($toLat);
+        $deltaLat = deg2rad($toLat - $fromLat);
+        $deltaLng = deg2rad($toLng - $fromLng);
+
+        $a = sin($deltaLat / 2) * sin($deltaLat / 2)
+            + cos($latFromRad) * cos($latToRad) * sin($deltaLng / 2) * sin($deltaLng / 2);
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadiusMeters * $c;
+    }
+
+    private function isCoordinateInTunisia(float $latitude, float $longitude): bool
+    {
+        return $latitude >= self::TUNISIA_SOUTH
+            && $latitude <= self::TUNISIA_NORTH
+            && $longitude >= self::TUNISIA_WEST
+            && $longitude <= self::TUNISIA_EAST;
     }
 
     private function buildPlaceGalleryImagesMap(EntityManagerInterface $em, array $places): array

@@ -6,13 +6,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class AiReviewService
 {
-    private const GEMINI_URL_TEMPLATE = 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s';
-    private const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
+    private const GEMINI_API_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=';
     private const TIMEOUT_SECONDS = 15;
-    private const ABUSIVE_WORDS = [
-        'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'idiot', 'stupid',
-        'merde', 'debil', 'debile', 'con',
-    ];
 
     public function __construct(private readonly HttpClientInterface $httpClient)
     {
@@ -26,22 +21,20 @@ class AiReviewService
             return new AiReviewResult('NEUTRAL', 'No review text provided for AI analysis.', 'UNKNOWN');
         }
 
+        $apiKey = trim((string) ($_SERVER['GEMINI_API_KEY'] ?? $_ENV['GEMINI_API_KEY'] ?? $_SERVER['APP_GEMINI_API_KEY'] ?? ''));
+        if ($apiKey === '') {
+            return new AiReviewResult('NEUTRAL', '', 'UNKNOWN');
+        }
+
         try {
-            return $this->callGeminiApi($text, $rating);
+            return $this->callGeminiApi($apiKey, $text, $rating);
         } catch (\Throwable $e) {
-            $fallbackSentiment = $this->inferSentimentFromTextAndRating($text, $rating);
-            return new AiReviewResult(
-                $fallbackSentiment,
-                $this->buildFallbackSummary($fallbackSentiment, $text),
-                $this->detectLanguageQuality($text)
-            );
+            return new AiReviewResult('NEUTRAL', '', 'UNKNOWN');
         }
     }
 
-    private function callGeminiApi(string $reviewText, int $rating): AiReviewResult
+    private function callGeminiApi(string $apiKey, string $reviewText, int $rating): AiReviewResult
     {
-        $apiKey = $this->getGeminiApiKey();
-
         $prompt = 'Analyse this accommodation review and respond ONLY with valid JSON on a single line, '
             . 'no markdown, no explanation. Format: '
             . '{"sentiment":"POSITIVE","language_quality":"GOOD","summary":"One sentence summary."}. '
@@ -64,42 +57,24 @@ class AiReviewService
             ],
         ];
 
-        $lastError = null;
-        foreach (self::GEMINI_MODELS as $model) {
-            $url = sprintf(self::GEMINI_URL_TEMPLATE, $model, $apiKey);
-            $response = $this->httpClient->request('POST', $url, [
-                'timeout' => self::TIMEOUT_SECONDS,
-                'headers' => ['Content-Type' => 'application/json'],
-                'json' => $payload,
-            ]);
+        $url = $this->buildGeminiApiUrl($apiKey);
+        $response = $this->httpClient->request('POST', $url, [
+            'timeout' => self::TIMEOUT_SECONDS,
+            'headers' => ['Content-Type' => 'application/json'],
+            'json' => $payload,
+        ]);
 
-            $statusCode = $response->getStatusCode();
-            $body = $response->getContent(false);
+        $statusCode = $response->getStatusCode();
+        $body = $response->getContent(false);
 
-            if ($statusCode === 200) {
-                return $this->parseGeminiResponse($body, $reviewText, $rating);
-            }
-
-            $lastError = sprintf('HTTP %d from %s: %s', $statusCode, $model, mb_substr($body, 0, 140));
-            if (in_array($statusCode, [400, 401, 403], true)) {
-                break;
-            }
+        if ($statusCode !== 200) {
+            throw new \RuntimeException(sprintf('HTTP %d from gemini-2.5-flash: %s', $statusCode, mb_substr($body, 0, 140)));
         }
 
-        throw new \RuntimeException($lastError ?? 'Gemini request failed.');
+        return $this->parseGeminiResponse($body, $rating, $reviewText);
     }
 
-    private function getGeminiApiKey(): string
-    {
-        $apiKey = (string) ($_ENV['GEMINI_API_KEY'] ?? $_SERVER['GEMINI_API_KEY'] ?? '');
-        if ($apiKey === '') {
-            throw new \RuntimeException('Missing GEMINI_API_KEY environment variable.');
-        }
-
-        return $apiKey;
-    }
-
-    private function parseGeminiResponse(string $responseBody, string $reviewText, int $rating): AiReviewResult
+    private function parseGeminiResponse(string $responseBody, int $rating, string $reviewText): AiReviewResult
     {
         $decoded = json_decode($responseBody, true);
         $text = '';
@@ -108,7 +83,7 @@ class AiReviewService
             $text = (string) ($decoded['candidates'][0]['content']['parts'][0]['text'] ?? '');
         }
 
-        if ($text === '' && preg_match('/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/u', $responseBody, $matches)) {
+        if ($text === '' && preg_match('/"text"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"/u', $responseBody, $matches)) {
             $text = stripslashes(str_replace('\\n', ' ', $matches[1]));
         }
 
@@ -116,128 +91,127 @@ class AiReviewService
             throw new \RuntimeException('Unable to parse Gemini response payload.');
         }
 
-        $fallbackSentiment = $this->inferSentimentFromTextAndRating($reviewText, $rating);
-        $fallbackLanguage = $this->detectLanguageQuality($reviewText);
-        $fallbackSummary = $this->buildFallbackSummary($fallbackSentiment, $reviewText);
+        $normalized = trim($text);
+        $normalized = preg_replace('/^```(?:json)?\s*/iu', '', $normalized) ?? $normalized;
+        $normalized = preg_replace('/\s*```$/u', '', $normalized) ?? $normalized;
 
-        $structured = $this->extractStructuredPayload($text);
-
-        if (is_array($structured)) {
-            $sentiment = strtoupper((string) ($structured['sentiment'] ?? $fallbackSentiment));
-            if (!in_array($sentiment, ['POSITIVE', 'NEUTRAL', 'NEGATIVE'], true)) {
-                $sentiment = $fallbackSentiment;
+        $analysisPayload = null;
+        $decodedText = json_decode($normalized, true);
+        if (is_array($decodedText)) {
+            $analysisPayload = $decodedText;
+        } else {
+            $firstBrace = mb_strpos($normalized, '{');
+            $lastBrace = mb_strrpos($normalized, '}');
+            if ($firstBrace !== false && $lastBrace !== false && $lastBrace > $firstBrace) {
+                $jsonFragment = mb_substr($normalized, $firstBrace, ($lastBrace - $firstBrace) + 1);
+                $decodedFragment = json_decode($jsonFragment, true);
+                if (is_array($decodedFragment)) {
+                    $analysisPayload = $decodedFragment;
+                }
             }
-
-            $languageQuality = strtoupper((string) ($structured['language_quality'] ?? $fallbackLanguage));
-            if (!in_array($languageQuality, ['GOOD', 'BAD', 'UNKNOWN'], true)) {
-                $languageQuality = $fallbackLanguage;
-            }
-
-            $summary = trim((string) ($structured['summary'] ?? ''));
-            if ($summary === '') {
-                $summary = $fallbackSummary;
-            }
-
-            return new AiReviewResult($sentiment, mb_substr($summary, 0, 255), $languageQuality);
         }
 
-        $sentiment = $fallbackSentiment;
-        if (preg_match('/"sentiment"\s*:\s*"(POSITIVE|NEUTRAL|NEGATIVE)"/iu', $text, $sentMatch)) {
+        $sentiment = $this->inferSentimentFromText($reviewText, $rating);
+        $hasExplicitSentiment = false;
+        if (is_array($analysisPayload)) {
+            $candidate = strtoupper((string) ($analysisPayload['sentiment'] ?? ''));
+            if (in_array($candidate, ['POSITIVE', 'NEUTRAL', 'NEGATIVE'], true)) {
+                $sentiment = $candidate;
+                $hasExplicitSentiment = true;
+            }
+        }
+        if ($sentiment === 'NEUTRAL' && preg_match('/"sentiment"\s*:\s*"(POSITIVE|NEUTRAL|NEGATIVE)"/iu', $normalized, $sentMatch)) {
             $sentiment = strtoupper($sentMatch[1]);
+            $hasExplicitSentiment = true;
+        }
+        if (!$hasExplicitSentiment && $sentiment === 'NEUTRAL') {
+            $sentiment = $this->inferSentimentFromText($reviewText, $rating);
         }
 
-        $languageQuality = $fallbackLanguage;
-        if (preg_match('/"language_quality"\s*:\s*"(GOOD|BAD)"/iu', $text, $langMatch)) {
+        $languageQuality = 'GOOD';
+        if (is_array($analysisPayload)) {
+            $rawLanguageQuality = (string) ($analysisPayload['language_quality'] ?? $analysisPayload['languageQuality'] ?? $analysisPayload['language'] ?? '');
+            $candidate = strtoupper($rawLanguageQuality);
+            if (in_array($candidate, ['GOOD', 'BAD'], true)) {
+                $languageQuality = $candidate;
+            }
+        }
+        if (preg_match('/"(?:language_quality|languageQuality|language)"\s*:\s*"(GOOD|BAD)"/iu', $normalized, $langMatch)) {
             $languageQuality = strtoupper($langMatch[1]);
         }
+        if ($this->containsProfanity($reviewText)) {
+            $languageQuality = 'BAD';
+        }
 
-        $summary = $fallbackSummary;
-        if (preg_match('/"summary"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"/u', $text, $sumMatch)) {
+        $summary = '';
+        if (is_array($analysisPayload)) {
+            $summary = trim((string) ($analysisPayload['summary'] ?? $analysisPayload['resume'] ?? ''));
+        }
+        if ($summary === '' && preg_match('/"(?:summary|resume)"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"/u', $normalized, $sumMatch)) {
             $summary = trim(stripslashes($sumMatch[1]));
+        }
+
+        if ($summary === '') {
+            $summary = $this->buildSummaryFallback($reviewText, $normalized);
+        }
+
+        if ($summary === '') {
+            $summary = 'Resume non disponible.';
         }
 
         return new AiReviewResult($sentiment, mb_substr($summary, 0, 255), $languageQuality);
     }
 
-    private function extractStructuredPayload(string $text): ?array
+    private function buildGeminiApiUrl(string $apiKey): string
     {
-        $clean = trim($text);
-
-        // Handles outputs wrapped in markdown fences like ```json ... ```.
-        if (preg_match('/```(?:json)?\s*(\{.*\})\s*```/isu', $clean, $fenced)) {
-            $clean = trim($fenced[1]);
-        }
-
-        $asJson = json_decode($clean, true);
-        if (is_array($asJson)) {
-            return $asJson;
-        }
-
-        if (preg_match('/\{(?:[^{}]|(?R))*\}/s', $clean, $objectMatch)) {
-            $nested = json_decode($objectMatch[0], true);
-            if (is_array($nested)) {
-                return $nested;
-            }
-        }
-
-        return null;
+        return self::GEMINI_API_URL_BASE . rawurlencode($apiKey);
     }
 
-    private function detectLanguageQuality(string $reviewText): string
+    private function containsProfanity(string $reviewText): bool
     {
-        $text = mb_strtolower(trim($reviewText));
-        if ($text === '') {
-            return 'UNKNOWN';
-        }
+        $normalizedText = mb_strtolower($reviewText);
 
-        foreach (self::ABUSIVE_WORDS as $word) {
-            if (str_contains($text, $word)) {
-                return 'BAD';
-            }
-        }
-
-        if (mb_strlen($text) < 4) {
-            return 'BAD';
-        }
-
-        return 'GOOD';
+        return preg_match('/\b(fuck|shit|bitch|asshole|bastard|damn|motherfucker)\b/u', $normalizedText) === 1;
     }
 
-    private function inferSentimentFromTextAndRating(string $reviewText, int $rating): string
+    private function inferSentimentFromText(string $reviewText, int $rating): string
     {
-        $text = mb_strtolower($reviewText);
+        $normalizedText = mb_strtolower(trim($reviewText));
+
+        if ($normalizedText !== '') {
+            if (preg_match('/\b(love|great|excellent|amazing|awesome|perfect|wonderful|nice|good|beautiful)\b/u', $normalizedText) === 1) {
+                return 'POSITIVE';
+            }
+
+            if (preg_match('/\b(hate|terrible|awful|horrible|bad|worst|disappointing|poor|trash|fuck|shit)\b/u', $normalizedText) === 1) {
+                return 'NEGATIVE';
+            }
+        }
 
         if ($rating >= 4) {
             return 'POSITIVE';
         }
-        if ($rating > 0 && $rating <= 2) {
-            return 'NEGATIVE';
-        }
 
-        if (str_contains($text, 'bad') || str_contains($text, 'terrible') || str_contains($text, 'awful')) {
+        if ($rating <= 2) {
             return 'NEGATIVE';
-        }
-        if (str_contains($text, 'great') || str_contains($text, 'excellent') || str_contains($text, 'amazing')) {
-            return 'POSITIVE';
         }
 
         return 'NEUTRAL';
     }
 
-    private function buildFallbackSummary(string $sentiment, string $reviewText): string
+    private function buildSummaryFallback(string $reviewText, string $normalizedGeminiText): string
     {
-        $trimmed = trim($reviewText);
-        if ($trimmed === '') {
-            return 'No written review summary available.';
+        $reviewText = trim($reviewText);
+        if ($reviewText !== '') {
+            $reviewText = preg_replace('/\s+/u', ' ', $reviewText) ?? $reviewText;
+            return mb_substr($reviewText, 0, 255);
         }
 
-        if ($sentiment === 'NEGATIVE') {
-            return 'The review describes a negative experience.';
-        }
-        if ($sentiment === 'POSITIVE') {
-            return 'The review describes a positive experience.';
+        $normalizedGeminiText = trim($normalizedGeminiText);
+        if ($normalizedGeminiText !== '' && !preg_match('/^\s*[\{\[]/u', $normalizedGeminiText)) {
+            return mb_substr(preg_replace('/\s+/u', ' ', $normalizedGeminiText) ?? $normalizedGeminiText, 0, 255);
         }
 
-        return 'The review describes a mixed or neutral experience.';
+        return '';
     }
 }

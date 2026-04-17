@@ -4,6 +4,7 @@
 
 {% block stylesheets %}
     {{ parent() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         .relative { position: relative; }
         .absolute { position: absolute; }
@@ -155,6 +156,55 @@
         @media (min-width: 1280px) {
             .xl\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .xl\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+
+        .location-suggestions {
+            position: absolute;
+            z-index: 45;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            max-height: 210px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+        }
+
+        .location-suggestion-item {
+            width: 100%;
+            display: block;
+            text-align: left;
+            border: 0;
+            border-bottom: 1px solid #e2e8f0;
+            background: transparent;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            color: #0f172a;
+        }
+
+        .location-suggestion-item:last-child {
+            border-bottom: 0;
+        }
+
+        .location-suggestion-item:hover {
+            background: #f8fafc;
+        }
+
+        .location-map {
+            height: 220px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .location-map-preview {
+            width: 100%;
+            min-height: 240px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
         }
     </style>
 {% endblock %}
@@ -347,20 +397,22 @@
                                 {% if formErrors.images is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.images }}</p>{% endif %}
                             </div>
                         </div>
-                        <div>
-                            <input name="address" type="text" value="{{ formData.address }}" placeholder="Address" class="w-full rounded-2xl border border-border px-4 py-3" required>
+                        <div class="relative" data-location-picker="host-create">
+                            <input id="host-place-create-address" name="address" type="text" value="{{ formData.address }}" placeholder="Address" autocomplete="off" class="w-full rounded-2xl border border-border px-4 py-3" required>
+                            <div id="host-place-create-suggestions" class="location-suggestions hidden"></div>
                             {% if formErrors.address is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.address }}</p>{% endif %}
                         </div>
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
-                                <input name="latitude" type="number" step="0.00000001" min="-90" max="90" value="{{ formData.latitude }}" placeholder="Latitude" class="w-full rounded-2xl border border-border px-4 py-3" required>
+                                <input id="host-place-create-latitude" name="latitude" type="number" step="0.00000001" min="-90" max="90" value="{{ formData.latitude }}" placeholder="Latitude" class="w-full rounded-2xl border border-border px-4 py-3" required>
                                 {% if formErrors.latitude is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.latitude }}</p>{% endif %}
                             </div>
                             <div>
-                                <input name="longitude" type="number" step="0.00000001" min="-180" max="180" value="{{ formData.longitude }}" placeholder="Longitude" class="w-full rounded-2xl border border-border px-4 py-3" required>
+                                <input id="host-place-create-longitude" name="longitude" type="number" step="0.00000001" min="-180" max="180" value="{{ formData.longitude }}" placeholder="Longitude" class="w-full rounded-2xl border border-border px-4 py-3" required>
                                 {% if formErrors.longitude is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.longitude }}</p>{% endif %}
                             </div>
                         </div>
+                        <div id="host-place-create-map" class="location-map"></div>
                     </div>
                     <button class="mt-6 w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Submit for review</button>
                 </form>
@@ -488,6 +540,7 @@
             <div class="space-y-1 md:col-span-2">
                 <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Address</label>
                 <input id="host-place-edit-address" type="text" name="address" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                <div id="host-place-edit-suggestions" class="location-suggestions hidden"></div>
             </div>
             <div class="space-y-1">
                 <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Latitude</label>
@@ -497,6 +550,7 @@
                 <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Longitude</label>
                 <input id="host-place-edit-longitude" type="text" name="longitude" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
             </div>
+            <div id="host-place-edit-map" class="location-map-preview md:col-span-2"></div>
             <div class="space-y-2 md:col-span-2" data-image-uploader>
                 <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Add More Images</label>
                 <div class="flex items-center gap-3">
@@ -530,9 +584,12 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
     const bookingStatusChartData = {{ bookingStatusChartData|json_encode|raw }};
     const earningsChartData = {{ earningsChartData|json_encode|raw }};
+    const locationSearchUrl = '{{ path('app_booking_location_search') }}';
+    const tunisiaBounds = L.latLngBounds([30.1, 7.4], [37.6, 11.8]);
 
     const hostPlaceEditModal = document.getElementById('host-place-edit-modal');
     const hostPlaceEditForm = document.getElementById('host-place-edit-form');
@@ -712,6 +769,175 @@
         });
     }
 
+    function initLocationPicker(config) {
+        if (typeof L === 'undefined') {
+            return;
+        }
+
+        const addressInput = document.getElementById(config.addressId);
+        const latitudeInput = document.getElementById(config.latitudeId);
+        const longitudeInput = document.getElementById(config.longitudeId);
+        const suggestionsBox = document.getElementById(config.suggestionsId);
+        const mapContainer = document.getElementById(config.mapId);
+
+        if (!addressInput || !latitudeInput || !longitudeInput || !suggestionsBox || !mapContainer) {
+            return;
+        }
+
+        const initialLat = parseFloat(latitudeInput.value) || 36.8065;
+        const initialLng = parseFloat(longitudeInput.value) || 10.1815;
+        const map = L.map(mapContainer, {
+            maxBounds: tunisiaBounds,
+            maxBoundsViscosity: 1.0,
+            minZoom: 6,
+            maxZoom: 19,
+        }).setView([initialLat, initialLng], 12);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(map);
+
+        const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
+
+        const updateCoordinates = (lat, lng) => {
+            const boundedLat = Math.min(37.6, Math.max(30.1, Number(lat)));
+            const boundedLng = Math.min(11.8, Math.max(7.4, Number(lng)));
+            latitudeInput.value = boundedLat.toFixed(8);
+            longitudeInput.value = boundedLng.toFixed(8);
+            marker.setLatLng([boundedLat, boundedLng]);
+            map.setView([boundedLat, boundedLng], 14);
+        };
+
+        marker.on('dragend', () => {
+            const position = marker.getLatLng();
+            updateCoordinates(position.lat, position.lng);
+        });
+
+        let debounceTimer = null;
+
+        const clearSuggestions = () => {
+            suggestionsBox.innerHTML = '';
+            suggestionsBox.classList.add('hidden');
+        };
+
+        const renderSuggestions = (items) => {
+            suggestionsBox.innerHTML = '';
+            if (!Array.isArray(items) || items.length === 0) {
+                clearSuggestions();
+                return;
+            }
+
+            items.forEach((item) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'location-suggestion-item';
+                button.textContent = item.name;
+                button.addEventListener('click', () => {
+                    addressInput.value = item.name;
+                    updateCoordinates(parseFloat(item.latitude), parseFloat(item.longitude));
+                    clearSuggestions();
+                });
+                suggestionsBox.appendChild(button);
+            });
+
+            suggestionsBox.classList.remove('hidden');
+        };
+
+        const mapNominatimItems = (items) => {
+            if (!Array.isArray(items)) {
+                return [];
+            }
+
+            return items
+                .map((item) => ({
+                    name: item.name || item.display_name || '',
+                    latitude: item.latitude || item.lat || '',
+                    longitude: item.longitude || item.lon || '',
+                }))
+                .filter((item) => item.name && item.latitude && item.longitude);
+        };
+
+        const searchLocationsDirectly = async (query) => {
+            const response = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=tn&limit=8&q=' + encodeURIComponent(query), {
+                headers: { 'Accept': 'application/json' },
+            });
+
+            if (!response.ok) {
+                return [];
+            }
+
+            const data = await response.json();
+            return mapNominatimItems(data);
+        };
+
+        const searchLocations = async (query) => {
+            try {
+                const response = await fetch(locationSearchUrl + '?q=' + encodeURIComponent(query), {
+                    headers: { 'Accept': 'application/json' },
+                });
+
+                let items = [];
+                if (response.ok) {
+                    const data = await response.json();
+                    items = mapNominatimItems(data.items || []);
+                }
+
+                if (items.length === 0) {
+                    items = await searchLocationsDirectly(query);
+                }
+
+                renderSuggestions(items);
+            } catch (error) {
+                try {
+                    const fallbackItems = await searchLocationsDirectly(query);
+                    renderSuggestions(fallbackItems);
+                } catch (fallbackError) {
+                    clearSuggestions();
+                }
+            }
+        };
+
+        addressInput.addEventListener('input', () => {
+            const query = addressInput.value.trim();
+            if (debounceTimer) {
+                window.clearTimeout(debounceTimer);
+            }
+
+            if (query.length < 3) {
+                clearSuggestions();
+                return;
+            }
+
+            debounceTimer = window.setTimeout(() => searchLocations(query), 250);
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!addressInput.closest('[data-location-picker]')?.contains(event.target)) {
+                clearSuggestions();
+            }
+        });
+
+        mapContainer.addEventListener('mouseenter', () => map.invalidateSize());
+        window.setTimeout(() => map.invalidateSize(), 250);
+
+        latitudeInput.addEventListener('change', () => {
+            const lat = parseFloat(latitudeInput.value);
+            const lng = parseFloat(longitudeInput.value);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                updateCoordinates(lat, lng);
+            }
+        });
+
+        longitudeInput.addEventListener('change', () => {
+            const lat = parseFloat(latitudeInput.value);
+            const lng = parseFloat(longitudeInput.value);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                updateCoordinates(lat, lng);
+            }
+        });
+    }
+
     function openEditHostPlaceModal(button) {
         if (!hostPlaceEditModal || !hostPlaceEditForm || !hostPlaceEditToken) {
             return;
@@ -735,6 +961,10 @@
         resetHostUploadersInContainer(hostPlaceEditModal);
         hostPlaceEditModal.classList.remove('hidden');
         hostPlaceEditModal.classList.add('flex');
+
+        if (window.hostEditLocationPicker && typeof window.hostEditLocationPicker.refresh === 'function') {
+            window.hostEditLocationPicker.refresh();
+        }
     }
 
     function closeEditHostPlaceModal() {
@@ -802,5 +1032,19 @@
     initHostCharts();
     initHostImageUploaders();
     initHostValidation();
+    initLocationPicker({
+        addressId: 'host-place-create-address',
+        latitudeId: 'host-place-create-latitude',
+        longitudeId: 'host-place-create-longitude',
+        suggestionsId: 'host-place-create-suggestions',
+        mapId: 'host-place-create-map',
+    });
+    window.hostEditLocationPicker = initLocationPicker({
+        addressId: 'host-place-edit-address',
+        latitudeId: 'host-place-edit-latitude',
+        longitudeId: 'host-place-edit-longitude',
+        suggestionsId: 'host-place-edit-suggestions',
+        mapId: 'host-place-edit-map',
+    });
 </script>
 {% endblock %}
