@@ -342,12 +342,11 @@ class SecurityController extends AbstractController
                         $error = 'Invalid or expired WhatsApp verification code.';
                     }
                 } elseif ($method === TFAMethod::APP) {
-                    $secret = (string) $user->getTfaSecret();
                     $code = trim((string) $request->request->get('code', ''));
-                    if ($secret === '') {
+                    if ((string) $user->getTfaSecret() === '') {
                         $error = 'Authenticator app is not configured. Please configure it in settings.';
                     } else {
-                        $verified = $twoFactorService->verifyTotpCode($secret, $code);
+                        $verified = $twoFactorService->verifyTotpCode($user, $code);
                         if (!$verified) {
                             $error = 'Invalid authenticator app code.';
                         }

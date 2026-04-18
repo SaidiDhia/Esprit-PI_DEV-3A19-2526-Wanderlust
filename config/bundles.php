@@ -1,21 +1,13 @@
 <?php
 
-use Symfony\Bundle\FrameworkBundle\FrameworkBundle;
-use Symfony\Bundle\TwigBundle\TwigBundle;
-use Twig\Extra\TwigExtraBundle\TwigExtraBundle;
-use Symfony\Bundle\SecurityBundle\SecurityBundle;
-use Lexik\Bundle\JWTAuthenticationBundle\LexikJWTAuthenticationBundle;
-use Symfony\Bundle\MakerBundle\MakerBundle;
-use Doctrine\Bundle\DoctrineBundle\DoctrineBundle;
-use Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle;
-
 return [
-    FrameworkBundle::class => ['all' => true],
-    TwigBundle::class => ['all' => true],
-    TwigExtraBundle::class => ['all' => true],
-    SecurityBundle::class => ['all' => true],
-    LexikJWTAuthenticationBundle::class => ['all' => true],
-    MakerBundle::class => ['dev' => true],
-    DoctrineBundle::class => ['all' => true],
-    DoctrineMigrationsBundle::class => ['all' => true],
+    Symfony\Bundle\FrameworkBundle\FrameworkBundle::class => ['all' => true],
+    Symfony\Bundle\TwigBundle\TwigBundle::class => ['all' => true],
+    Twig\Extra\TwigExtraBundle\TwigExtraBundle::class => ['all' => true],
+    Symfony\Bundle\SecurityBundle\SecurityBundle::class => ['all' => true],
+    Lexik\Bundle\JWTAuthenticationBundle\LexikJWTAuthenticationBundle::class => ['all' => true],
+    Symfony\Bundle\MakerBundle\MakerBundle::class => ['dev' => true],
+    Doctrine\Bundle\DoctrineBundle\DoctrineBundle::class => ['all' => true],
+    Doctrine\Bundle\MigrationsBundle\DoctrineMigrationsBundle::class => ['all' => true],
+    Scheb\TwoFactorBundle\SchebTwoFactorBundle::class => ['all' => true],
 ];

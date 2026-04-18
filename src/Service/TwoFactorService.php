@@ -4,6 +4,7 @@ namespace App\Service;
 
 use App\Entity\User;
 use App\Enum\TFAMethod;
+use Scheb\TwoFactorBundle\Security\TwoFactor\Provider\Google\GoogleAuthenticatorInterface;
 
 class TwoFactorService
 {
@@ -14,6 +15,7 @@ class TwoFactorService
     public function __construct(
         private readonly EmailService $emailService,
         private readonly SmsService $smsService,
+        private readonly GoogleAuthenticatorInterface $googleAuthenticator,
     ) {
     }
 
@@ -108,19 +110,16 @@ class TwoFactorService
 
     public function generateAppSecret(): string
     {
-        $raw = random_bytes(20);
-        return $this->base32Encode($raw);
+        return $this->googleAuthenticator->generateSecret();
     }
 
     public function getOtpAuthUri(User $user, string $issuer = 'Wanderlust'): ?string
     {
-        $secret = $user->getTfaSecret();
-        if (!$secret) {
+        if (!$user->isGoogleAuthenticatorEnabled()) {
             return null;
         }
 
-        $label = rawurlencode($issuer.':'.$user->getEmail());
-        return sprintf('otpauth://totp/%s?secret=%s&issuer=%s&algorithm=SHA1&digits=6&period=30', $label, $secret, rawurlencode($issuer));
+        return $this->googleAuthenticator->getQRContent($user);
     }
 
     public function getOtpQrCodeUrl(User $user, string $issuer = 'Wanderlust'): ?string
@@ -133,77 +132,12 @@ class TwoFactorService
         return 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data='.rawurlencode($otpAuthUri);
     }
 
-    public function verifyTotpCode(string $secret, string $code, int $window = 1): bool
+    public function verifyTotpCode(User $user, string $code): bool
     {
-        $code = trim($code);
-        if (!preg_match('/^\d{6}$/', $code)) {
+        if (!$user->isGoogleAuthenticatorEnabled()) {
             return false;
         }
 
-        $timeSlice = (int) floor(time() / 30);
-        for ($offset = -$window; $offset <= $window; ++$offset) {
-            if (hash_equals($this->calculateTotp($secret, $timeSlice + $offset), $code)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function calculateTotp(string $secret, int $timeSlice): string
-    {
-        $binarySecret = $this->base32Decode($secret);
-        $timeBytes = pack('N*', 0, $timeSlice);
-        $hmac = hash_hmac('sha1', $timeBytes, $binarySecret, true);
-        $offset = ord(substr($hmac, -1)) & 0x0F;
-        $chunk = substr($hmac, $offset, 4);
-        $value = unpack('N', $chunk)[1] & 0x7FFFFFFF;
-
-        return str_pad((string) ($value % 1000000), 6, '0', STR_PAD_LEFT);
-    }
-
-    private function base32Encode(string $data): string
-    {
-        $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-        $binary = '';
-        $length = strlen($data);
-
-        for ($i = 0; $i < $length; ++$i) {
-            $binary .= str_pad(decbin(ord($data[$i])), 8, '0', STR_PAD_LEFT);
-        }
-
-        $encoded = '';
-        foreach (str_split($binary, 5) as $chunk) {
-            if (strlen($chunk) < 5) {
-                $chunk = str_pad($chunk, 5, '0', STR_PAD_RIGHT);
-            }
-            $encoded .= $alphabet[bindec($chunk)];
-        }
-
-        return $encoded;
-    }
-
-    private function base32Decode(string $secret): string
-    {
-        $alphabet = array_flip(str_split('ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'));
-        $secret = strtoupper(preg_replace('/[^A-Z2-7]/', '', $secret) ?? '');
-        $binary = '';
-        $length = strlen($secret);
-
-        for ($i = 0; $i < $length; ++$i) {
-            if (!isset($alphabet[$secret[$i]])) {
-                continue;
-            }
-            $binary .= str_pad(decbin($alphabet[$secret[$i]]), 5, '0', STR_PAD_LEFT);
-        }
-
-        $decoded = '';
-        foreach (str_split($binary, 8) as $byte) {
-            if (strlen($byte) === 8) {
-                $decoded .= chr(bindec($byte));
-            }
-        }
-
-        return $decoded;
+        return $this->googleAuthenticator->checkCode($user, trim($code));
     }
 }

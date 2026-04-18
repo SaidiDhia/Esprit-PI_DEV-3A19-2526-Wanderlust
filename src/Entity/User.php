@@ -7,13 +7,14 @@ use App\Enum\TFAMethod;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
+use Scheb\TwoFactorBundle\Model\Google\TwoFactorInterface as GoogleTwoFactorInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity]
 #[ORM\Table(name: "users")]
 #[ORM\UniqueConstraint(name: 'uniq_user_email', columns: ['email'])]
-class User implements UserInterface, PasswordAuthenticatedUserInterface
+class User implements UserInterface, PasswordAuthenticatedUserInterface, GoogleTwoFactorInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'string', length: 36, options: ['fixed' => true])]
@@ -240,6 +241,21 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->tfaSecret = $tfaSecret;
 
         return $this;
+    }
+
+    public function isGoogleAuthenticatorEnabled(): bool
+    {
+        return $this->tfaMethod === TFAMethod::APP && !empty($this->tfaSecret);
+    }
+
+    public function getGoogleAuthenticatorUsername(): string
+    {
+        return (string) $this->email;
+    }
+
+    public function getGoogleAuthenticatorSecret(): ?string
+    {
+        return $this->tfaSecret;
     }
 
     public function getFaceReferenceImage(): ?string
