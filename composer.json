@@ -58,6 +58,7 @@
         "symfony/polyfill-php81": "*"
     },
     "scripts": {
+        "ai:check": "powershell -ExecutionPolicy Bypass -File scripts/ai-smoke-check.ps1",
         "auto-scripts": {
             "cache:clear": "symfony-cmd",
             "assets:install %PUBLIC_DIR%": "symfony-cmd",

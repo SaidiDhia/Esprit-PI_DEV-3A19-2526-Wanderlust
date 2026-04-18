@@ -292,6 +292,101 @@
 <script src="{{ asset('adventure/js/jquery.magnific-popup.min.js') }}"></script>
 <script src="{{ asset('adventure/js/main.js') }}"></script>
 
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+    import { getFirestore, doc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyBz_dXOgA381DE_DoFEChzKkiy22my6DdA",
+        authDomain: "posts-82fe6.firebaseapp.com",
+        projectId: "posts-82fe6",
+        storageBucket: "posts-82fe6.firebasestorage.app",
+        messagingSenderId: "264355167854",
+        appId: "1:264355167854:web:10d9dc5581013d1362307f",
+        measurementId: "G-W5GGWLYYRC"
+    };
+
+    function getOrCreateClientDeviceId() {
+        const key = 'wanderlust_device_id';
+        let value = localStorage.getItem(key);
+        if (value && value.trim() !== '') {
+            return value;
+        }
+
+        value = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem(key, value);
+        return value;
+    }
+
+    function hashString(input) {
+        let hash = 2166136261;
+        for (let i = 0; i < input.length; i += 1) {
+            hash ^= input.charCodeAt(i);
+            hash += (hash << 1) + (hash << 4) + (hash << 7) + (hash << 8) + (hash << 24);
+        }
+        return (hash >>> 0).toString(16);
+    }
+
+    function setDeviceField(kind, value) {
+        document.querySelectorAll('[data-device-field="' + kind + '"]').forEach(function (input) {
+            input.value = value;
+        });
+    }
+
+    let firebaseDeviceId = '';
+    let db = null;
+    try {
+        const app = initializeApp(firebaseConfig);
+        getAnalytics(app);
+        db = getFirestore(app);
+        const localDeviceId = getOrCreateClientDeviceId();
+        firebaseDeviceId = 'firebase:' + firebaseConfig.projectId + ':' + localDeviceId;
+    } catch (e) {
+        const fallbackDeviceId = getOrCreateClientDeviceId();
+        firebaseDeviceId = 'local:' + fallbackDeviceId;
+    }
+
+    const storedMac = localStorage.getItem('wanderlust_device_mac') || '';
+    const baseFingerprint = [
+        navigator.userAgent || '',
+        navigator.language || '',
+        navigator.platform || '',
+        firebaseDeviceId,
+    ].join('|');
+    const deviceFingerprint = hashString(baseFingerprint);
+
+    setDeviceField('firebase-device-id', firebaseDeviceId);
+    setDeviceField('fingerprint', deviceFingerprint);
+    setDeviceField('device-mac', storedMac);
+
+    if (db) {
+        const payload = {
+            firebaseDeviceId,
+            deviceFingerprint,
+            deviceMac: storedMac || null,
+            userAgent: navigator.userAgent || '',
+            language: navigator.language || '',
+            platform: navigator.platform || '',
+            path: window.location.pathname || '/',
+            lastSeenAt: serverTimestamp(),
+        };
+
+        setDoc(doc(db, 'device_registry', deviceFingerprint), payload, { merge: true })
+            .then(() => {
+                // Optional first-write marker for easier debugging in console.
+                return setDoc(doc(db, 'device_registry_meta', 'last_write'), {
+                    lastDeviceFingerprint: deviceFingerprint,
+                    lastPath: window.location.pathname || '/',
+                    updatedAt: serverTimestamp(),
+                }, { merge: true });
+            })
+            .catch(() => {
+                // Collection will not appear if Firestore rules deny writes.
+            });
+    }
+</script>
+
 {% block javascripts %}{% endblock %}
 {% block importmap %}{{ importmap('app') }}{% endblock %}
 </body>

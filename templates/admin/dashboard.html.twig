@@ -60,6 +60,38 @@
             <div class="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">{{ message }}</div>
         {% endfor %}
 
+        {% if highRiskRecentAlerts|default([]) is not empty %}
+            <div class="rounded-2xl border border-destructive/30 bg-destructive/10 p-5">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                    <h2 class="text-lg font-heading font-bold text-destructive">High-Risk Recent Activities</h2>
+                    <span class="rounded-full bg-destructive/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-destructive">Alert</span>
+                </div>
+                <div class="space-y-2">
+                    {% for alert in highRiskRecentAlerts %}
+                        <article class="rounded-xl border border-destructive/20 bg-white/80 px-3 py-2 text-sm">
+                            <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <span class="rounded-full bg-destructive/10 px-2 py-0.5 font-bold uppercase tracking-wider text-destructive">{{ alert.module }}</span>
+                                <span>{{ alert.action|replace({'_': ' '}) }}</span>
+                                {% set severityScore = (alert.severity_score ?? 0) + 0 %}
+                                {% set severityLabel = severityScore >= 95 ? 'Critical' : (severityScore >= 85 ? 'High' : 'Elevated') %}
+                                {% set severityClass = severityScore >= 95
+                                    ? 'bg-destructive/20 text-destructive border border-destructive/30'
+                                    : (severityScore >= 85
+                                        ? 'bg-orange-100 text-orange-700 border border-orange-300'
+                                        : 'bg-amber-100 text-amber-700 border border-amber-300') %}
+                                <span class="rounded-full px-2 py-0.5 font-bold uppercase tracking-wider {{ severityClass }}">{{ severityLabel }} {{ severityScore|number_format(0) }}</span>
+                                <span>{{ alert.created_at|date('Y-m-d H:i:s') }}</span>
+                            </div>
+                            <p class="mt-1 text-sm text-foreground">{{ alert.content ? alert.content|slice(0, 170) : 'High-risk event without content payload.' }}</p>
+                            {% if alert.user_id %}
+                                <a href="{{ path('app_admin_dashboard', { section: 'activity_logs', activity_user: alert.user_id }) }}" class="mt-2 inline-flex text-xs font-bold text-primary hover:underline">Open user activity log</a>
+                            {% endif %}
+                        </article>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-2xl border border-border bg-card p-5">
                 <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Total users</p>
@@ -115,6 +147,24 @@
                             <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
                         {% endif %}
                     </a>
+                    <a href="{{ path('app_admin_dashboard', { section: 'risk' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'risk' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
+                        <span>Risk Monitor</span>
+                        {% if activeSection == 'risk' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
+                        {% endif %}
+                    </a>
+                    <a href="{{ path('app_admin_dashboard', { section: 'activity_logs' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'activity_logs' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
+                        <span>Activity Logs</span>
+                        {% if activeSection == 'activity_logs' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
+                        {% endif %}
+                    </a>
+                    <a href="{{ path('app_admin_dashboard', { section: 'activity_feed' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'activity_feed' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
+                        <span>Platform Feed</span>
+                        {% if activeSection == 'activity_feed' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
+                        {% endif %}
+                    </a>
                 </nav>
 
                 <div class="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3 xl:grid-cols-1">
@@ -134,6 +184,65 @@
             </aside>
 
             <div class="space-y-6">
+                <div id="activity-feed" class="{{ activeSection == 'activity_feed' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6">
+                    <div class="mb-4 flex items-center justify-between gap-3">
+                        <div>
+                            <h2 class="text-xl font-heading font-bold text-foreground">Platform Activity Feed</h2>
+                            <p class="text-sm text-muted-foreground">Latest actions from booking, messaging, marketplace, and authentication modules.</p>
+                        </div>
+                        <span class="rounded-full bg-secondary/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-foreground">Live Audit</span>
+                    </div>
+
+                    <div class="space-y-3">
+                        {% for item in systemActivityFeed %}
+                            <article class="rounded-2xl border border-border/80 bg-secondary/10 p-4">
+                                <div class="flex items-start gap-3">
+                                    {% set feedAvatar = item.user_avatar ? asset('uploads/profiles/' ~ item.user_avatar) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ (item.user_name ?: 'Guest')|url_encode) %}
+                                    <img src="{{ feedAvatar }}" alt="{{ item.user_name ?: 'Unknown user' }}" class="h-11 w-11 rounded-full border border-border object-cover">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="flex flex-wrap items-center gap-2 text-xs">
+                                            <span class="rounded-full bg-primary/10 px-2.5 py-1 font-bold uppercase tracking-wider text-primary">{{ item.module }}</span>
+                                            <span class="rounded-full bg-secondary/40 px-2.5 py-1 font-bold uppercase tracking-wider text-foreground">{{ item.action|replace({'_': ' '}) }}</span>
+                                            <span class="text-muted-foreground">{{ item.created_at|date('Y-m-d H:i:s') }}</span>
+                                        </div>
+                                        <p class="mt-2 text-sm text-foreground">
+                                            {% if item.user_id %}
+                                                <a href="{{ path('app_admin_dashboard', { section: 'activity_logs', activity_user: item.user_id }) }}" class="font-bold text-primary hover:underline">{{ item.user_name ?: 'Unknown user' }}</a>
+                                            {% else %}
+                                                <span class="font-bold">{{ item.user_name ?: 'Unknown user' }}</span>
+                                            {% endif %}
+                                            {% if item.target_name %}
+                                                · {{ item.target_name }}
+                                            {% endif %}
+                                        </p>
+                                        {% if item.content %}
+                                            <p class="mt-1 rounded-lg bg-background px-3 py-2 text-xs text-muted-foreground">{{ item.content|slice(0, 220) }}</p>
+                                        {% endif %}
+                                        <div class="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                                            {% if item.destination %}
+                                                <span>To: {{ item.destination }}</span>
+                                            {% endif %}
+                                            {% if item.target_id %}
+                                                <span>ID: {{ item.target_id }}</span>
+                                            {% endif %}
+                                            {% if item.target_type %}
+                                                <span>Type: {{ item.target_type }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if item.target_image %}
+                                        <div class="hidden shrink-0 sm:block">
+                                            <img src="{{ item.target_image starts with('http') ? item.target_image : asset('uploads/places/' ~ item.target_image) }}" alt="{{ item.target_name ?: 'Target image' }}" class="h-14 w-20 rounded-lg border border-border object-cover">
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </article>
+                        {% else %}
+                            <p class="rounded-xl border border-border bg-secondary/10 px-4 py-6 text-center text-sm text-muted-foreground">No platform activity yet. Actions will appear here after users interact with booking, messaging, auth, and marketplace modules.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
                 <div id="users-section" class="{{ activeSection == 'users' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6">
                     <form method="get" action="{{ path('app_admin_dashboard') }}" class="grid grid-cols-1 gap-3 md:grid-cols-4">
                         <input type="text" name="q" value="{{ filters.q }}" placeholder="Search name, email, phone" class="md:col-span-2 rounded-xl border border-border bg-secondary/30 px-3 py-2 text-sm">
@@ -248,6 +357,10 @@
                                             >
                                                 Edit
                                             </button>
+
+                                            <a href="{{ path('app_admin_dashboard', { section: 'activity_logs', activity_user: user.id }) }}" class="rounded-xl bg-primary/10 px-3 py-2 text-xs font-bold text-primary transition-colors hover:bg-primary/20">
+                                                Activity Logs
+                                            </a>
 
                                             <form method="post" action="{{ path('app_admin_user_toggle_ban', { id: user.id }) }}">
                                                 <input type="hidden" name="_token" value="{{ csrf_token('admin_user_ban_' ~ user.id) }}">
@@ -582,6 +695,518 @@
                                     <p class="text-sm text-muted-foreground">No bookings yet.</p>
                                 {% endfor %}
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="risk-analytics" class="{{ activeSection == 'risk' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6 space-y-6">
+                    <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <h2 class="text-xl font-heading font-bold text-foreground">Risk Monitoring</h2>
+                            <p class="text-sm text-muted-foreground">Weighted abuse scores and recommended actions for each user.</p>
+                        </div>
+                        <a href="{{ path('app_admin_dashboard', { section: 'users' }) }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">
+                            Show Users
+                        </a>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">AI Service Status</h3>
+                        <div class="grid grid-cols-1 gap-3 md:grid-cols-3">
+                            {% for svc in aiServiceStatus|default([]) %}
+                                <article class="rounded-xl border border-border bg-background p-3">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <p class="text-sm font-semibold text-foreground">{{ svc.name }}</p>
+                                        <span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ svc.status == 'up' ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive' }}">{{ svc.status }}</span>
+                                    </div>
+                                    <p class="mt-2 truncate text-xs text-muted-foreground">{{ svc.details }}</p>
+                                    <p class="mt-1 text-xs text-muted-foreground">{{ svc.url }}</p>
+                                    <p class="mt-2 text-xs font-semibold text-foreground">Latency: {{ svc.response_ms is not null ? svc.response_ms ~ ' ms' : 'n/a' }}</p>
+                                </article>
+                            {% else %}
+                                <p class="text-sm text-muted-foreground">No AI service status available.</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Scored Users</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-foreground">{{ riskSummary.total|default(0) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Normal</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-primary">{{ riskSummary.normal|default(0) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Suspicious</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-accent">{{ riskSummary.suspicious|default(0) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Abusive</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-destructive">{{ riskSummary.abusive|default(0) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Critical</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-destructive">{{ riskSummary.critical|default(0) }}</p>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Flagged Users (Reason + Trigger Activity)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[1200px] border-collapse">
+                                <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">User</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Risk</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Reason</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Signal Score</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">From Activity</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Activity Content</th>
+                                    <th class="py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Activity Time</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for item in riskFlaggedUsers %}
+                                    {% set riskAvatar = item.profile_picture ? asset('uploads/profiles/' ~ item.profile_picture) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ (item.full_name ?: item.email ?: 'User')|url_encode) %}
+                                    <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                        <td class="py-3 pr-3">
+                                            <div class="flex items-center gap-3">
+                                                <img src="{{ riskAvatar }}" alt="{{ item.full_name ?: item.email ?: item.user_id }}" class="h-10 w-10 rounded-full border border-border object-cover">
+                                                <div class="min-w-0">
+                                                    {% if item.user_id %}
+                                                        <a href="{{ path('app_admin_dashboard', { section: 'activity_logs', activity_user: item.user_id }) }}" class="truncate text-sm font-semibold text-primary hover:underline">{{ item.full_name ?: 'Unknown user' }}</a>
+                                                    {% else %}
+                                                        <p class="truncate text-sm font-semibold text-foreground">{{ item.full_name ?: 'Unknown user' }}</p>
+                                                    {% endif %}
+                                                    <p class="truncate text-xs text-muted-foreground">{{ item.email ?: item.user_id }}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 pr-3 text-sm font-bold text-foreground">{{ item.risk_score }}</td>
+                                        <td class="py-3 pr-3 text-xs font-semibold text-muted-foreground">{{ item.flag_reason ?: 'Composite high-risk behavior' }}</td>
+                                        <td class="py-3 pr-3 text-xs font-semibold text-foreground">{{ item.flag_score }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.flag_activity_module ?: 'n/a' }}{% if item.flag_activity_action %} · {{ item.flag_activity_action|replace({'_': ' '}) }}{% endif %}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.flag_activity_content ? item.flag_activity_content|slice(0, 120) : 'No activity content available' }}</td>
+                                        <td class="py-3 text-xs text-muted-foreground">{{ item.flag_activity_time ? item.flag_activity_time|date('Y-m-d H:i:s') : 'n/a' }}</td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="7" class="py-8 text-center text-sm text-muted-foreground">No flagged users right now (threshold: risk score >= 30).</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Top Risk Users</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[1150px] border-collapse">
+                                <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">User</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Risk</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Band</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Action</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Anomaly</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Click Speed</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Login Fail</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Toxicity</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Cancel Abuse</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Marketplace Fraud</th>
+                                    <th class="py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Updated</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for item in riskTopUsers %}
+                                    {% set riskAvatar = item.profile_picture ? asset('uploads/profiles/' ~ item.profile_picture) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ (item.full_name ?: item.email ?: 'User')|url_encode) %}
+                                    <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                        <td class="py-3 pr-3">
+                                            <div class="flex items-center gap-3">
+                                                <img src="{{ riskAvatar }}" alt="{{ item.full_name ?: item.email ?: item.user_id }}" class="h-10 w-10 rounded-full border border-border object-cover">
+                                                <div class="min-w-0">
+                                                    {% if item.user_id %}
+                                                        <a href="{{ path('app_admin_dashboard', { section: 'activity_logs', activity_user: item.user_id }) }}" class="truncate text-sm font-semibold text-primary hover:underline">{{ item.full_name ?: 'Unknown user' }}</a>
+                                                    {% else %}
+                                                        <p class="truncate text-sm font-semibold text-foreground">{{ item.full_name ?: 'Unknown user' }}</p>
+                                                    {% endif %}
+                                                    <p class="truncate text-xs text-muted-foreground">{{ item.email ?: item.user_id }}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 pr-3 text-sm font-bold text-foreground">{{ item.risk_score }}</td>
+                                        <td class="py-3 pr-3 text-sm">
+                                            <span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ item.risk_band == 'normal' ? 'bg-primary/10 text-primary' : (item.risk_band == 'suspicious' ? 'bg-accent/20 text-accent' : 'bg-destructive/10 text-destructive') }}">{{ item.risk_band }}</span>
+                                        </td>
+                                        <td class="py-3 pr-3 text-xs font-semibold text-muted-foreground">{{ item.recommended_action }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.anomaly_score }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.click_speed_score }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.login_failure_score }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.message_toxicity_score }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.cancellation_abuse_score }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.marketplace_fraud_score|default(0) }}</td>
+                                        <td class="py-3 text-xs text-muted-foreground">{{ item.updated_at|date('Y-m-d H:i:s') }}</td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="11" class="py-8 text-center text-sm text-muted-foreground">No risk scores available yet. Run app:risk:recompute to generate data.</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Marketplace Fraud Breakdown</h3>
+                        <p class="mb-3 text-xs text-muted-foreground">AI sub-signals per user: rapid orders, buyer/seller cancel ratios, rapid listings, and suspicious pricing.</p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[1500px] border-collapse">
+                                <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">User</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Marketplace Score</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Orders 24h</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Rapid Orders (10m)</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Buyer Cancels 30d</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Buyer Cancel Ratio</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Seller Cancels 30d</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Seller Cancel Ratio</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Products 24h</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Suspicious Prices 30d</th>
+                                    <th class="py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Trigger</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for item in marketplaceFraudRows|default([]) %}
+                                    {% set riskAvatar = item.profile_picture ? asset('uploads/profiles/' ~ item.profile_picture) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ (item.full_name ?: item.email ?: 'User')|url_encode) %}
+                                    {% set mk = item.marketplace_breakdown %}
+                                    <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                        <td class="py-3 pr-3">
+                                            <div class="flex items-center gap-3">
+                                                <img src="{{ riskAvatar }}" alt="{{ item.full_name ?: item.email ?: item.user_id }}" class="h-10 w-10 rounded-full border border-border object-cover">
+                                                <div class="min-w-0">
+                                                    {% if item.user_id %}
+                                                        <a href="{{ path('app_admin_dashboard', { section: 'activity_logs', activity_user: item.user_id }) }}" class="truncate text-sm font-semibold text-primary hover:underline">{{ item.full_name ?: 'Unknown user' }}</a>
+                                                    {% else %}
+                                                        <p class="truncate text-sm font-semibold text-foreground">{{ item.full_name ?: 'Unknown user' }}</p>
+                                                    {% endif %}
+                                                    <p class="truncate text-xs text-muted-foreground">{{ item.email ?: item.user_id }}</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="py-3 pr-3 text-xs font-semibold text-foreground">{{ item.marketplace_fraud_score|default(0) }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ mk.orders_24h }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ mk.rapid_order_bucket_10m }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ mk.buyer_cancelled_30d }} / {{ mk.buyer_orders_30d }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ (mk.buyer_cancel_ratio * 100)|number_format(1) }}%</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ mk.seller_cancelled_orders_30d }} / {{ mk.seller_orders_30d }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ (mk.seller_cancel_ratio * 100)|number_format(1) }}%</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ mk.products_24h }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ mk.suspicious_price_products_30d }}</td>
+                                        <td class="py-3 text-xs text-muted-foreground">{{ mk.trigger_reason }}</td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="11" class="py-8 text-center text-sm text-muted-foreground">No marketplace activity to analyze yet.</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="activity-logs" class="{{ activeSection == 'activity_logs' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6 space-y-6">
+                    <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <h2 class="text-xl font-heading font-bold text-foreground">Activity Logs by User</h2>
+                            <p class="text-sm text-muted-foreground">Select a user to inspect every tracked action, module footprint, and risk-aligned analysis.</p>
+                        </div>
+                        <a href="{{ path('app_admin_dashboard', { section: 'users' }) }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">
+                            Show Users
+                        </a>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6 xl:grid-cols-[340px_1fr]">
+                        <aside class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Users With Activity</h3>
+                            <div class="max-h-[620px] space-y-2 overflow-y-auto pr-1">
+                                {% for item in activityLogUsers %}
+                                    {% set activityAvatar = item.profile_picture ? asset('uploads/profiles/' ~ item.profile_picture) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ (item.full_name ?: item.email ?: item.user_id)|url_encode) %}
+                                    <a href="{{ path('app_admin_dashboard', { section: 'activity_logs', activity_user: item.user_id }) }}" class="block rounded-xl border px-3 py-3 transition-colors {{ activityFocusUserId == item.user_id ? 'border-primary/30 bg-primary/10' : 'border-border bg-background hover:bg-secondary/30' }}">
+                                        <div class="flex items-start gap-3">
+                                            <img src="{{ activityAvatar }}" alt="{{ item.full_name ?: item.user_id }}" class="h-10 w-10 rounded-full border border-border object-cover">
+                                            <div class="min-w-0 flex-1">
+                                                <p class="truncate text-sm font-semibold text-foreground">{{ item.full_name ?: 'Unknown user' }}</p>
+                                                <p class="truncate text-xs text-muted-foreground">{{ item.email ?: item.user_id }}</p>
+                                                <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                                                    <span class="rounded-full bg-secondary/30 px-2 py-0.5 font-semibold text-foreground">{{ item.action_count }} actions</span>
+                                                    <span class="rounded-full bg-secondary/30 px-2 py-0.5 font-semibold text-foreground">{{ item.module_count }} modules</span>
+                                                </div>
+                                                <p class="mt-2 text-[11px] text-muted-foreground">Last: {{ item.last_activity_at ? item.last_activity_at|date('Y-m-d H:i:s') : 'n/a' }}</p>
+                                            </div>
+                                        </div>
+                                    </a>
+                                {% else %}
+                                    <p class="rounded-xl border border-border bg-background px-3 py-6 text-center text-sm text-muted-foreground">No tracked user activity yet.</p>
+                                {% endfor %}
+                            </div>
+                        </aside>
+
+                        <div class="space-y-4">
+                            {% if activityFocusUser %}
+                                {% set focusAvatar = activityFocusUser.profile_picture ? asset('uploads/profiles/' ~ activityFocusUser.profile_picture) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ (activityFocusUser.full_name ?: activityFocusUser.email ?: activityFocusUser.id)|url_encode) %}
+                                {% set protectedFocusUser = activityFocusUser.role == 'ADMIN' or app.user.id == activityFocusUser.id %}
+
+                                <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                                        <div class="flex items-center gap-3">
+                                            <img src="{{ focusAvatar }}" alt="{{ activityFocusUser.full_name ?: activityFocusUser.id }}" class="h-14 w-14 rounded-full border border-border object-cover">
+                                            <div>
+                                                <h3 class="text-lg font-heading font-bold text-foreground">{{ activityFocusUser.full_name ?: 'Unknown user' }}</h3>
+                                                <p class="text-sm text-muted-foreground">{{ activityFocusUser.email ?: activityFocusUser.id }}</p>
+                                                <p class="text-xs text-muted-foreground">Role: {{ activityFocusUser.role }} · Joined: {{ activityFocusUser.created_at|date('Y-m-d H:i') }}</p>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <span class="inline-flex rounded-full px-3 py-1 text-xs font-bold {{ activityFocusUser.is_active ? 'bg-primary/10 text-primary' : 'bg-destructive/10 text-destructive' }}">{{ activityFocusUser.is_active ? 'Active' : 'Banned' }}</span>
+                                            <form method="post" action="{{ path('app_admin_user_toggle_ban', { id: activityFocusUser.id }) }}">
+                                                <input type="hidden" name="_token" value="{{ csrf_token('admin_user_ban_' ~ activityFocusUser.id) }}">
+                                                <button type="submit" class="rounded-xl px-3 py-2 text-xs font-bold {{ protectedFocusUser ? 'cursor-not-allowed bg-muted text-muted-foreground' : (activityFocusUser.is_active ? 'bg-destructive/10 text-destructive hover:bg-destructive/20' : 'bg-primary/10 text-primary hover:bg-primary/20') }}" {% if protectedFocusUser %}disabled title="Protected user"{% endif %}>
+                                                    {{ activityFocusUser.is_active ? 'Ban User' : 'Unban User' }}
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                        <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Total Actions</p>
+                                        <p class="mt-1 text-2xl font-heading font-bold text-foreground">{{ activityUserInsights.summary.total_actions }}</p>
+                                    </div>
+                                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                        <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Last 24h</p>
+                                        <p class="mt-1 text-2xl font-heading font-bold text-primary">{{ activityUserInsights.summary.actions_last_24h }}</p>
+                                    </div>
+                                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                        <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Modules Used</p>
+                                        <p class="mt-1 text-2xl font-heading font-bold text-foreground">{{ activityUserInsights.summary.distinct_modules }}</p>
+                                    </div>
+                                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                        <p class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Distinct Actions</p>
+                                        <p class="mt-1 text-2xl font-heading font-bold text-foreground">{{ activityUserInsights.summary.distinct_actions }}</p>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Risk Snapshot</h3>
+                                        {% if activityUserInsights.risk %}
+                                            <div class="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                                                <p>Risk score: <span class="font-bold text-foreground">{{ activityUserInsights.risk.risk_score }}</span></p>
+                                                <p>Band: <span class="font-bold text-foreground">{{ activityUserInsights.risk.risk_band }}</span></p>
+                                                <p>Anomaly: <span class="font-bold text-foreground">{{ activityUserInsights.risk.anomaly_score }}</span></p>
+                                                <p>Click speed: <span class="font-bold text-foreground">{{ activityUserInsights.risk.click_speed_score }}</span></p>
+                                                <p>Login fail: <span class="font-bold text-foreground">{{ activityUserInsights.risk.login_failure_score }}</span></p>
+                                                <p>Toxicity: <span class="font-bold text-foreground">{{ activityUserInsights.risk.message_toxicity_score }}</span></p>
+                                                <p>Cancel abuse: <span class="font-bold text-foreground">{{ activityUserInsights.risk.cancellation_abuse_score }}</span></p>
+                                                <p>Marketplace fraud: <span class="font-bold text-foreground">{{ activityUserInsights.risk.marketplace_fraud_score|default(0) }}</span></p>
+                                                <p>Action: <span class="font-bold text-foreground">{{ activityUserInsights.risk.recommended_action }}</span></p>
+                                            </div>
+                                        {% else %}
+                                            <p class="text-sm text-muted-foreground">No computed risk snapshot for this user yet.</p>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Content Analysis</h3>
+                                        <div class="space-y-2 text-sm text-muted-foreground">
+                                            <p>Entries with content: <span class="font-bold text-foreground">{{ activityUserInsights.content_analysis.entries_with_content }}</span></p>
+                                            <p>Abusive wording signals: <span class="font-bold text-foreground">{{ activityUserInsights.content_analysis.toxic_like_entries }}</span></p>
+                                            <p>Threat-like wording signals: <span class="font-bold text-destructive">{{ activityUserInsights.content_analysis.threat_like_entries }}</span></p>
+                                            <p>First seen: <span class="font-semibold text-foreground">{{ activityUserInsights.summary.first_activity_at ? activityUserInsights.summary.first_activity_at|date('Y-m-d H:i:s') : 'n/a' }}</span></p>
+                                            <p>Last seen: <span class="font-semibold text-foreground">{{ activityUserInsights.summary.last_activity_at ? activityUserInsights.summary.last_activity_at|date('Y-m-d H:i:s') : 'n/a' }}</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                    <div class="mb-3 flex items-center justify-between gap-2">
+                                        <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Booking Cancellation Tracking</h3>
+                                        {% set cancelBurst = activityUserInsights.cancellation_tracking.burst_flags %}
+                                        <span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ cancelBurst.ai_flag ? 'bg-destructive/10 text-destructive' : 'bg-primary/10 text-primary' }}">
+                                            {{ cancelBurst.ai_flag ? 'AI Flagged' : 'AI Clear' }}
+                                        </span>
+                                    </div>
+
+                                    <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                        <div class="rounded-xl border border-border bg-background px-3 py-2">
+                                            <p class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Closest Interval</p>
+                                            <p class="mt-1 text-sm font-semibold text-foreground">{{ cancelBurst.closest_interval_minutes is not null ? cancelBurst.closest_interval_minutes ~ ' min' : 'n/a' }}</p>
+                                        </div>
+                                        <div class="rounded-xl border border-border bg-background px-3 py-2">
+                                            <p class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Rapid Pairs</p>
+                                            <p class="mt-1 text-sm font-semibold text-foreground">{{ cancelBurst.rapid_pair_count }}</p>
+                                        </div>
+                                        <div class="rounded-xl border border-border bg-background px-3 py-2">
+                                            <p class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Max in 2h Window</p>
+                                            <p class="mt-1 text-sm font-semibold text-foreground">{{ cancelBurst.max_burst_size }}</p>
+                                        </div>
+                                    </div>
+                                    <p class="mb-3 text-sm text-muted-foreground">{{ cancelBurst.reason }}</p>
+
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full min-w-[980px] border-collapse">
+                                            <thead>
+                                            <tr class="border-b border-border text-left">
+                                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Cancelled At</th>
+                                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Booking</th>
+                                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Cancelled For</th>
+                                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Stay</th>
+                                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Amount</th>
+                                                <th class="py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Created</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for item in activityUserInsights.cancellation_tracking.recent_cancellations %}
+                                                <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                                    <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.cancelled_at|date('Y-m-d H:i:s') }}</td>
+                                                    <td class="py-3 pr-3 text-xs font-semibold text-foreground">#{{ item.id }}</td>
+                                                    <td class="py-3 pr-3 text-xs text-foreground">{{ item.place_title ?: ('Place #' ~ item.place_id) }}{% if item.place_city %} · {{ item.place_city }}{% endif %}</td>
+                                                    <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.start_date|date('Y-m-d') }} to {{ item.end_date|date('Y-m-d') }}</td>
+                                                    <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.total_price }}</td>
+                                                    <td class="py-3 text-xs text-muted-foreground">{{ item.created_at|date('Y-m-d H:i:s') }}</td>
+                                                </tr>
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="6" class="py-8 text-center text-sm text-muted-foreground">No booking cancellations tracked for this user.</td>
+                                                </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                    <div class="mb-3 flex items-center justify-between gap-2">
+                                        <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Marketplace AI Flags</h3>
+                                        {% set marketplaceFraud = activityUserInsights.risk and activityUserInsights.risk.marketplace_fraud_score is defined ? activityUserInsights.risk.marketplace_fraud_score : 0 %}
+                                        <span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ marketplaceFraud >= 60 ? 'bg-destructive/10 text-destructive' : (marketplaceFraud >= 30 ? 'bg-accent/20 text-accent' : 'bg-primary/10 text-primary') }}">
+                                            {{ marketplaceFraud >= 60 ? 'AI Flagged (High)' : (marketplaceFraud >= 30 ? 'AI Flagged (Medium)' : 'AI Clear') }}
+                                        </span>
+                                    </div>
+                                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                        <div class="rounded-xl border border-border bg-background px-3 py-2">
+                                            <p class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Marketplace Fraud Score</p>
+                                            <p class="mt-1 text-sm font-semibold text-foreground">{{ marketplaceFraud }}</p>
+                                        </div>
+                                        <div class="rounded-xl border border-border bg-background px-3 py-2">
+                                            <p class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Fake Orders Signal</p>
+                                            <p class="mt-1 text-sm font-semibold text-foreground">{{ marketplaceFraud >= 40 ? 'Elevated' : 'Normal' }}</p>
+                                        </div>
+                                        <div class="rounded-xl border border-border bg-background px-3 py-2">
+                                            <p class="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Fake Products Signal</p>
+                                            <p class="mt-1 text-sm font-semibold text-foreground">{{ marketplaceFraud >= 55 ? 'Elevated' : 'Normal' }}</p>
+                                        </div>
+                                    </div>
+                                    <p class="mt-3 text-xs text-muted-foreground">AI model signals include suspicious order cancellation behavior, fast order bursts, rapid listing creation, and abnormal pricing patterns.</p>
+                                </div>
+
+                                <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Module Statistics</h3>
+                                        <div class="space-y-2">
+                                            {% for row in activityUserInsights.module_breakdown %}
+                                                <div class="flex items-center justify-between rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                                                    <span class="font-semibold text-foreground">{{ row.module ?: 'unknown' }}</span>
+                                                    <span class="rounded-full bg-secondary/30 px-2 py-0.5 text-xs font-bold text-foreground">{{ row.action_count }} actions</span>
+                                                </div>
+                                            {% else %}
+                                                <p class="text-sm text-muted-foreground">No module activity found.</p>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+
+                                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Top Actions</h3>
+                                        <div class="space-y-2">
+                                            {% for row in activityUserInsights.action_breakdown|slice(0, 12) %}
+                                                {% set isActiveTopAction = (activityModuleFilter|default('') == (row.module ?: '')) and (activityActionFilter|default('') == (row.action ?: '')) %}
+                                                <a href="{{ path('app_admin_dashboard', {
+                                                    section: 'activity_logs',
+                                                    activity_user: activityFocusUser.id,
+                                                    activity_module: row.module,
+                                                    activity_action: row.action
+                                                }) }}#user-doings" class="flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition-colors {{ isActiveTopAction ? 'border-primary/30 bg-primary/10' : 'border-border bg-background hover:bg-secondary/30' }}">
+                                                    <span class="truncate font-semibold text-foreground">{{ row.module ?: 'unknown' }} · {{ row.action|replace({'_': ' '}) }}</span>
+                                                    <span class="rounded-full bg-secondary/30 px-2 py-0.5 text-xs font-bold text-foreground">{{ row.action_count }}</span>
+                                                </a>
+                                            {% else %}
+                                                <p class="text-sm text-muted-foreground">No action statistics available.</p>
+                                            {% endfor %}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div id="user-doings" class="rounded-2xl border border-border bg-secondary/10 p-4">
+                                    <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">What This User Did (Recent Activity)</h3>
+                                    {% if activityModuleFilter|default('') != '' or activityActionFilter|default('') != '' %}
+                                        <div class="mb-3 flex flex-wrap items-center gap-2 text-xs">
+                                            <span class="rounded-full bg-primary/10 px-2.5 py-1 font-bold text-primary">Filtered</span>
+                                            {% if activityModuleFilter|default('') != '' %}
+                                                <span class="rounded-full bg-secondary/30 px-2.5 py-1 font-semibold text-foreground">module: {{ activityModuleFilter }}</span>
+                                            {% endif %}
+                                            {% if activityActionFilter|default('') != '' %}
+                                                <span class="rounded-full bg-secondary/30 px-2.5 py-1 font-semibold text-foreground">action: {{ activityActionFilter|replace({'_': ' '}) }}</span>
+                                            {% endif %}
+                                            <a href="{{ path('app_admin_dashboard', { section: 'activity_logs', activity_user: activityFocusUser.id }) }}#user-doings" class="rounded-full border border-border px-2.5 py-1 font-semibold text-foreground hover:bg-secondary/30">Clear filter</a>
+                                        </div>
+                                    {% endif %}
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full min-w-[1200px] border-collapse">
+                                            <thead>
+                                            <tr class="border-b border-border text-left">
+                                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Time</th>
+                                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Module</th>
+                                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Action</th>
+                                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Target</th>
+                                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Content</th>
+                                                <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Analysis</th>
+                                                <th class="py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Severity</th>
+                                            </tr>
+                                            </thead>
+                                            <tbody>
+                                            {% for row in activityUserInsights.recent_entries %}
+                                                <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                                    <td class="py-3 pr-3 text-xs text-muted-foreground">{{ row.created_at|date('Y-m-d H:i:s') }}</td>
+                                                    <td class="py-3 pr-3 text-xs font-semibold text-foreground">{{ row.module ?: 'n/a' }}</td>
+                                                    <td class="py-3 pr-3 text-xs text-muted-foreground">{{ row.action|replace({'_': ' '}) }}</td>
+                                                    <td class="py-3 pr-3 text-xs text-muted-foreground">{{ row.target_name ?: row.target_type ?: row.target_id ?: 'n/a' }}</td>
+                                                    <td class="py-3 pr-3 text-xs text-muted-foreground">{{ row.content ? row.content|slice(0, 140) : 'No content' }}</td>
+                                                    <td class="py-3 pr-3 text-xs text-muted-foreground">{{ row.analysis }}</td>
+                                                    <td class="py-3 text-xs">
+                                                        <span class="inline-flex rounded-full px-2.5 py-1 font-bold uppercase tracking-wider {{ row.severity == 'high' ? 'bg-destructive/10 text-destructive' : (row.severity == 'medium' ? 'bg-accent/20 text-accent' : 'bg-primary/10 text-primary') }}">{{ row.severity }}</span>
+                                                    </td>
+                                                </tr>
+                                            {% else %}
+                                                <tr>
+                                                    <td colspan="7" class="py-8 text-center text-sm text-muted-foreground">No activity rows found for this user.</td>
+                                                </tr>
+                                            {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="rounded-2xl border border-border bg-secondary/10 px-6 py-10 text-center text-sm text-muted-foreground">
+                                    Select a user from the left list, or click “Activity Logs” from Users/Risk to open a full per-user activity timeline.
+                                </div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>

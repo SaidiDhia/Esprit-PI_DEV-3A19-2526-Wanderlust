@@ -97,6 +97,67 @@
             margin-bottom: 8px;
             color: #f6214b;
         }
+
+        .testimonials-section {
+            background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+        }
+
+        .testimonial-track {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            padding-bottom: 8px;
+            scroll-behavior: smooth;
+        }
+
+        .testimonial-track::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .testimonial-track::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+
+        .testimonial-card {
+            min-width: min(360px, 90vw);
+            scroll-snap-align: start;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            background: #fff;
+            padding: 18px;
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .testimonial-avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 999px;
+            object-fit: cover;
+            border: 2px solid #e2e8f0;
+        }
+
+        .testimonial-form {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            background: #fff;
+            padding: 22px;
+            margin-top: 20px;
+        }
+
+        .testimonial-nav button {
+            border: 1px solid #d1d5db;
+            background: #fff;
+            width: 42px;
+            height: 42px;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+
+        .testimonial-nav button:hover {
+            background: #f8fafc;
+        }
     </style>
 {% endblock %}
 
@@ -112,6 +173,17 @@
         <a href="{{ path('app_activities_index') }}" class="primary-btn text-uppercase">Explore Activities</a>
     </div>
 </section>
+
+{% for message in app.flashes('success') %}
+    <div class="container mt-4">
+        <div class="alert alert-success mb-0">{{ message }}</div>
+    </div>
+{% endfor %}
+{% for message in app.flashes('error') %}
+    <div class="container mt-4">
+        <div class="alert alert-danger mb-0">{{ message }}</div>
+    </div>
+{% endfor %}
 
 <section class="section-gap">
     <div class="container">
@@ -169,6 +241,70 @@
     </div>
 </section>
 
+<section class="section-gap testimonials-section pt-0">
+    <div class="container">
+        <div class="row d-flex justify-content-center mb-40">
+            <div class="menu-content pb-20 col-lg-8">
+                <div class="title text-center">
+                    <h1 class="mb-10">Traveler Testimonials</h1>
+                    <p>Real testimonials published by your community, with newest entries first.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-end testimonial-nav mb-3" style="gap: 8px;">
+            <button type="button" id="testimonial-prev" aria-label="Previous testimonial">&#8592;</button>
+            <button type="button" id="testimonial-next" aria-label="Next testimonial">&#8594;</button>
+        </div>
+
+        <div id="testimonial-track" class="testimonial-track">
+            {% for item in testimonialFeed|default([]) %}
+                {% set testimonialUser = item.user %}
+                {% set testimonialName = testimonialUser ? (testimonialUser.fullName ?: testimonialUser.email) : 'Unknown traveler' %}
+                {% set avatar = (testimonialUser and testimonialUser.profilePicture) ? asset('uploads/profiles/' ~ testimonialUser.profilePicture) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ testimonialName|url_encode) %}
+                <article class="testimonial-card">
+                    <div class="d-flex align-items-center mb-3" style="gap: 12px;">
+                        <img class="testimonial-avatar" src="{{ avatar }}" alt="{{ testimonialName }}">
+                        <div>
+                            <p class="mb-0" style="font-weight: 700; color: #0f172a;">{{ testimonialName }}</p>
+                            <p class="mb-0" style="font-size: 12px; color: #64748b;">{{ item.createdAt|date('Y-m-d H:i') }}</p>
+                            {% if item.moderationSeverity == 'mild' %}
+                                <span style="display: inline-flex; margin-top: 4px; border-radius: 999px; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;">Filtered</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if item.hiddenByModeration %}
+                        <p class="mb-0" style="font-size: 15px; color: #be123c; line-height: 1.55; font-weight: 600;">This testimonial was removed from public view due to policy violation.</p>
+                    {% else %}
+                        <p class="mb-0" style="font-size: 15px; color: #0f172a; line-height: 1.55;">{{ item.displayContent|slice(0, 300) }}</p>
+                    {% endif %}
+                </article>
+            {% else %}
+                <article class="testimonial-card">
+                    <p class="mb-0" style="color: #475569;">No testimonials yet. Be the first to share your experience.</p>
+                </article>
+            {% endfor %}
+        </div>
+
+        <div class="testimonial-form">
+            <h4 class="mb-3">Share your testimonial</h4>
+            <p class="mb-3" style="color: #64748b;">Your profile picture, name, timestamp, and message will appear in the testimonial slider.</p>
+            <form method="post" action="{{ path('app_home') }}">
+                <input type="hidden" name="action" value="submit_testimonial">
+                <input type="hidden" name="_token" value="{{ csrf_token('submit_home_testimonial') }}">
+                <div class="form-group mb-3">
+                    <textarea name="testimonialContent" rows="4" class="form-control" maxlength="1200" placeholder="Tell us about your stay, activities, or messages experience..." required></textarea>
+                </div>
+                {% if app.user %}
+                    <button type="submit" class="primary-btn text-uppercase">Publish Testimonial</button>
+                {% else %}
+                    <a href="{{ path('app_login') }}" class="primary-btn text-uppercase">Login To Publish</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</section>
+
 <section class="section-gap pt-0">
     <div class="container">
         <div class="row">
@@ -193,5 +329,24 @@
         </div>
     </div>
 </section>
+
+<script>
+    (function () {
+        const track = document.getElementById('testimonial-track');
+        const prevBtn = document.getElementById('testimonial-prev');
+        const nextBtn = document.getElementById('testimonial-next');
+        if (!track || !prevBtn || !nextBtn) {
+            return;
+        }
+
+        const scrollStep = 380;
+        prevBtn.addEventListener('click', function () {
+            track.scrollBy({ left: -scrollStep, behavior: 'smooth' });
+        });
+        nextBtn.addEventListener('click', function () {
+            track.scrollBy({ left: scrollStep, behavior: 'smooth' });
+        });
+    })();
+</script>
 
 {% endblock %}

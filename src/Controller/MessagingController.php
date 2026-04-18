@@ -5,6 +5,8 @@ namespace App\Controller;
 use App\Entity\Conversation;
 use App\Entity\ConversationUser;
 use App\Entity\Message;
+use App\Entity\User;
+use App\Service\ActivityLogger;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -20,9 +22,11 @@ use Symfony\Component\HttpFoundation\File\Exception\FileException;
 class MessagingController extends AbstractController
 {
     private string $uploadDir;
+    private ActivityLogger $activityLogger;
 
-    public function __construct()
+    public function __construct(ActivityLogger $activityLogger)
     {
+        $this->activityLogger = $activityLogger;
         $this->uploadDir = __DIR__ . '/../../public/uploads/';
 
         if (!is_dir($this->uploadDir)) {
@@ -64,6 +68,38 @@ class MessagingController extends AbstractController
         }
 
         return $default;
+    }
+
+    /**
+     * @return array{actorId: ?string, actorName: ?string, actorAvatar: ?string}
+     */
+    private function getCurrentActorContext(EntityManagerInterface $em): array
+    {
+        $actorId = $this->getCurrentUserId();
+        $actorName = null;
+        $actorAvatar = null;
+
+        $currentUser = $this->getUser();
+        if ($currentUser instanceof User) {
+            $actorName = $currentUser->getFullName();
+            $actorAvatar = $currentUser->getProfilePicture();
+        } else {
+            $row = $em->getConnection()->executeQuery(
+                'SELECT full_name, profile_picture FROM users WHERE id = :id LIMIT 1',
+                ['id' => $actorId]
+            )->fetchAssociative();
+
+            if (is_array($row)) {
+                $actorName = isset($row['full_name']) ? (string) $row['full_name'] : null;
+                $actorAvatar = isset($row['profile_picture']) ? (string) $row['profile_picture'] : null;
+            }
+        }
+
+        return [
+            'actorId' => $actorId,
+            'actorName' => $actorName,
+            'actorAvatar' => $actorAvatar,
+        ];
     }
 
     /**
@@ -416,6 +452,18 @@ public function index(Request $request, EntityManagerInterface $em): Response
             }
             
             $em->flush();
+
+            $this->activityLogger->logAction(null, 'messaging', 'conversation_created', [
+                ...$this->getCurrentActorContext($em),
+                'targetType' => 'conversation',
+                'targetId' => $conversation->getId(),
+                'targetName' => $name,
+                'destination' => sprintf('Conversation #%d', (int) $conversation->getId()),
+                'metadata' => [
+                    'type' => $type,
+                    'participants_count' => count($participantIds),
+                ],
+            ]);
             
             $this->addFlash('success', 'Conversation created successfully!');
             return $this->redirectToRoute('app_messaging');
@@ -441,6 +489,14 @@ public function index(Request $request, EntityManagerInterface $em): Response
         $stmt->bindValue('name', $newName);
         $stmt->bindValue('id', $id);
         $stmt->executeStatement();
+
+        $this->activityLogger->logAction(null, 'messaging', 'conversation_renamed', [
+            ...$this->getCurrentActorContext($em),
+            'targetType' => 'conversation',
+            'targetId' => $id,
+            'targetName' => $newName,
+            'destination' => sprintf('Conversation #%d', $id),
+        ]);
         
         $this->addFlash('success', 'Conversation renamed!');
         return $this->redirectToRoute('app_messaging');
@@ -463,6 +519,8 @@ public function index(Request $request, EntityManagerInterface $em): Response
             return $this->redirectToRoute('app_messaging');
         }
         
+        $conversationName = $conn->executeQuery('SELECT name FROM conversation WHERE id = :id', ['id' => $id])->fetchOne();
+
         // Delete messages, participants, then conversation
         $sql = "DELETE FROM message WHERE conversation_id = :id";
         $stmt = $conn->prepare($sql);
@@ -478,6 +536,14 @@ public function index(Request $request, EntityManagerInterface $em): Response
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('id', $id);
         $stmt->executeStatement();
+
+        $this->activityLogger->logAction(null, 'messaging', 'conversation_deleted', [
+            ...$this->getCurrentActorContext($em),
+            'targetType' => 'conversation',
+            'targetId' => $id,
+            'targetName' => is_scalar($conversationName) ? (string) $conversationName : null,
+            'destination' => sprintf('Conversation #%d', $id),
+        ]);
         
         $this->addFlash('success', 'Conversation deleted!');
         return $this->redirectToRoute('app_messaging');
@@ -510,6 +576,16 @@ public function index(Request $request, EntityManagerInterface $em): Response
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('id', $conversationId);
         $stmt->executeStatement();
+
+        $conversationName = $conn->executeQuery('SELECT name FROM conversation WHERE id = :id', ['id' => $conversationId])->fetchOne();
+        $this->activityLogger->logAction(null, 'messaging', 'message_sent', [
+            ...$this->getCurrentActorContext($em),
+            'targetType' => 'message',
+            'targetId' => $message->getId(),
+            'targetName' => is_scalar($conversationName) ? (string) $conversationName : sprintf('Conversation #%d', $conversationId),
+            'content' => $content,
+            'destination' => sprintf('Conversation #%d', $conversationId),
+        ]);
         
         return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
     }
@@ -548,6 +624,14 @@ public function editMessage(int $id, Request $request, EntityManagerInterface $e
     $stmt->bindValue('id', $id);
     $result = $stmt->executeQuery();
     $convId = $result->fetchOne();
+
+    $this->activityLogger->logAction(null, 'messaging', 'message_edited', [
+        ...$this->getCurrentActorContext($em),
+        'targetType' => 'message',
+        'targetId' => $id,
+        'content' => $newContent,
+        'destination' => is_scalar($convId) ? sprintf('Conversation #%s', $convId) : null,
+    ]);
     
     $this->addFlash('success', 'Message edited!');
     return $this->redirectToRoute('messaging_conversation_show', ['id' => $convId]);
@@ -575,6 +659,13 @@ public function editMessage(int $id, Request $request, EntityManagerInterface $e
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('id', $id);
         $stmt->executeStatement();
+
+        $this->activityLogger->logAction(null, 'messaging', 'message_deleted', [
+            ...$this->getCurrentActorContext($em),
+            'targetType' => 'message',
+            'targetId' => $id,
+            'destination' => sprintf('Conversation #%s', (string) $convId),
+        ]);
         
         $this->addFlash('success', 'Message deleted!');
         return $this->redirectToRoute('messaging_conversation_show', ['id' => $convId]);
@@ -648,6 +739,20 @@ public function uploadFile(Request $request, EntityManagerInterface $em): Respon
     
     $em->persist($message);
     $em->flush();
+
+    $this->activityLogger->logAction(null, 'messaging', 'file_message_sent', [
+        ...$this->getCurrentActorContext($em),
+        'targetType' => 'message_file',
+        'targetId' => $message->getId(),
+        'targetName' => $originalName,
+        'content' => '[' . $messageType . '] ' . $originalName,
+        'destination' => sprintf('Conversation #%d', $conversationId),
+        'metadata' => [
+            'message_type' => $messageType,
+            'file_size' => $fileSize,
+            'file_url' => $message->getFileUrl(),
+        ],
+    ]);
     
     $this->addFlash('success', 'File uploaded!');
     return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
@@ -683,6 +788,14 @@ public function pinConversation(int $id, EntityManagerInterface $em): Response
     $stmt = $conn->prepare($sql);
     $stmt->bindValue('id', $id);
     $stmt->executeStatement();
+
+    $newPinned = $conn->executeQuery('SELECT is_pinned FROM conversation WHERE id = :id', ['id' => $id])->fetchOne();
+    $this->activityLogger->logAction(null, 'messaging', ((int) $newPinned) === 1 ? 'conversation_pinned' : 'conversation_unpinned', [
+        ...$this->getCurrentActorContext($em),
+        'targetType' => 'conversation',
+        'targetId' => $id,
+        'destination' => sprintf('Conversation #%d', $id),
+    ]);
     
     $this->addFlash('success', 'Conversation pin status updated!');
     return $this->redirectToRoute('app_messaging');
@@ -696,6 +809,14 @@ public function archiveConversation(int $id, EntityManagerInterface $em): Respon
     $stmt = $conn->prepare($sql);
     $stmt->bindValue('id', $id);
     $stmt->executeStatement();
+
+    $isArchived = $conn->executeQuery('SELECT is_archived FROM conversation WHERE id = :id', ['id' => $id])->fetchOne();
+    $this->activityLogger->logAction(null, 'messaging', ((int) $isArchived) === 1 ? 'conversation_archived' : 'conversation_unarchived', [
+        ...$this->getCurrentActorContext($em),
+        'targetType' => 'conversation',
+        'targetId' => $id,
+        'destination' => sprintf('Conversation #%d', $id),
+    ]);
     
     $this->addFlash('success', 'Conversation archived/unarchived!');
     return $this->redirectToRoute('app_messaging');
@@ -808,6 +929,14 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
                 $stmt->bindValue('senderId', $this->getCurrentUserId());
                 $stmt->bindValue('content', '👤 ' . $email . ' was re-added to the conversation');
                 $stmt->executeStatement();
+
+                $this->activityLogger->logAction(null, 'messaging', 'participant_readded', [
+                    ...$this->getCurrentActorContext($em),
+                    'targetType' => 'conversation_participant',
+                    'targetId' => (string) $newUser['id'],
+                    'targetName' => $email,
+                    'destination' => sprintf('Conversation #%d', $id),
+                ]);
                 
                 $this->addFlash('success', 'User re-added to conversation!');
                 return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
@@ -822,6 +951,14 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
         $stmt->bindValue('userId', $newUser['id']);
         $stmt->bindValue('addedBy', $this->getCurrentUserId());
         $stmt->executeStatement();
+
+        $this->activityLogger->logAction(null, 'messaging', 'participant_added', [
+            ...$this->getCurrentActorContext($em),
+            'targetType' => 'conversation_participant',
+            'targetId' => (string) $newUser['id'],
+            'targetName' => $email,
+            'destination' => sprintf('Conversation #%d', $id),
+        ]);
         
         $this->addFlash('success', 'Participant added successfully!');
         return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
@@ -873,6 +1010,13 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
         $stmt->bindValue('senderId', $this->getCurrentUserId());
         $stmt->bindValue('content', '👤 A participant was removed from the conversation');
         $stmt->executeStatement();
+
+        $this->activityLogger->logAction(null, 'messaging', 'participant_removed', [
+            ...$this->getCurrentActorContext($em),
+            'targetType' => 'conversation_participant',
+            'targetId' => $userId,
+            'destination' => sprintf('Conversation #%d', $id),
+        ]);
         
         $this->addFlash('success', 'Participant removed successfully!');
         return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
@@ -902,6 +1046,13 @@ public function leaveConversation(int $id, EntityManagerInterface $em): Response
     $stmt->bindValue('convId', $id);
     $stmt->bindValue('userId', $this->getCurrentUserId());
     $stmt->executeStatement();
+
+    $this->activityLogger->logAction(null, 'messaging', 'conversation_left', [
+        ...$this->getCurrentActorContext($em),
+        'targetType' => 'conversation',
+        'targetId' => $id,
+        'destination' => sprintf('Conversation #%d', $id),
+    ]);
     
     $this->addFlash('success', 'You left the conversation');
     return $this->redirectToRoute('app_messaging');
@@ -931,6 +1082,13 @@ public function promoteToAdmin(int $id, string $userId, EntityManagerInterface $
     $stmt->bindValue('convId', $id);
     $stmt->bindValue('userId', $userId);
     $stmt->executeStatement();
+
+    $this->activityLogger->logAction(null, 'messaging', 'participant_promoted_admin', [
+        ...$this->getCurrentActorContext($em),
+        'targetType' => 'conversation_participant',
+        'targetId' => $userId,
+        'destination' => sprintf('Conversation #%d', $id),
+    ]);
     
     $this->addFlash('success', 'User promoted to ADMIN');
     return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);
@@ -960,6 +1118,13 @@ public function demoteToMember(int $id, string $userId, EntityManagerInterface $
     $stmt->bindValue('convId', $id);
     $stmt->bindValue('userId', $userId);
     $stmt->executeStatement();
+
+    $this->activityLogger->logAction(null, 'messaging', 'participant_demoted_member', [
+        ...$this->getCurrentActorContext($em),
+        'targetType' => 'conversation_participant',
+        'targetId' => $userId,
+        'destination' => sprintf('Conversation #%d', $id),
+    ]);
     
     $this->addFlash('success', 'User demoted to MEMBER');
     return $this->redirectToRoute('messaging_conversation_participants', ['id' => $id]);

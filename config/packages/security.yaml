@@ -61,6 +61,7 @@ security:
         - { path: ^/api/signup, roles: PUBLIC_ACCESS }
         - { path: ^/login, roles: PUBLIC_ACCESS }
         - { path: ^/signup, roles: PUBLIC_ACCESS }
+        - { path: ^/risk/review-required, roles: PUBLIC_ACCESS }
         - { path: ^/forgot-password, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
         - { path: ^/admin, roles: ROLE_ADMIN }

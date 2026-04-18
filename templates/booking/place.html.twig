@@ -350,7 +350,8 @@
                 </div>
             </div>
             <div class="mt-5 grid gap-4 md:grid-cols-2">
-                {% for review in reviews %}
+                {% for card in reviewCards|default([]) %}
+                    {% set review = card.review %}
                     <article class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                         <div class="flex items-center justify-between gap-4">
                             <div class="flex items-center gap-3">
@@ -358,6 +359,9 @@
                                 <div>
                                     <p class="font-semibold text-slate-950">{{ review.user.fullName ?? review.user.email }}</p>
                                     <p class="text-xs text-slate-500">{{ review.createdAt|date('M d, Y') }}</p>
+                                    {% if card.moderationSeverity == 'mild' %}
+                                        <span class="mt-1 inline-flex rounded-full border border-amber-300 bg-amber-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-700">Filtered</span>
+                                    {% endif %}
                                 </div>
                             </div>
                             <div class="inline-flex items-center gap-0.5 rounded-full bg-amber-50 px-3 py-1" aria-label="Review rating">
@@ -367,7 +371,11 @@
                             </div>
                         </div>
                         {% if review.comment %}
-                            <p class="mt-3 text-sm leading-relaxed text-slate-700">{{ review.comment }}</p>
+                            {% if card.hiddenByModeration %}
+                                <p class="mt-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700">This comment has been removed from public view due to policy violation.</p>
+                            {% else %}
+                                <p class="mt-3 text-sm leading-relaxed text-slate-700">{{ card.displayComment }}</p>
+                            {% endif %}
                         {% else %}
                             <p class="mt-3 text-sm italic text-slate-500">No written comment provided.</p>
                         {% endif %}

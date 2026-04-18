@@ -339,6 +339,7 @@
                                         </form>
                                         <form method="post" action="{{ path('app_booking_host_booking_reject', { id: booking.id }) }}">
                                             <input type="hidden" name="_token" value="{{ csrf_token('booking_host_reject_' ~ booking.id) }}">
+                                            <input type="text" name="reason" placeholder="Reject reason (optional)" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700">
                                             <button type="submit" class="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white">Reject</button>
                                         </form>
                                     </div>

@@ -1,0 +1,29 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Security Review Required{% endblock %}
+
+{% block content %}
+<section class="min-h-[calc(100vh-64px)] bg-slate-50 px-4 py-16">
+    <div class="container mx-auto max-w-2xl">
+        {% for message in app.flashes('error') %}
+            <div class="mb-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">{{ message }}</div>
+        {% endfor %}
+        <div class="rounded-3xl border border-border bg-card p-8 shadow-sm">
+            <p class="text-xs font-bold uppercase tracking-[0.28em] text-destructive">Risk Protection</p>
+            <h1 class="mt-2 text-3xl font-heading font-bold text-foreground">Account Temporarily Restricted</h1>
+            <p class="mt-4 text-sm text-muted-foreground">
+                Our abuse prevention engine detected unusual behavior on this account. Access is temporarily limited pending a manual review.
+            </p>
+            <div class="mt-6 space-y-2 text-sm text-muted-foreground">
+                <p>1. Contact an administrator to validate your activity.</p>
+                <p>2. Avoid repeated logins and rapid actions while review is pending.</p>
+                <p>3. You can sign out and retry later.</p>
+            </div>
+            <div class="mt-6 flex flex-wrap gap-3">
+                <a href="{{ path('app_logout') }}" class="rounded-xl bg-destructive px-4 py-2 text-sm font-bold text-white">Logout</a>
+                <a href="{{ path('app_home') }}" class="rounded-xl border border-border px-4 py-2 text-sm font-semibold text-foreground">Go Home</a>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

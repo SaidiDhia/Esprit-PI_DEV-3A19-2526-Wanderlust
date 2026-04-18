@@ -11,6 +11,9 @@ use App\Entity\Review;
 use App\Entity\User;
 use App\Enum\RoleEnum;
 use App\Service\AiReviewService;
+use App\Service\ActivityLogger;
+use App\Service\ContentModerationService;
+use App\Service\EmailService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -29,6 +32,10 @@ class BookingController extends AbstractController
     private const TUNISIA_NORTH = 37.6;
     private const TUNISIA_WEST = 7.4;
     private const TUNISIA_EAST = 11.8;
+
+    public function __construct(private readonly ContentModerationService $contentModerationService)
+    {
+    }
 
     #[Route('', name: 'app_booking')]
     public function index(Request $request, EntityManagerInterface $em): Response
@@ -206,7 +213,7 @@ class BookingController extends AbstractController
     }
 
     #[Route('/place/{id}/book', name: 'app_booking_book', methods: ['POST'])]
-    public function book(int $id, Request $request, EntityManagerInterface $em): Response
+    public function book(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $user = $this->requireUser();
         $place = $em->find(Place::class, $id);
@@ -288,12 +295,33 @@ class BookingController extends AbstractController
         $em->persist($booking);
         $em->flush();
 
+        $activityLogger->logAction($user, 'booking', 'booking_request_created', [
+            'targetType' => 'booking',
+            'targetId' => $booking->getId(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'destination' => sprintf('Place #%d', (int) $place->getId()),
+            'metadata' => [
+                'start_date' => $start?->format('Y-m-d'),
+                'end_date' => $end?->format('Y-m-d'),
+                'guests' => $guests,
+                'total_price' => $booking->getTotalPrice(),
+            ],
+        ]);
+
         $this->addFlash('success', 'Booking request sent. Waiting for confirmation.');
         return $this->redirectToRoute('app_booking_my_bookings');
     }
 
     #[Route('/place/{id}/review', name: 'app_booking_review', methods: ['POST'])]
-    public function submitReview(int $id, Request $request, EntityManagerInterface $em, AiReviewService $aiReviewService): Response
+    public function submitReview(
+        int $id,
+        Request $request,
+        EntityManagerInterface $em,
+        AiReviewService $aiReviewService,
+        ActivityLogger $activityLogger,
+        EmailService $emailService
+    ): Response
     {
         $user = $this->requireUser();
         $place = $em->find(Place::class, $id);
@@ -359,6 +387,16 @@ class BookingController extends AbstractController
         $review->setRating($rating);
         $review->setComment($reviewFormData['comment'] !== '' ? $reviewFormData['comment'] : null);
 
+        $moderation = [
+            'severity' => 'none',
+            'reason' => 'No moderation needed',
+            'should_hide' => false,
+            'display_text' => $review->getComment() ?? '',
+        ];
+        if (($review->getComment() ?? '') !== '') {
+            $moderation = $this->contentModerationService->moderateForDisplay((string) $review->getComment());
+        }
+
         $aiResult = $aiReviewService->analyzeReview($review->getComment(), $rating);
         if ($aiResult->getSummary() !== '') {
             $review->setSentiment($aiResult->getSentiment());
@@ -368,6 +406,39 @@ class BookingController extends AbstractController
 
         $this->recalculatePlaceRatingStats($em, $place);
         $em->flush();
+
+        $activityLogger->logAction($user, 'booking', $existingReview instanceof Review ? 'review_updated' : 'review_created', [
+            'targetType' => 'place_review',
+            'targetId' => $review->getId(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'content' => $review->getComment() ?: sprintf('Rated %s with %d/5 stars.', $place->getTitle(), $rating),
+            'metadata' => [
+                'rating' => $rating,
+                'sentiment' => $review->getSentiment(),
+                'moderation_severity' => (string) ($moderation['severity'] ?? 'none'),
+            ],
+        ]);
+
+        if (($moderation['severity'] ?? 'none') === 'severe' && ($review->getComment() ?? '') !== '') {
+            $activityLogger->logAction($user, 'moderation', 'high_risk_content_hidden', [
+                'targetType' => 'place_review',
+                'targetId' => $review->getId(),
+                'targetName' => $place->getTitle(),
+                'targetImage' => $place->getImageUrl(),
+                'content' => $review->getComment(),
+                'destination' => '/admin/dashboard?section=activity_logs',
+                'metadata' => [
+                    'source' => 'booking_review',
+                    'moderation_severity' => 'severe',
+                    'moderation_reason' => (string) ($moderation['reason'] ?? 'High-risk content'),
+                ],
+            ]);
+
+            $emailService->sendContentModerationWarning($user, 'review comment', (string) $review->getComment());
+            $this->addFlash('error', 'Your review comment was saved but removed from public display due to policy violation. A warning email was sent and admins were informed.');
+            return $this->redirectToRoute('app_booking_place', ['id' => $place->getId()]);
+        }
 
         $this->addFlash('success', $existingReview instanceof Review ? 'Review updated successfully.' : 'Review submitted successfully.');
         return $this->redirectToRoute('app_booking_place', ['id' => $place->getId()]);
@@ -595,7 +666,7 @@ class BookingController extends AbstractController
     }
 
     #[Route('/my-bookings/{id}/edit', name: 'app_booking_my_booking_edit', methods: ['POST'])]
-    public function editMyBooking(int $id, Request $request, EntityManagerInterface $em): Response
+    public function editMyBooking(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $user = $this->requireUser();
         $booking = $em->createQueryBuilder()
@@ -673,12 +744,24 @@ class BookingController extends AbstractController
         $booking->setTotalPrice((string) ((float) $place->getPricePerDay() * $nights));
         $em->flush();
 
+        $activityLogger->logAction($user, 'booking', 'booking_request_updated', [
+            'targetType' => 'booking',
+            'targetId' => $booking->getId(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'metadata' => [
+                'start_date' => $booking->getStartDate()->format('Y-m-d'),
+                'end_date' => $booking->getEndDate()->format('Y-m-d'),
+                'total_price' => $booking->getTotalPrice(),
+            ],
+        ]);
+
         $this->addFlash('success', 'Booking dates updated successfully.');
         return $this->redirectToRoute('app_booking_my_bookings');
     }
 
     #[Route('/my-bookings/{id}/cancel', name: 'app_booking_my_booking_cancel', methods: ['POST'])]
-    public function cancelMyBooking(int $id, Request $request, EntityManagerInterface $em): Response
+    public function cancelMyBooking(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $user = $this->requireUser();
         $booking = $em->createQueryBuilder()
@@ -715,6 +798,29 @@ class BookingController extends AbstractController
         $booking->setCancelReason('Cancelled by guest');
         $booking->setRefundAmount((string) $refundPolicy['amount']);
         $em->flush();
+
+        $activityLogger->logAction($user, 'booking', 'booking_cancelled_by_guest', [
+            'targetType' => 'booking',
+            'targetId' => $booking->getId(),
+            'targetName' => $booking->getPlace()?->getTitle(),
+            'targetImage' => $booking->getPlace()?->getImageUrl(),
+            'destination' => sprintf('Place #%d', (int) ($booking->getPlace()?->getId() ?? 0)),
+            'content' => sprintf(
+                'Cancelled booking #%d for %s (%s to %s).',
+                (int) $booking->getId(),
+                (string) ($booking->getPlace()?->getTitle() ?? 'Unknown place'),
+                $booking->getStartDate()->format('Y-m-d'),
+                $booking->getEndDate()->format('Y-m-d')
+            ),
+            'metadata' => [
+                'place_id' => $booking->getPlace()?->getId(),
+                'place_title' => $booking->getPlace()?->getTitle(),
+                'cancelled_at' => $booking->getCancelledAt()?->format('Y-m-d H:i:s'),
+                'previous_status' => $currentStatus,
+                'refund_percent' => $refundPolicy['percent'],
+                'refund_amount' => $refundPolicy['amount'],
+            ],
+        ]);
 
         if ($currentStatus === Booking::STATUS_CONFIRMED) {
             $this->addFlash('success', sprintf(
@@ -810,7 +916,7 @@ class BookingController extends AbstractController
     }
 
     #[Route('/host/request', name: 'app_booking_host_request', methods: ['POST'])]
-    public function submitPlaceRequest(Request $request, EntityManagerInterface $em): Response
+    public function submitPlaceRequest(Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $user = $this->requireUser();
 
@@ -917,12 +1023,25 @@ class BookingController extends AbstractController
         $this->persistHostPlaceImages($em, $place, $uploadedImages);
         $em->flush();
 
+        $activityLogger->logAction($user, 'booking', 'place_request_created', [
+            'targetType' => 'place',
+            'targetId' => $place->getId(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'metadata' => [
+                'city' => $place->getCity(),
+                'category' => $place->getCategory(),
+                'status' => $place->getStatus(),
+                'price_per_day' => $place->getPricePerDay(),
+            ],
+        ]);
+
         $this->addFlash('success', 'Your place request was submitted for admin review.');
         return $this->redirectToRoute('app_booking_host');
     }
 
     #[Route('/host/places/{id}/update', name: 'app_booking_host_place_update', methods: ['POST'])]
-    public function updateHostPlace(Place $place, Request $request, EntityManagerInterface $em): Response
+    public function updateHostPlace(Place $place, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $viewer = $this->requireUser();
         $host = $place->getHost();
@@ -1022,12 +1141,24 @@ class BookingController extends AbstractController
         $this->persistHostPlaceImages($em, $place, $uploadedImages);
         $em->flush();
 
+        $activityLogger->logAction($viewer, 'booking', 'place_updated', [
+            'targetType' => 'place',
+            'targetId' => $place->getId(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'metadata' => [
+                'city' => $place->getCity(),
+                'category' => $place->getCategory(),
+                'price_per_day' => $place->getPricePerDay(),
+            ],
+        ]);
+
         $this->addFlash('success', 'Place updated successfully.');
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $host->getId()]);
     }
 
     #[Route('/host/places/{id}/delete', name: 'app_booking_host_place_delete', methods: ['POST'])]
-    public function deleteHostPlace(Place $place, Request $request, EntityManagerInterface $em): Response
+    public function deleteHostPlace(Place $place, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $viewer = $this->requireUser();
         $host = $place->getHost();
@@ -1040,8 +1171,19 @@ class BookingController extends AbstractController
             return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $host->getId()]);
         }
 
+        $placeId = $place->getId();
+        $placeTitle = $place->getTitle();
+        $placeImage = $place->getImageUrl();
+
         $em->remove($place);
         $em->flush();
+
+        $activityLogger->logAction($viewer, 'booking', 'place_deleted', [
+            'targetType' => 'place',
+            'targetId' => $placeId,
+            'targetName' => $placeTitle,
+            'targetImage' => $placeImage,
+        ]);
 
         $this->addFlash('success', 'Place deleted successfully.');
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $host->getId()]);
@@ -1154,7 +1296,7 @@ class BookingController extends AbstractController
     }
 
     #[Route('/host/bookings/{id}/confirm', name: 'app_booking_host_booking_confirm', methods: ['POST'])]
-    public function confirmHostBooking(int $id, Request $request, EntityManagerInterface $em): Response
+    public function confirmHostBooking(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $viewer = $this->requireUser();
         $booking = $em->find(Booking::class, $id);
@@ -1175,12 +1317,31 @@ class BookingController extends AbstractController
         $booking->setStatus(Booking::STATUS_CONFIRMED);
         $em->flush();
 
+        $activityLogger->logAction($viewer, 'booking', 'booking_confirmed_by_host', [
+            'targetType' => 'booking',
+            'targetId' => $booking->getId(),
+            'targetName' => $booking->getPlace()?->getTitle(),
+            'targetImage' => $booking->getPlace()?->getImageUrl(),
+            'destination' => $booking->getGuest()?->getFullName(),
+            'content' => sprintf(
+                'Approved booking request for %s from %s to %s.',
+                $booking->getPlace()?->getTitle() ?? 'booking',
+                $booking->getStartDate()?->format('Y-m-d') ?? 'unknown date',
+                $booking->getEndDate()?->format('Y-m-d') ?? 'unknown date'
+            ),
+            'metadata' => [
+                'status' => Booking::STATUS_CONFIRMED,
+                'guest' => $booking->getGuest()?->getFullName(),
+                'reason' => null,
+            ],
+        ]);
+
         $this->addFlash('success', 'Booking request approved.');
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
     }
 
     #[Route('/host/bookings/{id}/reject', name: 'app_booking_host_booking_reject', methods: ['POST'])]
-    public function rejectHostBooking(int $id, Request $request, EntityManagerInterface $em): Response
+    public function rejectHostBooking(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $viewer = $this->requireUser();
         $booking = $em->find(Booking::class, $id);
@@ -1198,8 +1359,26 @@ class BookingController extends AbstractController
             return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
         }
 
+        $reason = trim((string) $request->request->get('reason', ''));
+
         $booking->setStatus(Booking::STATUS_REJECTED);
         $em->flush();
+
+        $activityLogger->logAction($viewer, 'booking', 'booking_rejected_by_host', [
+            'targetType' => 'booking',
+            'targetId' => $booking->getId(),
+            'targetName' => $booking->getPlace()?->getTitle(),
+            'targetImage' => $booking->getPlace()?->getImageUrl(),
+            'destination' => $booking->getGuest()?->getFullName(),
+            'content' => $reason !== ''
+                ? $reason
+                : sprintf('Rejected booking request for %s.', $booking->getPlace()?->getTitle() ?? 'booking'),
+            'metadata' => [
+                'status' => Booking::STATUS_REJECTED,
+                'guest' => $booking->getGuest()?->getFullName(),
+                'reason' => $reason !== '' ? $reason : null,
+            ],
+        ]);
 
         $this->addFlash('success', 'Booking request rejected.');
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
@@ -1412,6 +1591,30 @@ class BookingController extends AbstractController
             ->getQuery()
             ->getResult();
 
+        $reviewCards = [];
+        foreach ($reviews as $review) {
+            if (!$review instanceof Review) {
+                continue;
+            }
+
+            $comment = $review->getComment() ?? '';
+            $moderation = $comment !== ''
+                ? $this->contentModerationService->moderateForDisplay($comment)
+                : [
+                    'severity' => 'none',
+                    'should_hide' => false,
+                    'display_text' => '',
+                    'reason' => 'Empty text',
+                ];
+
+            $reviewCards[] = [
+                'review' => $review,
+                'displayComment' => (string) ($moderation['display_text'] ?? ''),
+                'hiddenByModeration' => (bool) ($moderation['should_hide'] ?? false),
+                'moderationSeverity' => (string) ($moderation['severity'] ?? 'none'),
+            ];
+        }
+
         $bookings = $em->createQueryBuilder()
             ->select('b')
             ->from(Booking::class, 'b')
@@ -1454,6 +1657,7 @@ class BookingController extends AbstractController
             'images' => $images,
             'mainImageUrl' => $images !== [] ? $images[0]->getUrl() : $place->getImageUrl(),
             'reviews' => $reviews,
+            'reviewCards' => $reviewCards,
             'bookings' => $bookings,
             'bookedRanges' => array_map(static fn (Booking $booking): array => [
                 'start' => $booking->getStartDate()->format('Y-m-d'),
@@ -1761,7 +1965,7 @@ class BookingController extends AbstractController
     }
 
     #[Route('/admin/place/{id}/approve', name: 'app_booking_admin_place_approve', methods: ['POST'])]
-    public function approvePlace(int $id, EntityManagerInterface $em): Response
+    public function approvePlace(int $id, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
@@ -1776,6 +1980,13 @@ class BookingController extends AbstractController
             }
 
             $em->flush();
+            $activityLogger->logAction($this->getUser() instanceof User ? $this->getUser() : null, 'booking', 'place_approved_by_admin', [
+                'targetType' => 'place',
+                'targetId' => $place->getId(),
+                'targetName' => $place->getTitle(),
+                'targetImage' => $place->getImageUrl(),
+                'destination' => $place->getHost()?->getFullName(),
+            ]);
             $this->addFlash('success', 'Place approved.');
         }
 
@@ -1783,7 +1994,7 @@ class BookingController extends AbstractController
     }
 
     #[Route('/admin/place/{id}/deny', name: 'app_booking_admin_place_deny', methods: ['POST'])]
-    public function denyPlace(int $id, Request $request, EntityManagerInterface $em): Response
+    public function denyPlace(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
@@ -1793,6 +2004,14 @@ class BookingController extends AbstractController
             $place->setStatus(Place::STATUS_DENIED);
             $place->setDenialReason($reason !== '' ? $reason : null);
             $em->flush();
+            $activityLogger->logAction($this->getUser() instanceof User ? $this->getUser() : null, 'booking', 'place_denied_by_admin', [
+                'targetType' => 'place',
+                'targetId' => $place->getId(),
+                'targetName' => $place->getTitle(),
+                'targetImage' => $place->getImageUrl(),
+                'destination' => $place->getHost()?->getFullName(),
+                'content' => $reason !== '' ? $reason : null,
+            ]);
             $this->addFlash('success', 'Place denied.');
         }
 

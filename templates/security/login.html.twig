@@ -75,6 +75,9 @@
                 </div>
 
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+                <input type="hidden" name="device_fingerprint" data-device-field="fingerprint" value="">
+                <input type="hidden" name="firebase_device_id" data-device-field="firebase-device-id" value="">
+                <input type="hidden" name="device_mac" data-device-field="device-mac" value="">
 
                 <div class="flex items-center gap-2 py-2">
                     <input type="checkbox" id="remember_me" name="_remember_me" class="w-4 h-4 rounded border-border text-primary focus:ring-primary/20">

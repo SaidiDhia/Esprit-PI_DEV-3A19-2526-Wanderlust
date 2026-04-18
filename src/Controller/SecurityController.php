@@ -5,6 +5,8 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Enum\RoleEnum;
 use App\Enum\TFAMethod;
+use App\Service\ActivityLogger;
+use App\Service\EmailRiskDetectorService;
 use App\Service\FaceVerificationService;
 use App\Service\TwoFactorService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -47,7 +49,7 @@ class SecurityController extends AbstractController
     }
 
     #[Route(path: '/login/face-id', name: 'app_login_face_id', methods: ['POST'])]
-    public function faceIdLogin(Request $request, EntityManagerInterface $entityManager, FaceVerificationService $faceVerificationService, Security $security): JsonResponse
+    public function faceIdLogin(Request $request, EntityManagerInterface $entityManager, FaceVerificationService $faceVerificationService, Security $security, ActivityLogger $activityLogger): JsonResponse
     {
         $csrfToken = (string) $request->request->get('_token', '');
         if (!$this->isCsrfTokenValid('face_login', $csrfToken)) {
@@ -99,11 +101,23 @@ class SecurityController extends AbstractController
                 $session->set('tfa.verified_user_id', $candidate->getId());
             }
 
+            $activityLogger->logAction($candidate, 'auth', 'face_id_login_match', [
+                'targetType' => 'session',
+                'targetName' => 'Face ID login',
+                'destination' => '/login/face-id',
+            ]);
+
             return new JsonResponse([
                 'success' => true,
                 'redirectUrl' => $this->generateUrl('app_home'),
             ]);
         }
+
+        $activityLogger->logAction(null, 'auth', 'face_id_login_failed', [
+            'targetType' => 'session',
+            'targetName' => 'Face ID login failed',
+            'destination' => '/login/face-id',
+        ]);
 
         return new JsonResponse([
             'success' => false,
@@ -112,7 +126,14 @@ class SecurityController extends AbstractController
     }
 
     #[Route(path: '/signup', name: 'app_signup', methods: ['GET', 'POST'])]
-    public function signup(Request $request, UserPasswordHasherInterface $userPasswordHasher, EntityManagerInterface $entityManager, SluggerInterface $slugger): Response
+    public function signup(
+        Request $request,
+        UserPasswordHasherInterface $userPasswordHasher,
+        EntityManagerInterface $entityManager,
+        SluggerInterface $slugger,
+        ActivityLogger $activityLogger,
+        EmailRiskDetectorService $emailRiskDetectorService
+    ): Response
     {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_home');
@@ -192,8 +213,10 @@ class SecurityController extends AbstractController
             $user->setPhoneNumber($phoneNumber === '' ? null : $phoneNumber);
             
             $user->setRole(RoleEnum::tryFrom($roleValue) ?? RoleEnum::PARTICIPANT);
-            
-            $user->setTfaMethod(TFAMethod::NONE);
+
+            $emailRisk = $emailRiskDetectorService->assess($email);
+            $requiresEmailVerification = $emailRiskDetectorService->shouldRequireVerification($email, $roleValue === RoleEnum::ADMIN->value);
+            $user->setTfaMethod($requiresEmailVerification ? TFAMethod::EMAIL : TFAMethod::NONE);
 
             $user->setPassword(
                 $userPasswordHasher->hashPassword(
@@ -237,6 +260,25 @@ class SecurityController extends AbstractController
 
             $entityManager->persist($user);
             $entityManager->flush();
+
+            $activityLogger->logAction($user, 'auth', 'signup_success', [
+                'targetType' => 'user',
+                'targetId' => $user->getId(),
+                'targetName' => $user->getFullName() ?: $user->getEmail(),
+                'targetImage' => $user->getProfilePicture(),
+                'destination' => '/signup',
+                'metadata' => [
+                    'email' => $user->getEmail(),
+                    'role' => $user->getRoleValue(),
+                    'email_risk_score' => (int) ($emailRisk['score'] ?? 0),
+                    'email_risk_reasons' => (array) ($emailRisk['reasons'] ?? []),
+                    'forced_email_verification' => $requiresEmailVerification,
+                ],
+            ]);
+
+            if ($requiresEmailVerification) {
+                $this->addFlash('error', 'Your email looks temporary or high-risk. Email verification will be required at sign-in.');
+            }
 
             return $this->redirectToRoute('app_login');
         }

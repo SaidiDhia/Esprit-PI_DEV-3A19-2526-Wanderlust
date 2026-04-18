@@ -2,8 +2,12 @@
 
 namespace App\Controller;
 
+use App\Entity\Testimonial;
 use App\Entity\User;
 use App\Enum\TFAMethod;
+use App\Service\ActivityLogger;
+use App\Service\ContentModerationService;
+use App\Service\EmailService;
 use App\Service\TwoFactorService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -18,9 +22,106 @@ use Symfony\Component\HttpFoundation\File\Exception\FileException;
 class MainController extends AbstractController
 {
     #[Route('/', name: 'app_home')]
-    public function home(): Response
+    public function home(
+        Request $request,
+        EntityManagerInterface $entityManager,
+        ActivityLogger $activityLogger,
+        ContentModerationService $contentModerationService,
+        EmailService $emailService
+    ): Response
     {
-        return $this->render('main/home.html.twig');
+        if ($request->isMethod('POST') && (string) $request->request->get('action') === 'submit_testimonial') {
+            if (!$this->isCsrfTokenValid('submit_home_testimonial', (string) $request->request->get('_token'))) {
+                $this->addFlash('error', 'Invalid testimonial form token. Please try again.');
+                return $this->redirectToRoute('app_home');
+            }
+
+            $user = $this->getUser();
+            if (!$user instanceof User) {
+                $this->addFlash('error', 'Please log in to share your testimonial.');
+                return $this->redirectToRoute('app_login');
+            }
+
+            $content = trim((string) $request->request->get('testimonialContent', ''));
+            if ($content === '' || mb_strlen($content) < 8) {
+                $this->addFlash('error', 'Testimonial must contain at least 8 characters.');
+                return $this->redirectToRoute('app_home');
+            }
+
+            if (mb_strlen($content) > 1200) {
+                $this->addFlash('error', 'Testimonial is too long (max 1200 characters).');
+                return $this->redirectToRoute('app_home');
+            }
+
+            $moderation = $contentModerationService->moderateForDisplay($content);
+
+            $testimonial = new Testimonial();
+            $testimonial->setUser($user);
+            $testimonial->setContent($content);
+            $entityManager->persist($testimonial);
+            $entityManager->flush();
+
+            $activityLogger->logAction($user, 'testimonial', 'testimonial_submitted', [
+                'targetType' => 'home_testimonial',
+                'targetId' => $testimonial->getId(),
+                'targetName' => 'Homepage testimonial',
+                'targetImage' => $user->getProfilePicture(),
+                'content' => $content,
+                'destination' => '/',
+            ]);
+
+            if (($moderation['severity'] ?? 'none') === 'severe') {
+                $activityLogger->logAction($user, 'moderation', 'high_risk_content_hidden', [
+                    'targetType' => 'testimonial',
+                    'targetId' => $testimonial->getId(),
+                    'targetName' => 'Homepage testimonial',
+                    'content' => $content,
+                    'destination' => '/admin/dashboard?section=activity_logs',
+                    'metadata' => [
+                        'source' => 'testimonial',
+                        'moderation_severity' => 'severe',
+                        'moderation_reason' => (string) ($moderation['reason'] ?? 'High-risk content'),
+                    ],
+                ]);
+
+                $emailService->sendContentModerationWarning($user, 'testimonial', $content);
+                $this->addFlash('error', 'Your testimonial was saved but removed from public display due to policy violation. A warning email was sent and admins were informed.');
+                return $this->redirectToRoute('app_home');
+            }
+
+            $this->addFlash('success', 'Your testimonial has been published on the homepage.');
+            return $this->redirectToRoute('app_home');
+        }
+
+        $testimonialFeed = $entityManager->createQueryBuilder()
+            ->select('t', 'u')
+            ->from(Testimonial::class, 't')
+            ->leftJoin('t.user', 'u')
+            ->orderBy('t.createdAt', 'DESC')
+            ->setMaxResults(18)
+            ->getQuery()
+            ->getResult();
+
+        $testimonialFeedCards = [];
+        foreach ($testimonialFeed as $item) {
+            if (!$item instanceof Testimonial) {
+                continue;
+            }
+
+            $moderation = $contentModerationService->moderateForDisplay($item->getContent());
+            $testimonialFeedCards[] = [
+                'id' => $item->getId(),
+                'user' => $item->getUser(),
+                'createdAt' => $item->getCreatedAt(),
+                'displayContent' => (string) ($moderation['display_text'] ?? ''),
+                'hiddenByModeration' => (bool) ($moderation['should_hide'] ?? false),
+                'moderationSeverity' => (string) ($moderation['severity'] ?? 'none'),
+            ];
+        }
+
+        return $this->render('main/home.html.twig', [
+            'testimonialFeed' => $testimonialFeedCards,
+        ]);
     }
 
     #[Route('/settings', name: 'app_settings', methods: ['GET', 'POST'])]

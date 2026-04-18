@@ -2,6 +2,8 @@
 
 namespace App\Controller;
 
+use App\Entity\User;
+use App\Service\ActivityLogger;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,15 +17,39 @@ class MarketplaceController extends AbstractController
     private ?string $CURRENT_USER_ID = null;
 
     private PDO $pdo;
+    private ActivityLogger $activityLogger;
 
-    public function __construct()
+    public function __construct(ActivityLogger $activityLogger)
     {
+        $this->activityLogger = $activityLogger;
         $this->pdo = new PDO(
             'mysql:host=127.0.0.1;dbname=wonderlust_db;charset=utf8mb4',
             'root',
-            'saididhia',
+            '',
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
         );
+    }
+
+    /**
+     * @return array{actorId: ?string, actorName: ?string, actorAvatar: ?string}
+     */
+    private function getMarketplaceActorContext(): array
+    {
+        $actorId = $this->CURRENT_USER_ID;
+        $actorName = null;
+        $actorAvatar = null;
+
+        $user = $this->getUser();
+        if ($user instanceof User) {
+            $actorName = $user->getFullName();
+            $actorAvatar = $user->getProfilePicture();
+        }
+
+        return [
+            'actorId' => $actorId,
+            'actorName' => $actorName,
+            'actorAvatar' => $actorAvatar,
+        ];
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -166,6 +192,21 @@ class MarketplaceController extends AbstractController
                 $request->request->get('image', ''),
                 $this->CURRENT_USER_ID,
             ]);
+
+            $productId = (int) $this->pdo->lastInsertId();
+            $this->activityLogger->logAction(null, 'marketplace', 'product_created', [
+                ...$this->getMarketplaceActorContext(),
+                'targetType' => 'product',
+                'targetId' => $productId,
+                'targetName' => (string) $request->request->get('title'),
+                'targetImage' => (string) $request->request->get('image', ''),
+                'metadata' => [
+                    'price' => (string) $request->request->get('price'),
+                    'quantity' => (string) $request->request->get('quantity'),
+                    'category' => (string) $request->request->get('category'),
+                ],
+            ]);
+
             $this->addFlash('success', '✅ Product added successfully!');
             return $this->redirectToRoute('app_marketplace_seller');
         }
@@ -209,6 +250,20 @@ class MarketplaceController extends AbstractController
                 $id,
                 $this->CURRENT_USER_ID,
             ]);
+
+            $this->activityLogger->logAction(null, 'marketplace', 'product_updated', [
+                ...$this->getMarketplaceActorContext(),
+                'targetType' => 'product',
+                'targetId' => $id,
+                'targetName' => (string) $request->request->get('title'),
+                'targetImage' => (string) $request->request->get('image', $product['image']),
+                'metadata' => [
+                    'price' => (string) $request->request->get('price'),
+                    'quantity' => (string) $request->request->get('quantity'),
+                    'category' => (string) $request->request->get('category'),
+                ],
+            ]);
+
             $this->addFlash('success', '✅ Product updated successfully!');
             return $this->redirectToRoute('app_marketplace_seller');
         }
@@ -228,8 +283,21 @@ class MarketplaceController extends AbstractController
     {
         $this->ensureCurrentUserId();
 
+        $stmtMeta = $this->pdo->prepare('SELECT title, image FROM products WHERE id = ? AND userId = ?');
+        $stmtMeta->execute([$id, $this->CURRENT_USER_ID]);
+        $deletedProduct = $stmtMeta->fetch(PDO::FETCH_ASSOC) ?: [];
+
         $stmt = $this->pdo->prepare('DELETE FROM products WHERE id = ? AND userId = ?');
         $stmt->execute([$id, $this->CURRENT_USER_ID]);
+
+        $this->activityLogger->logAction(null, 'marketplace', 'product_deleted', [
+            ...$this->getMarketplaceActorContext(),
+            'targetType' => 'product',
+            'targetId' => $id,
+            'targetName' => isset($deletedProduct['title']) ? (string) $deletedProduct['title'] : null,
+            'targetImage' => isset($deletedProduct['image']) ? (string) $deletedProduct['image'] : null,
+        ]);
+
         $this->addFlash('success', '🗑️ Product deleted.');
         return $this->redirectToRoute('app_marketplace_seller');
     }
@@ -324,6 +392,17 @@ class MarketplaceController extends AbstractController
             $stmt->execute([$cartId, $productId, $quantity]);
         }
 
+        $this->activityLogger->logAction(null, 'marketplace', 'cart_item_added', [
+            ...$this->getMarketplaceActorContext(),
+            'targetType' => 'product',
+            'targetId' => $productId,
+            'targetName' => (string) $product['title'],
+            'targetImage' => isset($product['image']) ? (string) $product['image'] : null,
+            'metadata' => [
+                'quantity' => $quantity,
+            ],
+        ]);
+
         $this->addFlash('success', "✅ {$product['title']} added to cart!");
         return $this->redirectToRoute('app_marketplace_buyer');
     }
@@ -336,6 +415,13 @@ class MarketplaceController extends AbstractController
         $cartId = $this->getOrCreateCart($this->CURRENT_USER_ID);
         $stmt   = $this->pdo->prepare('DELETE FROM cart_item WHERE cart_id = ? AND product_id = ?');
         $stmt->execute([$cartId, $productId]);
+
+        $this->activityLogger->logAction(null, 'marketplace', 'cart_item_removed', [
+            ...$this->getMarketplaceActorContext(),
+            'targetType' => 'product',
+            'targetId' => $productId,
+        ]);
+
         return $this->redirectToRoute('app_marketplace_cart');
     }
 
@@ -355,6 +441,15 @@ class MarketplaceController extends AbstractController
             $stmt = $this->pdo->prepare('UPDATE cart_item SET quantity = ? WHERE cart_id = ? AND product_id = ?');
             $stmt->execute([$quantity, $cartId, $productId]);
         }
+
+        $this->activityLogger->logAction(null, 'marketplace', 'cart_item_updated', [
+            ...$this->getMarketplaceActorContext(),
+            'targetType' => 'product',
+            'targetId' => $productId,
+            'metadata' => [
+                'quantity' => $quantity,
+            ],
+        ]);
 
         return $this->redirectToRoute('app_marketplace_cart');
     }
@@ -468,6 +563,21 @@ class MarketplaceController extends AbstractController
             $stmt->execute([$cartId]);
 
             $this->pdo->commit();
+
+            $this->activityLogger->logAction(null, 'marketplace', 'order_created', [
+                ...$this->getMarketplaceActorContext(),
+                'targetType' => 'order',
+                'targetId' => $factureId,
+                'targetName' => sprintf('Order #%d', $factureId),
+                'destination' => (string) $request->request->get('city', ''),
+                'metadata' => [
+                    'payment_method' => $paymentMethod,
+                    'delivery_status' => $deliveryStatus,
+                    'total' => $total,
+                    'items_count' => count($cartItems),
+                ],
+            ]);
+
             $this->addFlash('success', '🎉 Order placed successfully!');
             return $this->redirectToRoute('app_marketplace_orders');
 
@@ -579,6 +689,12 @@ class MarketplaceController extends AbstractController
                 $stmt->execute([$id]);
 
                 $this->pdo->commit();
+                $this->activityLogger->logAction(null, 'marketplace', 'seller_order_confirmed', [
+                    ...$this->getMarketplaceActorContext(),
+                    'targetType' => 'order',
+                    'targetId' => $id,
+                    'targetName' => sprintf('Order #%d', $id),
+                ]);
                 $this->addFlash('success', '✅ Order confirmed & stock deducted.');
             } catch (\Exception $e) {
                 $this->pdo->rollBack();
@@ -615,6 +731,12 @@ class MarketplaceController extends AbstractController
                 $stmt->execute([$id]);
 
                 $this->pdo->commit();
+                $this->activityLogger->logAction(null, 'marketplace', 'seller_order_cancelled', [
+                    ...$this->getMarketplaceActorContext(),
+                    'targetType' => 'order',
+                    'targetId' => $id,
+                    'targetName' => sprintf('Order #%d', $id),
+                ]);
                 $this->addFlash('success', '❌ Order cancelled. Stock released.');
             } catch (\Exception $e) {
                 $this->pdo->rollBack();
