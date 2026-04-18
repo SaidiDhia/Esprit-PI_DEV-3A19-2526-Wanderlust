@@ -7,12 +7,14 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use PDO;
+use Stripe\Stripe;
+use Stripe\Checkout\Session;
 
 #[Route('/marketplace', name: 'app_marketplace')]
 class MarketplaceController extends AbstractController
 {
     // ── Current user — change this to real auth when ready ────────────────────
-    private string $CURRENT_USER_ID = '1';
+    private string $CURRENT_USER_ID = '1'; // Change to 'user1', 'user2', etc. for testing different roles
 
     private PDO $pdo;
 
@@ -894,27 +896,42 @@ if (!$facture) throw $this->createNotFoundException('Order not found.');
     }
 
     #[Route('/seller/orders/{id}/cancel', name: '_seller_order_cancel', methods: ['POST'])]
-    public function cancelOrder(int $id): Response
-    {
-        $stmt = $this->pdo->prepare('SELECT * FROM facture WHERE id_facture = ?');
-        $stmt->execute([$id]);
-        $facture = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($facture && $facture['delivery_status'] === 'pending') {
-            $this->pdo->beginTransaction();
-            try {
-                $stmt = $this->pdo->prepare('SELECT * FROM facture_product WHERE facture_id = ?');
-                $stmt->execute([$id]);
-                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $item) {
-                    $s = $this->pdo->prepare('UPDATE products SET reserved_quantity = reserved_quantity - ? WHERE id = ?');
+public function cancelOrder(int $id): Response
+{
+    $stmt = $this->pdo->prepare('SELECT * FROM facture WHERE id_facture = ?');
+    $stmt->execute([$id]);
+    $facture = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($facture) {
+        $this->pdo->beginTransaction();
+        try {
+            $stmt = $this->pdo->prepare('SELECT * FROM facture_product WHERE facture_id = ?');
+            $stmt->execute([$id]);
+            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($items as $item) {
+                if ($facture['delivery_status'] === 'pending') {
+                    // Just release the reservation
+                    $s = $this->pdo->prepare('UPDATE products SET reserved_quantity = GREATEST(0, reserved_quantity - ?) WHERE id = ?');
+                    $s->execute([$item['quantity'], $item['product_id']]);
+                } 
+                elseif ($facture['delivery_status'] === 'confirmed') {
+                    // Put the stock back since it was already deducted
+                    $s = $this->pdo->prepare('UPDATE products SET quantity = quantity + ? WHERE id = ?');
                     $s->execute([$item['quantity'], $item['product_id']]);
                 }
-                $this->pdo->prepare("UPDATE facture SET delivery_status = 'cancelled' WHERE id_facture = ?")->execute([$id]);
-                $this->pdo->commit();
-                $this->addFlash('success', '❌ Order cancelled.');
-            } catch (\Exception $e) { $this->pdo->rollBack(); $this->addFlash('error', 'Error.'); }
+            }
+
+            $this->pdo->prepare("UPDATE facture SET delivery_status = 'cancelled' WHERE id_facture = ?")->execute([$id]);
+            $this->pdo->commit();
+            $this->addFlash('success', '❌ Order cancelled and stock updated.');
+        } catch (\Exception $e) { 
+            $this->pdo->rollBack(); 
+            $this->addFlash('error', 'Error during cancellation.'); 
         }
-        return $this->redirectToRoute('app_marketplace_seller_orders');
     }
+    return $this->redirectToRoute('app_marketplace_seller_orders');
+}
 
 #[Route('/seller/dashboard', name: '_seller_dashboard')]
 public function sellerDashboard(): Response
@@ -1021,4 +1038,139 @@ public function sellerDashboard(): Response
         $stmt->execute([$cartId]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+#[Route('/stripe/checkout', name: '_stripe_checkout')]
+public function stripeCheckout(Request $request): Response
+{
+    $cartId = $this->getOrCreateCart($this->CURRENT_USER_ID);
+    $cartItems = $this->getCartItemsDetailed($cartId);
+
+    if (empty($cartItems)) {
+        return $this->redirectToRoute('app_marketplace_cart');
+    }
+
+    Stripe::setApiKey($_ENV['STRIPE_SECRET_KEY']);
+    // 🔥 get rates
+    $ratesJson = file_get_contents("https://open.er-api.com/v6/latest/TND");
+    $ratesData = json_decode($ratesJson, true);
+    $usdRate = $ratesData['rates']['USD'] ?? 0.32;
+    $lineItems = [];
+
+   foreach ($cartItems as $item) {
+    $priceUSD = $item['price'] * $usdRate;
+    $unitAmount = (int) round($priceUSD * 100);
+
+    $lineItems[] = [
+        'price_data' => [
+            'currency' => 'usd',
+            'product_data' => [
+                'name' => $item['product_title'],
+            ],
+            'unit_amount' => $unitAmount,
+        ],
+        'quantity' => $item['cart_qty'],
+    ];
+}
+
+    $successUrl = $request->getSchemeAndHttpHost()
+        . $this->generateUrl('app_marketplace_stripe_success')
+        . '?session_id={CHECKOUT_SESSION_ID}';
+
+    $cancelUrl = $request->getSchemeAndHttpHost()
+        . $this->generateUrl('app_marketplace_cart');
+
+    $session = Session::create([
+        'payment_method_types' => ['card'],
+        'line_items' => $lineItems,
+        'mode' => 'payment',
+        'success_url' => $successUrl,
+        'cancel_url' => $cancelUrl,
+        'metadata' => [
+        'customer_name'  => $request->request->get('name'),
+        'customer_email' => $request->request->get('email'),
+                 ]
+    ]);
+
+    return $this->redirect($session->url);
+}
+
+#[Route('/stripe/success', name: '_stripe_success')]
+public function stripeSuccess(Request $request): Response
+{
+    $sessionId = $request->query->get('session_id');
+
+    Stripe::setApiKey($_ENV['STRIPE_SECRET_KEY']);
+    $session = Session::retrieve($sessionId);
+
+    if ($session && $session->payment_status === 'paid') {
+
+        $cartId = $this->getOrCreateCart($this->CURRENT_USER_ID);
+        $cartItems = $this->getCartItemsDetailed($cartId);
+
+        $total = array_reduce($cartItems, fn($s, $i) => $s + ($i['price'] * $i['cart_qty']), 0);
+
+        $this->pdo->beginTransaction();
+
+        try {
+            // create facture (confirmed مباشرة خاطر الدفع تم)
+            $stmt = $this->pdo->prepare("
+                INSERT INTO facture (user_id, date_facture, total_price, delivery_status, payment_method)
+                VALUES (?, NOW(), ?, 'confirmed', 'online')
+            ");
+            $stmt->execute([$this->CURRENT_USER_ID, $total]);
+
+            $factureId = $this->pdo->lastInsertId();
+
+            foreach ($cartItems as $item) {
+
+                // stock deduction مباشرة
+                $stmt = $this->pdo->prepare("
+                    UPDATE products 
+                    SET quantity = quantity - ? 
+                    WHERE id = ?
+                ");
+                $stmt->execute([$item['cart_qty'], $item['product_id']]);
+
+                // facture product
+                $stmt = $this->pdo->prepare("
+                    INSERT INTO facture_product 
+                    (facture_id, product_id, product_title, quantity, price, product_image)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ");
+                $stmt->execute([
+                    $factureId,
+                    $item['product_id'],
+                    $item['product_title'],
+                    $item['cart_qty'],
+                    $item['price'],
+                    $item['image']
+                ]);
+            }
+
+            // clear cart
+            $stmt = $this->pdo->prepare("DELETE FROM cart_item WHERE cart_id = ?");
+            $stmt->execute([$cartId]);
+
+            $this->pdo->commit();
+
+// Save the name and email into the session so the next page can see them
+$request->getSession()->set('send_success_email', [
+    'name' => $session->metadata->customer_name ?? 'Customer',
+    'email' => $session->metadata->customer_email ?? null,
+    'type' => 'online'
+]);
+
+$this->addFlash('success', '🎉 Payment successful & order created!');
+return $this->redirectToRoute('app_marketplace_orders');
+
+        } catch (\Exception $e) {
+            $this->pdo->rollBack();
+            $this->addFlash('error', 'Error: ' . $e->getMessage());
+        }
+    }
+
+    return $this->redirectToRoute('app_marketplace_cart');
+}
+
+
 }

@@ -75,8 +75,78 @@
 .stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:20px;}
 @media(max-width:1200px){.stats-grid{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr);}.mp-product-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}.mp-page-content{padding:20px 16px;}.mp-topnav-inner{flex-wrap:wrap;}.mp-filter-bar{flex-direction:column;}.mp-form-card{padding:20px;}}
+.currency-switch {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.currency-switch button {
+    flex: 1;
+    padding: 6px;
+    border-radius: 8px;
+    border: 1px solid #E5E7EB;
+    background: white;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.currency-switch button:hover {
+    background: #EFF6FF;
+    border-color: #3B82F6;
+}
+
 </style>
 {% endblock %}
+
+{% block javascripts %}
+
+<script>
+let rates = {
+    TND: 1,
+    USD: 0.35,
+    EUR: 0.29
+};
+
+// 🔥 Load real rates (WORKING API)
+async function loadRates() {
+    try {
+        const res = await fetch('https://open.er-api.com/v6/latest/TND');
+        const data = await res.json();
+
+        if (data.result === "success") {
+            rates.USD = data.rates.USD;
+            rates.EUR = data.rates.EUR;
+        }
+
+        console.log("Rates loaded:", rates);
+    } catch (e) {
+        console.warn("API failed, using fallback");
+    }
+}
+
+loadRates();
+
+// 🔄 Convert price
+function convertPrice(btn, currency) {
+    const card = btn.closest('.mp-product-card');
+    const priceEl = card.querySelector('.mp-card-price');
+
+    const basePrice = parseFloat(priceEl.dataset.price);
+    const converted = basePrice * rates[currency];
+
+    priceEl.innerText = converted.toFixed(2) + ' ' + currency;
+
+    // active UI
+    const buttons = card.querySelectorAll('.currency-switch button');
+    buttons.forEach(b => b.style.background = 'white');
+    btn.style.background = '#DBEAFE';
+}
+</script>
+
+{% endblock %}
+
 
 {% block content %}
 
@@ -168,8 +238,15 @@
                         <h3 class="mp-card-title">{{ p.title }}</h3>
                         <p class="mp-card-desc">{{ p.description|slice(0,80) }}{% if p.description|length > 80 %}...{% endif %}</p>
 
-                        <div class="mp-card-price">{{ p.price|number_format(2) }} TND</div>
+<div class="mp-card-price" data-price="{{ p.price }}">
+    {{ p.price|number_format(2) }} TND
+</div>
 
+<div class="currency-switch">
+    <button onclick="convertPrice(this, 'TND')">TND دينار</button>
+    <button onclick="convertPrice(this, 'USD')">USD💲</button>
+    <button onclick="convertPrice(this, 'EUR')">EUR💶</button>
+</div>
                         {% if p.available_quantity > 0 %}
                             <div class="mp-stock in-stock">✅ In Stock ({{ p.available_quantity }})</div>
                         {% else %}

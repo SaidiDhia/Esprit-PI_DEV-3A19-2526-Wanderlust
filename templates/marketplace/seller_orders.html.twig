@@ -115,23 +115,31 @@
                         </div>
                     </div>
                     <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
-                        <span class="mp-status-badge {{ order.delivery_status }}">
-                            {% if order.delivery_status == 'confirmed' %}✅ Confirmed
-                            {% elseif order.delivery_status == 'cancelled' %}❌ Cancelled
-                            {% else %}⏳ Pending{% endif %}
-                        </span>
-                        {% if order.delivery_status == 'pending' %}
-                        <div style="display:flex; gap:8px;">
-                            <form method="POST" action="{{ path('app_marketplace_seller_order_confirm', {id: order.id_facture}) }}">
-                                <button type="submit" class="mp-btn-primary" style="padding:8px 16px; font-size:12px;">✅ Confirm</button>
-                            </form>
-                            <form method="POST" action="{{ path('app_marketplace_seller_order_cancel', {id: order.id_facture}) }}"
-                                  onsubmit="return confirm('Cancel this order?')">
-                                <button type="submit" class="mp-btn-danger" style="padding:8px 16px; font-size:12px;">❌ Cancel</button>
-                            </form>
-                        </div>
-                        {% endif %}
-                    </div>
+    <span class="mp-status-badge {{ order.delivery_status }}">
+        {% if order.delivery_status == 'confirmed' %}✅ Confirmed
+        {% elseif order.delivery_status == 'cancelled' %}❌ Cancelled
+        {% else %}⏳ Pending{% endif %}
+    </span>
+
+    <div style="display:flex; gap:8px;">
+        {# 1. Show CONFIRM only if Pending #}
+        {% if order.delivery_status == 'pending' %}
+            <form method="POST" action="{{ path('app_marketplace_seller_order_confirm', {id: order.id_facture}) }}">
+                <button type="submit" class="mp-btn-primary" style="padding:8px 16px; font-size:12px;">✅ Confirm</button>
+            </form>
+        {% endif %}
+
+        {# 2. Show CANCEL if Pending OR if Confirmed (so you can undo) #}
+        {% if order.delivery_status == 'pending' or order.delivery_status == 'confirmed' %}
+            <form method="POST" action="{{ path('app_marketplace_seller_order_cancel', {id: order.id_facture}) }}"
+                  onsubmit="return confirm('Are you sure you want to cancel this order? Stock will be restored.')">
+                <button type="submit" class="mp-btn-danger" style="padding:8px 16px; font-size:12px;">❌ Cancel</button>
+            </form>
+        {% endif %}
+        
+        {# 3. If Cancelled, no buttons will show up here #}
+    </div>
+</div>
                 </div>
             </div>
             {% endfor %}

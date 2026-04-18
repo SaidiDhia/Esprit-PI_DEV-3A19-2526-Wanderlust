@@ -78,6 +78,38 @@
 </style>
 {% endblock %}
 
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+(function(){
+    emailjs.init("acj2ZNp2H8YaxnoXl");
+
+    {% if app.session.has('send_success_email') %}
+        {% set emailData = app.session.get('send_success_email') %}
+        
+        // Convert PHP array to JS Object safely
+        const data = {{ emailData|json_encode|raw }};
+        
+        if (data.email) {
+            const templateParams = {
+                to_name: data.name || "Customer",
+                to_email: data.email,
+                message: "✅ Your payment was successful! Your order is confirmed and will arrive soon."
+            };
+
+            emailjs.send("service_9xd7f5q", "template_k3dmmg4", templateParams)
+                .then(() => console.log("Success Email Sent! ✅"))
+                .catch((err) => console.error("Email failed ❌", err));
+        }
+
+        {# CRITICAL: 'do' prevents the 500 error #}
+        {% do app.session.remove('send_success_email') %}
+    {% endif %}
+})();
+</script>
+{% endblock %}
+
+
 {% block content %}
 
 <div class="mp-topnav">
