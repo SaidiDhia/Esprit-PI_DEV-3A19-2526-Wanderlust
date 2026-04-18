@@ -41,7 +41,7 @@ class AiReviewService
             . 'sentiment must be exactly POSITIVE, NEUTRAL, or NEGATIVE. '
             . 'language_quality must be exactly GOOD or BAD and should judge the quality/tone/profanity level '
             . 'of the language used (not the place). '
-            . 'If review language is insulting, offensive, or vulgar, language_quality must be BAD. '
+            . 'If review language is insulting, offensive, vulgar, or contains a threat of violence/death, language_quality must be BAD. '
             . 'Review text: "' . addslashes($reviewText) . '". '
             . 'User rating: ' . $rating . '/5.';
 
@@ -139,7 +139,7 @@ class AiReviewService
         if (preg_match('/"(?:language_quality|languageQuality|language)"\s*:\s*"(GOOD|BAD)"/iu', $normalized, $langMatch)) {
             $languageQuality = strtoupper($langMatch[1]);
         }
-        if ($this->containsProfanity($reviewText)) {
+        if ($this->containsProfanity($reviewText) || $this->containsViolentThreat($reviewText)) {
             $languageQuality = 'BAD';
         }
 
@@ -186,6 +186,10 @@ class AiReviewService
             if (preg_match('/\b(hate|terrible|awful|horrible|bad|worst|disappointing|poor|trash|fuck|shit)\b/u', $normalizedText) === 1) {
                 return 'NEGATIVE';
             }
+
+            if ($this->containsViolentThreat($normalizedText)) {
+                return 'NEGATIVE';
+            }
         }
 
         if ($rating >= 4) {
@@ -213,5 +217,15 @@ class AiReviewService
         }
 
         return '';
+    }
+
+    private function containsViolentThreat(string $reviewText): bool
+    {
+        $normalizedText = mb_strtolower(trim($reviewText));
+        if ($normalizedText === '') {
+            return false;
+        }
+
+        return preg_match('/\b(i\s+want\s+(?:the\s+)?(?:owner|host|him|her|them|you)\s+to\s+die|(?:owner|host|you|he|she|they)\s+should\s+die|deserve(?:s)?\s+to\s+die|go\s+die|kill\s+(?:the\s+)?(?:owner|host|him|her|them|you)|murder\s+(?:the\s+)?(?:owner|host|him|her|them|you))\b/u', $normalizedText) === 1;
     }
 }

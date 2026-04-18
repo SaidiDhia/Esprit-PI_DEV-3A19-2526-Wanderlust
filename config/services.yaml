@@ -15,7 +15,9 @@ services:
         bind:
             $anomalyApiUrl: '%env(default::AI_ANOMALY_API_URL)%'
             $toxicityApiUrl: '%env(default::AI_TOXICITY_API_URL)%'
+            $botApiUrl: '%env(default::BOT_API_URL)%'
             $rulesApiUrl: '%env(default::AI_RULES_API_URL)%'
+            $locationApiUrl: '%env(default::LOCATION_API_URL)%'
             $emailVerificationExemptEmails: []
 
     # makes classes in src/ available to be used as services

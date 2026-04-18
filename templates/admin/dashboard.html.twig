@@ -8,7 +8,7 @@
     <style>
         .location-suggestions {
             position: absolute;
-            z-index: 45;
+            z-index: 1200;
             top: calc(100% + 6px);
             left: 0;
             right: 0;
@@ -61,11 +61,11 @@
         {% endfor %}
 
         {% if highRiskRecentAlerts|default([]) is not empty %}
-            <div class="rounded-2xl border border-destructive/30 bg-destructive/10 p-5">
+            <div class="rounded-2xl border border-destructive/30 bg-destructive/10 p-5" data-risk-alert-panel>
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <h2 class="text-lg font-heading font-bold text-destructive">High-Risk Recent Activities</h2>
                     <div class="flex flex-wrap items-center gap-2">
-                        <form method="post" action="{{ path('app_admin_dashboard_ack_alerts') }}">
+                        <form method="post" action="{{ path('app_admin_dashboard_ack_alerts') }}" data-risk-ack-form>
                             <input type="hidden" name="_token" value="{{ csrf_token('admin_recent_risk_alert_ack') }}">
                             {% for alert in highRiskRecentAlerts %}
                                 <input type="hidden" name="alert_ids[]" value="{{ alert.id }}">
@@ -77,7 +77,7 @@
                 </div>
                 <div class="space-y-2">
                     {% for alert in highRiskRecentAlerts %}
-                        <article class="rounded-xl border border-destructive/20 bg-white/80 px-3 py-2 text-sm">
+                        <article class="rounded-xl border border-destructive/20 bg-white/80 px-3 py-2 text-sm" data-risk-alert-card data-alert-id="{{ alert.id }}">
                             <div class="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                 <span class="rounded-full bg-destructive/10 px-2 py-0.5 font-bold uppercase tracking-wider text-destructive">{{ alert.module }}</span>
                                 <span>{{ alert.action|replace({'_': ' '}) }}</span>
@@ -96,7 +96,7 @@
                                 {% if alert.user_id %}
                                     <a href="{{ path('app_admin_dashboard', { section: 'activity_logs', activity_user: alert.user_id }) }}" class="inline-flex text-xs font-bold text-primary hover:underline">Open user activity log</a>
                                 {% endif %}
-                                <form method="post" action="{{ path('app_admin_dashboard_ack_alerts') }}">
+                                <form method="post" action="{{ path('app_admin_dashboard_ack_alerts') }}" data-risk-ack-form>
                                     <input type="hidden" name="_token" value="{{ csrf_token('admin_recent_risk_alert_ack') }}">
                                     <input type="hidden" name="alert_ids[]" value="{{ alert.id }}">
                                     <button type="submit" class="inline-flex text-xs font-bold text-destructive hover:underline">Mark read</button>
@@ -1839,14 +1839,8 @@
                 <input id="admin-place-create-address" type="text" name="address" autocomplete="off" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
                 <div id="admin-place-create-suggestions" class="location-suggestions hidden"></div>
             </div>
-            <div class="space-y-1">
-                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Latitude</label>
-                <input id="admin-place-create-latitude" type="text" name="latitude" value="36.80650000" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
-            </div>
-            <div class="space-y-1">
-                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Longitude</label>
-                <input id="admin-place-create-longitude" type="text" name="longitude" value="10.18150000" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
-            </div>
+            <input id="admin-place-create-latitude" type="hidden" name="latitude" value="36.80650000" required>
+            <input id="admin-place-create-longitude" type="hidden" name="longitude" value="10.18150000" required>
             <div id="admin-place-create-map" class="location-map md:col-span-2"></div>
             <div class="space-y-1 md:col-span-2">
                 <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description</label>
@@ -1930,14 +1924,8 @@
                 <input id="place-edit-address" type="text" name="address" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
                 <div id="place-edit-suggestions" class="location-suggestions hidden"></div>
             </div>
-            <div class="space-y-1">
-                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Latitude</label>
-                <input id="place-edit-latitude" type="text" name="latitude" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
-            </div>
-            <div class="space-y-1">
-                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Longitude</label>
-                <input id="place-edit-longitude" type="text" name="longitude" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
-            </div>
+            <input id="place-edit-latitude" type="hidden" name="latitude" required>
+            <input id="place-edit-longitude" type="hidden" name="longitude" required>
             <div id="place-edit-map" class="location-map md:col-span-2"></div>
             <div class="space-y-1 md:col-span-2">
                 <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Description</label>
@@ -2874,19 +2862,6 @@
                 .filter((item) => item.name && item.latitude && item.longitude);
         };
 
-        const searchLocationsDirectly = async (query) => {
-            const response = await fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=tn&limit=8&q=' + encodeURIComponent(query), {
-                headers: { 'Accept': 'application/json' },
-            });
-
-            if (!response.ok) {
-                return [];
-            }
-
-            const data = await response.json();
-            return mapNominatimItems(data);
-        };
-
         const searchLocations = async (query) => {
             try {
                 const response = await fetch(locationSearchUrl + '?q=' + encodeURIComponent(query), {
@@ -2898,19 +2873,9 @@
                     const data = await response.json();
                     items = mapNominatimItems(data.items || []);
                 }
-
-                if (items.length === 0) {
-                    items = await searchLocationsDirectly(query);
-                }
-
                 renderSuggestions(items);
             } catch (error) {
-                try {
-                    const fallbackItems = await searchLocationsDirectly(query);
-                    renderSuggestions(fallbackItems);
-                } catch (fallbackError) {
-                    clearSuggestions();
-                }
+                clearSuggestions();
             }
         };
 
@@ -2920,7 +2885,7 @@
                 window.clearTimeout(debounceTimer);
             }
 
-            if (query.length < 3) {
+            if (query.length < 2) {
                 clearSuggestions();
                 return;
             }
@@ -3089,6 +3054,7 @@
     initImageUploaders();
     initExistingImageRemoval();
     initFormValidation();
+    initRiskAlertAcknowledgements();
     window.adminCreatePlaceLocationPicker = initLocationPicker({
         addressId: 'admin-place-create-address',
         latitudeId: 'admin-place-create-latitude',
@@ -3103,5 +3069,65 @@
         suggestionsId: 'place-edit-suggestions',
         mapId: 'place-edit-map',
     });
+
+    function initRiskAlertAcknowledgements() {
+        const panel = document.querySelector('[data-risk-alert-panel]');
+        if (!panel) {
+            return;
+        }
+
+        panel.addEventListener('submit', async (event) => {
+            const form = event.target;
+            if (!(form instanceof HTMLFormElement) || !form.matches('[data-risk-ack-form]')) {
+                return;
+            }
+
+            event.preventDefault();
+
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton instanceof HTMLButtonElement) {
+                submitButton.disabled = true;
+                submitButton.dataset.originalText = submitButton.innerHTML;
+                submitButton.textContent = 'Saving...';
+            }
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Request failed');
+                }
+
+                const alertIds = Array.from(form.querySelectorAll('input[name="alert_ids[]"]'))
+                    .map((input) => input.value)
+                    .filter(Boolean);
+
+                alertIds.forEach((alertId) => {
+                    const card = panel.querySelector(`[data-risk-alert-card][data-alert-id="${CSS.escape(alertId)}"]`);
+                    if (card instanceof HTMLElement) {
+                        card.remove();
+                    }
+                });
+
+                const remainingCards = panel.querySelectorAll('[data-risk-alert-card]');
+                if (remainingCards.length === 0) {
+                    panel.remove();
+                }
+            } catch (error) {
+                if (submitButton instanceof HTMLButtonElement) {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = submitButton.dataset.originalText ?? 'Mark read';
+                }
+
+                form.submit();
+            }
+        });
+    }
 </script>
 {% endblock %}

@@ -34,10 +34,26 @@ services:
   ai_toxicity:
     build:
       context: ./ai/toxicity
+    gpus: all
     ports:
       - "8102:8000"
     environment:
       MODEL_ID: unitary/toxic-bert
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3); sys.exit(0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
+
+  ai_bot:
+    build:
+      context: ./ai/bot
+    gpus: all
+    ports:
+      - "8105:8000"
+    environment:
+      BOT_MODEL_ID: facebook/bart-large-mnli
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3); sys.exit(0)"]
       interval: 30s
@@ -60,6 +76,24 @@ services:
       timeout: 5s
       retries: 4
       start_period: 20s
+
+  location_api:
+    build:
+      context: ./ai/location_api
+    ports:
+      - "8104:8000"
+    environment:
+      OSM_PBF_PATH: /data/osm/tunisia-latest.osm.pbf
+      LOCATION_CACHE_PATH: /data/cache/tunisia_places_index.json
+    volumes:
+      - ./osrm-tunisia:/data/osm:ro
+      - ./var/location_api:/data/cache
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=3); sys.exit(0)"]
+      interval: 30s
+      timeout: 5s
+      retries: 6
+      start_period: 120s
 ###< doctrine/doctrine-bundle ###
 
 volumes:

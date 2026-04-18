@@ -171,18 +171,18 @@
             border-radius: 16px;
         }
 
-        .carousel-inner {
+        .testimonial-slider-track {
             display: flex;
             position: relative;
+            width: 100%;
+            transform: translateX(0);
+            transition: transform 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
+            will-change: transform;
         }
 
-        .carousel-item {
+        .testimonial-slide {
             min-width: 100%;
-            opacity: 0;
-            transition: opacity 0.7s ease-in-out;
-        }
-
-        .carousel-item.active {
+            flex: 0 0 100%;
             opacity: 1;
         }
 
@@ -330,12 +330,12 @@
                 </div>
 
                 <div class="carousel-wrapper">
-                    <div class="carousel-inner" id="carousel-inner">
+                    <div class="testimonial-slider-track" id="testimonial-slider-track">
                         {% for item in testimonialFeed|default([]) %}
                             {% set testimonialUser = item.user %}
                             {% set testimonialName = testimonialUser ? (testimonialUser.fullName ?: testimonialUser.email) : 'Unknown traveler' %}
                             {% set avatar = (testimonialUser and testimonialUser.profilePicture) ? asset('uploads/profiles/' ~ testimonialUser.profilePicture) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ testimonialName|url_encode) %}
-                            <article class="carousel-item{% if loop.first %} active{% endif %}" data-testimonial-id="{{ item.id }}">
+                            <article class="testimonial-slide{% if loop.first %} active{% endif %}" data-testimonial-id="{{ item.id }}">
                                 <div class="testimonial-card">
                                     <div class="d-flex align-items-center mb-3" style="gap: 12px;">
                                         <img class="testimonial-avatar" src="{{ avatar }}" alt="{{ testimonialName }}">
@@ -431,8 +431,8 @@
 
 <script>
     (function () {
-        const carousel = document.getElementById('carousel-inner');
-        const items = carousel ? Array.from(carousel.querySelectorAll('.carousel-item')) : [];
+        const sliderTrack = document.getElementById('testimonial-slider-track');
+        const items = sliderTrack ? Array.from(sliderTrack.querySelectorAll('.testimonial-slide')) : [];
         const prevBtn = document.getElementById('carousel-prev');
         const nextBtn = document.getElementById('carousel-next');
         const indicators = document.querySelectorAll('.carousel-indicators button');
@@ -443,48 +443,40 @@
         let autoPlayTimer = null;
         const AUTO_PLAY_INTERVAL = 5000; // 5 seconds
 
-        // Show slide at given index
-        function showSlide(index) {
-            // Ensure index is within bounds
-            currentIndex = (index + items.length) % items.length;
-
-            // Update items
-            items.forEach((item, i) => {
-                item.classList.remove('active');
-                if (i === currentIndex) {
-                    item.classList.add('active');
-                }
-            });
-
-            // Update indicators
+        function updateIndicators() {
             indicators.forEach((indicator, i) => {
-                indicator.classList.remove('active');
-                if (i === currentIndex) {
-                    indicator.classList.add('active');
-                }
+                indicator.classList.toggle('active', i === currentIndex);
             });
         }
 
-        // Next slide
+        function showSlide(index) {
+            currentIndex = (index + items.length) % items.length;
+            items.forEach((item, i) => {
+                item.classList.toggle('active', i === currentIndex);
+            });
+            sliderTrack.style.transform = `translateX(-${currentIndex * 100}%)`;
+            updateIndicators();
+        }
+
         function nextSlide() {
             showSlide(currentIndex + 1);
             resetAutoPlay();
         }
 
-        // Previous slide
         function prevSlide() {
             showSlide(currentIndex - 1);
             resetAutoPlay();
         }
 
-        // Go to specific slide
         function goToSlide(index) {
             showSlide(index);
             resetAutoPlay();
         }
 
-        // Auto-play functionality
         function startAutoPlay() {
+            if (items.length < 2) {
+                return;
+            }
             autoPlayTimer = setInterval(() => {
                 nextSlide();
             }, AUTO_PLAY_INTERVAL);
@@ -497,7 +489,6 @@
             startAutoPlay();
         }
 
-        // Event listeners
         if (prevBtn) {
             prevBtn.addEventListener('click', prevSlide);
         }
@@ -512,10 +503,9 @@
             });
         });
 
-        // Start auto-play
+        showSlide(0);
         startAutoPlay();
 
-        // Optional: Pause on hover
         const carouselWrapper = document.querySelector('.carousel-wrapper');
         if (carouselWrapper) {
             carouselWrapper.addEventListener('mouseenter', () => {

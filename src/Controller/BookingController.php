@@ -33,7 +33,10 @@ class BookingController extends AbstractController
     private const TUNISIA_WEST = 7.4;
     private const TUNISIA_EAST = 11.8;
 
-    public function __construct(private readonly ContentModerationService $contentModerationService)
+    public function __construct(
+        private readonly ContentModerationService $contentModerationService,
+        private readonly string $locationApiUrl = ''
+    )
     {
     }
 
@@ -848,55 +851,166 @@ class BookingController extends AbstractController
         $this->requireUser();
 
         $query = trim((string) $request->query->get('q', ''));
-        if ($query === '' || mb_strlen($query) < 3) {
-            return new JsonResponse(['items' => []]);
-        }
-
-        $url = sprintf(
-            'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&countrycodes=tn&limit=8&q=%s',
-            rawurlencode($query)
-        );
-
-        $context = stream_context_create([
-            'http' => [
-                'method' => 'GET',
-                'timeout' => 8,
-                'header' => "User-Agent: Wanderlust/1.0 (Symfony geocoding)\r\nAccept: application/json\r\n",
-            ],
-        ]);
-
-        $response = @file_get_contents($url, false, $context);
-        if (!is_string($response) || $response === '') {
-            return new JsonResponse(['items' => []]);
-        }
-
-        $decoded = json_decode($response, true);
-        if (!is_array($decoded)) {
+        if ($query === '' || mb_strlen($query) < 2) {
             return new JsonResponse(['items' => []]);
         }
 
         $items = [];
-        foreach ($decoded as $item) {
+        $dedupe = [];
+
+        $coordinates = $this->extractCoordinatesFromQuery($query);
+        if ($coordinates !== null) {
+            $lat = $coordinates['lat'];
+            $lng = $coordinates['lng'];
+            if ($this->isCoordinateInTunisia($lat, $lng)) {
+                $snapped = $this->snapCoordinateToOsrmRoad($lat, $lng);
+                $resultLat = $snapped['lat'] ?? $lat;
+                $resultLng = $snapped['lng'] ?? $lng;
+                $key = number_format($resultLat, 6, '.', '') . ':' . number_format($resultLng, 6, '.', '');
+                $dedupe[$key] = true;
+
+                $items[] = [
+                    'name' => sprintf('Dropped pin (%s, %s)', number_format($resultLat, 5, '.', ''), number_format($resultLng, 5, '.', '')),
+                    'latitude' => number_format($resultLat, 8, '.', ''),
+                    'longitude' => number_format($resultLng, 8, '.', ''),
+                ];
+            }
+        }
+
+        $localSuggestions = $this->fetchTunisiaLocationSuggestionsFromApi($query);
+        foreach ($localSuggestions as $item) {
+            $key = number_format((float) $item['latitude'], 6, '.', '') . ':' . number_format((float) $item['longitude'], 6, '.', '');
+            if (isset($dedupe[$key])) {
+                continue;
+            }
+
+            $items[] = $item;
+            $dedupe[$key] = true;
+
+            if (count($items) >= 8) {
+                break;
+            }
+        }
+
+        return new JsonResponse(['items' => array_slice($items, 0, 8)]);
+    }
+
+    private function extractCoordinatesFromQuery(string $query): ?array
+    {
+        if (preg_match('/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/u', $query, $matches) !== 1) {
+            return null;
+        }
+
+        $latitude = (float) $matches[1];
+        $longitude = (float) $matches[2];
+
+        if ($latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180) {
+            return null;
+        }
+
+        return ['lat' => $latitude, 'lng' => $longitude];
+    }
+
+    private function fetchTunisiaLocationSuggestionsFromApi(string $query): array
+    {
+        $term = trim($query);
+        if ($term === '') {
+            return [];
+        }
+
+        $decoded = null;
+        foreach ($this->getLocationApiBaseUrls() as $baseUrl) {
+            $url = sprintf(
+                '%s/locations/search?q=%s&limit=8&country=tn',
+                rtrim($baseUrl, '/'),
+                rawurlencode($term)
+            );
+
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'timeout' => 4,
+                    'header' => "Accept: application/json\r\n",
+                ],
+            ]);
+
+            $response = @file_get_contents($url, false, $context);
+            if (!is_string($response) || $response === '') {
+                continue;
+            }
+
+            $candidate = json_decode($response, true);
+            if (!is_array($candidate) || !isset($candidate['items']) || !is_array($candidate['items'])) {
+                continue;
+            }
+
+            $decoded = $candidate;
+            break;
+        }
+
+        if (!is_array($decoded) || !isset($decoded['items']) || !is_array($decoded['items'])) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($decoded['items'] as $item) {
             if (!is_array($item)) {
                 continue;
             }
 
-            $displayName = trim((string) ($item['display_name'] ?? ''));
-            $latitude = (string) ($item['lat'] ?? '');
-            $longitude = (string) ($item['lon'] ?? '');
+            $name = trim((string) ($item['name'] ?? ''));
+            $latitude = (string) ($item['latitude'] ?? '');
+            $longitude = (string) ($item['longitude'] ?? '');
+            if ($name === '' || !is_numeric($latitude) || !is_numeric($longitude)) {
+                continue;
+            }
 
-            if ($displayName === '' || !is_numeric($latitude) || !is_numeric($longitude)) {
+            $lat = (float) $latitude;
+            $lng = (float) $longitude;
+            if (!$this->isCoordinateInTunisia($lat, $lng)) {
                 continue;
             }
 
             $items[] = [
-                'name' => $displayName,
-                'latitude' => number_format((float) $latitude, 8, '.', ''),
-                'longitude' => number_format((float) $longitude, 8, '.', ''),
+                'name' => $name,
+                'latitude' => number_format($lat, 8, '.', ''),
+                'longitude' => number_format($lng, 8, '.', ''),
             ];
+
+            if (count($items) >= 8) {
+                break;
+            }
         }
 
-        return new JsonResponse(['items' => $items]);
+        return $items;
+    }
+
+    private function getLocationApiBaseUrls(): array
+    {
+        $candidates = [
+            $this->locationApiUrl,
+            (string) ($_ENV['LOCATION_API_URL'] ?? ''),
+            (string) getenv('LOCATION_API_URL'),
+            'http://127.0.0.1:8104',
+            'http://location_api:8000',
+        ];
+
+        $urls = [];
+        foreach ($candidates as $candidate) {
+            $candidate = trim((string) $candidate);
+            if ($candidate === '') {
+                continue;
+            }
+
+            $normalized = rtrim($candidate, '/');
+            if (in_array($normalized, $urls, true)) {
+                continue;
+            }
+
+            $urls[] = $normalized;
+        }
+
+        return $urls;
     }
 
     #[Route('/host/{id}', name: 'app_booking_host_view', methods: ['GET'])]
@@ -959,10 +1073,6 @@ class BookingController extends AbstractController
             $formErrors['max_guests'] = 'Max guests must be at least 1.';
         }
 
-        if (!isset($formErrors['capacity']) && !isset($formErrors['max_guests']) && $maxGuests > $capacity) {
-            $formErrors['max_guests'] = 'Max guests cannot exceed capacity.';
-        }
-
         $uploadedImages = $request->files->get('images', []);
         if (!is_array($uploadedImages) || count(array_filter($uploadedImages)) === 0) {
             $formErrors['images'] = 'Please upload at least one image.';
@@ -992,15 +1102,16 @@ class BookingController extends AbstractController
         }
 
         if (!empty($formErrors)) {
-            $hostPlaces = $this->fetchHostPlaces($em, $user);
-            return $this->render('booking/host_dashboard.html.twig', [
-                'places' => $hostPlaces,
-                'placePreviewImages' => $this->buildPlacePreviewImagesMap($em, $hostPlaces),
-                'placeGalleryImages' => $this->buildPlaceGalleryImagesMap($em, $hostPlaces),
-                'pendingRequests' => $this->countHostPendingRequests($em, $user),
-                'formErrors' => $formErrors,
-                'formData' => $formData,
-            ], new Response('', Response::HTTP_UNPROCESSABLE_ENTITY));
+            return $this->renderHostDashboard(
+                $em,
+                $user,
+                $user,
+                [
+                    'formErrors' => $formErrors,
+                    'formData' => $formData,
+                ],
+                Response::HTTP_UNPROCESSABLE_ENTITY
+            );
         }
 
         $place = new Place();
@@ -1091,10 +1202,6 @@ class BookingController extends AbstractController
         $maxGuests = (int) $formData['max_guests'];
         if ($formData['max_guests'] === '' || $maxGuests < 1) {
             $errors[] = 'Max guests must be at least 1.';
-        }
-
-        if (empty($errors) && $maxGuests > $capacity) {
-            $errors[] = 'Max guests cannot exceed capacity.';
         }
 
         $uploadedImages = $request->files->get('images', []);
@@ -1215,7 +1322,7 @@ class BookingController extends AbstractController
             ->getResult();
     }
 
-    private function renderHostDashboard(EntityManagerInterface $em, User $hostUser, ?User $viewer = null): Response
+    private function renderHostDashboard(EntityManagerInterface $em, User $hostUser, ?User $viewer = null, array $additionalContext = [], int $statusCode = Response::HTTP_OK): Response
     {
         $places = $this->fetchHostPlaces($em, $hostUser);
         $placePreviewImages = $this->buildPlacePreviewImagesMap($em, $places);
@@ -1270,7 +1377,7 @@ class BookingController extends AbstractController
             'earningsTotal' => number_format($earningsTotal, 2, '.', ''),
         ];
 
-        return $this->render('booking/host_dashboard.html.twig', [
+        return $this->render('booking/host_dashboard.html.twig', array_merge([
             'hostUser' => $hostUser,
             'viewerIsAdmin' => $viewer instanceof User ? $viewer->isAdmin() : false,
             'places' => $places,
@@ -1292,7 +1399,7 @@ class BookingController extends AbstractController
             ],
             'formErrors' => [],
             'formData' => $this->defaultHostFormData(),
-        ]);
+        ], $additionalContext), new Response('', $statusCode));
     }
 
     #[Route('/host/bookings/{id}/confirm', name: 'app_booking_host_booking_confirm', methods: ['POST'])]

@@ -12,6 +12,7 @@ class UserRiskAssessmentService
         private readonly Connection $connection,
         private readonly RiskScoringEngine $riskScoringEngine,
         private readonly MessageToxicityService $messageToxicityService,
+        private readonly BotBehaviorService $botBehaviorService,
         private readonly AnomalyDetectionService $anomalyDetectionService,
         private readonly RuleEngineApiService $ruleEngineApiService,
     ) {
@@ -34,6 +35,7 @@ class UserRiskAssessmentService
             'click_speed_score' => $this->resolveRuleOrFallback('click_speed_score', $ruleResponse, fn (): float => $this->computeClickSpeedScore($userId)),
             'login_failure_score' => $this->resolveRuleOrFallback('login_failure_score', $ruleResponse, fn (): float => $this->computeLoginFailureScore($userId)),
             'message_toxicity_score' => $this->computeMessageToxicityScore($userId),
+            'bot_behavior_score' => $this->computeBotBehaviorScore($userId, $metrics),
             'cancellation_abuse_score' => $this->resolveRuleOrFallback('cancellation_abuse_score', $ruleResponse, fn (): float => $this->computeCancellationAbuseScore($userId)),
             'marketplace_fraud_score' => $this->resolveRuleOrFallback('marketplace_fraud_score', $ruleResponse, fn (): float => $this->computeMarketplaceFraudScore($userId)),
         ];
@@ -55,6 +57,7 @@ class UserRiskAssessmentService
                     click_speed_score,
                     login_failure_score,
                     message_toxicity_score,
+                    bot_behavior_score,
                     cancellation_abuse_score,
                     marketplace_fraud_score,
                     risk_band,
@@ -68,6 +71,7 @@ class UserRiskAssessmentService
                     :click_speed_score,
                     :login_failure_score,
                     :message_toxicity_score,
+                    :bot_behavior_score,
                     :cancellation_abuse_score,
                     :marketplace_fraud_score,
                     :risk_band,
@@ -81,6 +85,7 @@ class UserRiskAssessmentService
                     click_speed_score = VALUES(click_speed_score),
                     login_failure_score = VALUES(login_failure_score),
                     message_toxicity_score = VALUES(message_toxicity_score),
+                    bot_behavior_score = VALUES(bot_behavior_score),
                     cancellation_abuse_score = VALUES(cancellation_abuse_score),
                     marketplace_fraud_score = VALUES(marketplace_fraud_score),
                     risk_band = VALUES(risk_band),
@@ -94,6 +99,7 @@ class UserRiskAssessmentService
                     'click_speed_score' => $signals['click_speed_score'],
                     'login_failure_score' => $signals['login_failure_score'],
                     'message_toxicity_score' => $signals['message_toxicity_score'],
+                    'bot_behavior_score' => $signals['bot_behavior_score'],
                     'cancellation_abuse_score' => $signals['cancellation_abuse_score'],
                     'marketplace_fraud_score' => $signals['marketplace_fraud_score'],
                     'risk_band' => $classification['band'],
@@ -252,6 +258,7 @@ class UserRiskAssessmentService
                 login_failure_score DECIMAL(5,2) NOT NULL,
                 message_toxicity_score DECIMAL(5,2) NOT NULL,
                 cancellation_abuse_score DECIMAL(5,2) NOT NULL,
+                bot_behavior_score DECIMAL(5,2) NOT NULL,
                 marketplace_fraud_score DECIMAL(5,2) NOT NULL DEFAULT 0.00,
                 risk_band VARCHAR(16) NOT NULL,
                 recommended_action VARCHAR(32) NOT NULL,
@@ -264,6 +271,12 @@ class UserRiskAssessmentService
             ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci ENGINE = InnoDB");
         } catch (\Throwable) {
             // Keep service best-effort.
+        }
+
+        try {
+            $this->connection->executeStatement("ALTER TABLE risk_assessment ADD COLUMN bot_behavior_score DECIMAL(5,2) NOT NULL DEFAULT 0.00 AFTER message_toxicity_score");
+        } catch (\Throwable) {
+            // Column already exists or cannot be altered in current rollout.
         }
 
         try {
@@ -432,6 +445,66 @@ class UserRiskAssessmentService
         }
 
         return min(100.0, round($finalScore, 2));
+    }
+
+    private function computeBotBehaviorScore(string $userId, array $metrics): float
+    {
+        try {
+            $activityRows = $this->connection->executeQuery(
+                "SELECT module, action, content, destination, target_type, target_name
+                 FROM activity_log
+                 WHERE user_id = :user_id
+                   AND created_at >= DATE_SUB(NOW(), INTERVAL 24 HOUR)
+                 ORDER BY created_at DESC
+                 LIMIT 25",
+                ['user_id' => $userId]
+            )->fetchAllAssociative();
+        } catch (\Throwable) {
+            return 0.0;
+        }
+
+        if ($activityRows === []) {
+            return 0.0;
+        }
+
+        $parts = [];
+        foreach ($activityRows as $row) {
+            $fragment = trim(implode(' ', array_filter([
+                (string) ($row['module'] ?? ''),
+                (string) ($row['action'] ?? ''),
+                (string) ($row['content'] ?? ''),
+                (string) ($row['destination'] ?? ''),
+                (string) ($row['target_type'] ?? ''),
+                (string) ($row['target_name'] ?? ''),
+            ], static fn (string $value): bool => trim($value) !== '')));
+
+            if ($fragment !== '') {
+                $parts[] = $fragment;
+            }
+        }
+
+        if ($parts === []) {
+            return 0.0;
+        }
+
+        $summary = implode("\n", $parts);
+        $score = $this->botBehaviorService->score($summary);
+
+        $clickSpeed = (float) ($metrics['clicks_per_minute'] ?? 0.0);
+        if ($clickSpeed > 0.0) {
+            $score = max($score, min(100.0, $clickSpeed * 2.5));
+        }
+
+        $distinctActions = count(array_unique(array_map(
+            static fn (array $row): string => strtolower(trim((string) ($row['module'] ?? '')) . ':' . trim((string) ($row['action'] ?? ''))),
+            $activityRows
+        )));
+
+        if (count($activityRows) >= 10 && $distinctActions <= 3) {
+            $score = max($score, 75.0);
+        }
+
+        return min(100.0, round($score, 2));
     }
 
     private function computeCancellationAbuseScore(string $userId): float

@@ -263,7 +263,7 @@ class AdminController extends AbstractController
             'critical' => 0,
         ];
         try {
-            $riskTopUsers = $conn->executeQuery("\n                SELECT r.user_id, r.risk_score, r.anomaly_score, r.click_speed_score,\n                       r.login_failure_score, r.message_toxicity_score, r.cancellation_abuse_score,\n                       r.marketplace_fraud_score, r.risk_band, r.recommended_action, r.updated_at,\n                       u.full_name, u.email, u.profile_picture\n                FROM risk_assessment r\n                LEFT JOIN users u ON u.id = r.user_id\n                ORDER BY r.risk_score DESC, r.updated_at DESC\n                LIMIT 40\n            ")->fetchAllAssociative();
+            $riskTopUsers = $conn->executeQuery("\n                SELECT r.user_id, r.risk_score, r.anomaly_score, r.click_speed_score,\n                       r.login_failure_score, r.message_toxicity_score, r.bot_behavior_score, r.cancellation_abuse_score,\n                       r.marketplace_fraud_score, r.risk_band, r.recommended_action, r.updated_at,\n                       u.full_name, u.email, u.profile_picture\n                FROM risk_assessment r\n                LEFT JOIN users u ON u.id = r.user_id\n                ORDER BY r.risk_score DESC, r.updated_at DESC\n                LIMIT 40\n            ")->fetchAllAssociative();
 
             $riskSummaryRow = $conn->executeQuery("\n                SELECT\n                    COUNT(*) AS total,\n                    SUM(CASE WHEN risk_score < 30 THEN 1 ELSE 0 END) AS normal_count,\n                    SUM(CASE WHEN risk_score >= 30 AND risk_score < 60 THEN 1 ELSE 0 END) AS suspicious_count,\n                    SUM(CASE WHEN risk_score >= 60 AND risk_score < 80 THEN 1 ELSE 0 END) AS abusive_count,\n                    SUM(CASE WHEN risk_score >= 80 THEN 1 ELSE 0 END) AS critical_count\n                FROM risk_assessment\n            ")->fetchAssociative();
 
@@ -1424,6 +1424,7 @@ class AdminController extends AbstractController
             'click_speed_score' => (float) ($riskRow['click_speed_score'] ?? 0.0),
             'login_failure_score' => (float) ($riskRow['login_failure_score'] ?? 0.0),
             'message_toxicity_score' => (float) ($riskRow['message_toxicity_score'] ?? 0.0),
+            'bot_behavior_score' => (float) ($riskRow['bot_behavior_score'] ?? 0.0),
             'cancellation_abuse_score' => (float) ($riskRow['cancellation_abuse_score'] ?? 0.0),
             'marketplace_fraud_score' => (float) ($riskRow['marketplace_fraud_score'] ?? 0.0),
         ];
@@ -1437,6 +1438,7 @@ class AdminController extends AbstractController
             'click_speed_score' => 'High click/request speed burst',
             'login_failure_score' => 'Repeated login failures / unusual auth pattern',
             'message_toxicity_score' => 'Toxic message pattern detected',
+            'bot_behavior_score' => 'Automated or repetitive bot-like behavior',
             'cancellation_abuse_score' => 'Booking cancellation abuse pattern',
             'marketplace_fraud_score' => 'Marketplace fake order/product behavior pattern',
         ];
@@ -1560,6 +1562,7 @@ class AdminController extends AbstractController
         $defaultUrls = [
             'Anomaly API' => 'http://127.0.0.1:8101/health',
             'Toxicity API' => 'http://127.0.0.1:8102/health',
+            'Bot API' => 'http://127.0.0.1:8105/health',
             'Rules API' => 'http://127.0.0.1:8103/health',
         ];
 
@@ -1569,6 +1572,7 @@ class AdminController extends AbstractController
             $envKey = match ($name) {
                 'Anomaly API' => 'AI_ANOMALY_API_URL',
                 'Toxicity API' => 'AI_TOXICITY_API_URL',
+                'Bot API' => 'BOT_API_URL',
                 default => 'AI_RULES_API_URL',
             };
 
@@ -2095,10 +2099,6 @@ class AdminController extends AbstractController
         $maxGuests = (int) $formData['max_guests'];
         if ($formData['max_guests'] === '' || $maxGuests < 1) {
             $errors[] = 'Max guests must be at least 1.';
-        }
-
-        if ($capacity > 0 && $maxGuests > $capacity) {
-            $errors[] = 'Max guests cannot exceed capacity.';
         }
 
         if (!in_array($formData['status'], [Place::STATUS_PENDING, Place::STATUS_APPROVED, Place::STATUS_DENIED], true)) {
