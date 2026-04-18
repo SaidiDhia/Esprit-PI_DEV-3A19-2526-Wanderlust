@@ -55,6 +55,54 @@ class MainController extends AbstractController
 
             $moderation = $contentModerationService->moderateForDisplay($content);
 
+            // Check if user already has a testimonial
+            $existingTestimonial = $entityManager->createQueryBuilder()
+                ->select('t')
+                ->from(Testimonial::class, 't')
+                ->where('t.user = :user')
+                ->setParameter('user', $user)
+                ->getQuery()
+                ->getOneOrNullResult();
+
+            if ($existingTestimonial instanceof Testimonial) {
+                // Update existing testimonial
+                $existingTestimonial->setContent($content);
+                $existingTestimonial->setUpdatedAt(new \DateTimeImmutable());
+                $entityManager->flush();
+
+                $activityLogger->logAction($user, 'testimonial', 'testimonial_updated', [
+                    'targetType' => 'home_testimonial',
+                    'targetId' => $existingTestimonial->getId(),
+                    'targetName' => 'Homepage testimonial',
+                    'targetImage' => $user->getProfilePicture(),
+                    'content' => $content,
+                    'destination' => '/',
+                ]);
+
+                if (($moderation['severity'] ?? 'none') === 'severe') {
+                    $activityLogger->logAction($user, 'moderation', 'high_risk_content_hidden', [
+                        'targetType' => 'testimonial',
+                        'targetId' => $existingTestimonial->getId(),
+                        'targetName' => 'Homepage testimonial',
+                        'content' => $content,
+                        'destination' => '/admin/dashboard?section=activity_logs',
+                        'metadata' => [
+                            'source' => 'testimonial',
+                            'moderation_severity' => 'severe',
+                            'moderation_reason' => (string) ($moderation['reason'] ?? 'High-risk content'),
+                        ],
+                    ]);
+
+                    $emailService->sendContentModerationWarning($user, 'testimonial', $content);
+                    $this->addFlash('error', 'Your testimonial was updated but removed from public display due to policy violation. A warning email was sent and admins were informed.');
+                    return $this->redirectToRoute('app_home');
+                }
+
+                $this->addFlash('success', 'Your testimonial has been updated on the homepage.');
+                return $this->redirectToRoute('app_home');
+            }
+
+            // Create new testimonial
             $testimonial = new Testimonial();
             $testimonial->setUser($user);
             $testimonial->setContent($content);
@@ -113,14 +161,29 @@ class MainController extends AbstractController
                 'id' => $item->getId(),
                 'user' => $item->getUser(),
                 'createdAt' => $item->getCreatedAt(),
+                'updatedAt' => $item->getUpdatedAt(),
                 'displayContent' => (string) ($moderation['display_text'] ?? ''),
                 'hiddenByModeration' => (bool) ($moderation['should_hide'] ?? false),
                 'moderationSeverity' => (string) ($moderation['severity'] ?? 'none'),
             ];
         }
 
+        // Get user's existing testimonial if logged in
+        $userTestimonial = null;
+        $currentUser = $this->getUser();
+        if ($currentUser instanceof User) {
+            $userTestimonial = $entityManager->createQueryBuilder()
+                ->select('t')
+                ->from(Testimonial::class, 't')
+                ->where('t.user = :user')
+                ->setParameter('user', $currentUser)
+                ->getQuery()
+                ->getOneOrNullResult();
+        }
+
         return $this->render('main/home.html.twig', [
             'testimonialFeed' => $testimonialFeedCards,
+            'userTestimonial' => $userTestimonial,
         ]);
     }
 

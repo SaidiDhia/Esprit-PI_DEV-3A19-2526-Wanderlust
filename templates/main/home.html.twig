@@ -158,6 +158,73 @@
         .testimonial-nav button:hover {
             background: #f8fafc;
         }
+
+        /* Carousel Styles */
+        .carousel-container {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .carousel-wrapper {
+            overflow: hidden;
+            border-radius: 16px;
+        }
+
+        .carousel-inner {
+            display: flex;
+            position: relative;
+        }
+
+        .carousel-item {
+            min-width: 100%;
+            opacity: 0;
+            transition: opacity 0.7s ease-in-out;
+        }
+
+        .carousel-item.active {
+            opacity: 1;
+        }
+
+        .testimonial-card {
+            min-width: 100%;
+        }
+
+        .carousel-indicators {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+            padding: 0;
+        }
+
+        .carousel-indicators button {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            border: none;
+            background: #cbd5e1;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .carousel-indicators button.active {
+            background: #1D4ED8;
+            transform: scale(1.2);
+        }
+
+        .carousel-indicators button:hover {
+            background: #94a3b8;
+        }
+
+        .no-testimonials {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            background: #fff;
+            padding: 40px;
+            text-align: center;
+            color: #475569;
+        }
     </style>
 {% endblock %}
 
@@ -252,51 +319,83 @@
             </div>
         </div>
 
-        <div class="d-flex justify-content-end testimonial-nav mb-3" style="gap: 8px;">
-            <button type="button" id="testimonial-prev" aria-label="Previous testimonial">&#8592;</button>
-            <button type="button" id="testimonial-next" aria-label="Next testimonial">&#8594;</button>
-        </div>
-
-        <div id="testimonial-track" class="testimonial-track">
-            {% for item in testimonialFeed|default([]) %}
-                {% set testimonialUser = item.user %}
-                {% set testimonialName = testimonialUser ? (testimonialUser.fullName ?: testimonialUser.email) : 'Unknown traveler' %}
-                {% set avatar = (testimonialUser and testimonialUser.profilePicture) ? asset('uploads/profiles/' ~ testimonialUser.profilePicture) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ testimonialName|url_encode) %}
-                <article class="testimonial-card">
-                    <div class="d-flex align-items-center mb-3" style="gap: 12px;">
-                        <img class="testimonial-avatar" src="{{ avatar }}" alt="{{ testimonialName }}">
-                        <div>
-                            <p class="mb-0" style="font-weight: 700; color: #0f172a;">{{ testimonialName }}</p>
-                            <p class="mb-0" style="font-size: 12px; color: #64748b;">{{ item.createdAt|date('Y-m-d H:i') }}</p>
-                            {% if item.moderationSeverity == 'mild' %}
-                                <span style="display: inline-flex; margin-top: 4px; border-radius: 999px; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;">Filtered</span>
-                            {% endif %}
-                        </div>
+        {% if testimonialFeed|default([]) is not empty %}
+            <div class="carousel-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div style="flex: 1;"></div>
+                    <div class="testimonial-nav d-flex" style="gap: 8px;">
+                        <button type="button" id="carousel-prev" aria-label="Previous testimonial">&#8592;</button>
+                        <button type="button" id="carousel-next" aria-label="Next testimonial">&#8594;</button>
                     </div>
-                    {% if item.hiddenByModeration %}
-                        <p class="mb-0" style="font-size: 15px; color: #be123c; line-height: 1.55; font-weight: 600;">This testimonial was removed from public view due to policy violation.</p>
-                    {% else %}
-                        <p class="mb-0" style="font-size: 15px; color: #0f172a; line-height: 1.55;">{{ item.displayContent|slice(0, 300) }}</p>
-                    {% endif %}
-                </article>
-            {% else %}
-                <article class="testimonial-card">
-                    <p class="mb-0" style="color: #475569;">No testimonials yet. Be the first to share your experience.</p>
-                </article>
-            {% endfor %}
-        </div>
+                </div>
+
+                <div class="carousel-wrapper">
+                    <div class="carousel-inner" id="carousel-inner">
+                        {% for item in testimonialFeed|default([]) %}
+                            {% set testimonialUser = item.user %}
+                            {% set testimonialName = testimonialUser ? (testimonialUser.fullName ?: testimonialUser.email) : 'Unknown traveler' %}
+                            {% set avatar = (testimonialUser and testimonialUser.profilePicture) ? asset('uploads/profiles/' ~ testimonialUser.profilePicture) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ testimonialName|url_encode) %}
+                            <article class="carousel-item{% if loop.first %} active{% endif %}" data-testimonial-id="{{ item.id }}">
+                                <div class="testimonial-card">
+                                    <div class="d-flex align-items-center mb-3" style="gap: 12px;">
+                                        <img class="testimonial-avatar" src="{{ avatar }}" alt="{{ testimonialName }}">
+                                        <div style="flex: 1;">
+                                            <p class="mb-0" style="font-weight: 700; color: #0f172a;">{{ testimonialName }}</p>
+                                            <p class="mb-0" style="font-size: 12px; color: #64748b;">
+                                                {% if item.updatedAt %}
+                                                    Updated {{ item.updatedAt|date('Y-m-d H:i') }}
+                                                {% else %}
+                                                    {{ item.createdAt|date('Y-m-d H:i') }}
+                                                {% endif %}
+                                            </p>
+                                            {% if item.moderationSeverity == 'mild' %}
+                                                <span style="display: inline-flex; margin-top: 4px; border-radius: 999px; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;">Filtered</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if item.hiddenByModeration %}
+                                        <p class="mb-0" style="font-size: 15px; color: #be123c; line-height: 1.55; font-weight: 600;">This testimonial was removed from public view due to policy violation.</p>
+                                    {% else %}
+                                        <p class="mb-0" style="font-size: 15px; color: #0f172a; line-height: 1.55;">{{ item.displayContent|slice(0, 300) }}</p>
+                                    {% endif %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% if testimonialFeed|length > 1 %}
+                    <div class="carousel-indicators" id="carousel-indicators">
+                        {% for item in testimonialFeed %}
+                            <button type="button" class="{% if loop.first %}active{% endif %}" aria-label="Go to testimonial {{ loop.index }}" data-slide-index="{{ loop.index0 }}"></button>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="no-testimonials">
+                <p class="mb-0">No testimonials yet. Be the first to share your experience.</p>
+            </div>
+        {% endif %}
 
         <div class="testimonial-form">
-            <h4 class="mb-3">Share your testimonial</h4>
-            <p class="mb-3" style="color: #64748b;">Your profile picture, name, timestamp, and message will appear in the testimonial slider.</p>
+            {% if app.user and userTestimonial %}
+                <h4 class="mb-3">Update your testimonial</h4>
+                <p class="mb-3" style="color: #64748b;">Edit your existing testimonial to keep it fresh and up-to-date.</p>
+            {% else %}
+                <h4 class="mb-3">Share your testimonial</h4>
+                <p class="mb-3" style="color: #64748b;">Your profile picture, name, timestamp, and message will appear in the testimonial carousel.</p>
+            {% endif %}
             <form method="post" action="{{ path('app_home') }}">
                 <input type="hidden" name="action" value="submit_testimonial">
                 <input type="hidden" name="_token" value="{{ csrf_token('submit_home_testimonial') }}">
                 <div class="form-group mb-3">
-                    <textarea name="testimonialContent" rows="4" class="form-control" maxlength="1200" placeholder="Tell us about your stay, activities, or messages experience..." required></textarea>
+                    <textarea name="testimonialContent" rows="4" class="form-control" maxlength="1200" placeholder="Tell us about your stay, activities, or experience..." required>{% if userTestimonial %}{{ userTestimonial.content }}{% endif %}</textarea>
                 </div>
                 {% if app.user %}
-                    <button type="submit" class="primary-btn text-uppercase">Publish Testimonial</button>
+                    <button type="submit" class="primary-btn text-uppercase">
+                        {% if userTestimonial %}Update Testimonial{% else %}Publish Testimonial{% endif %}
+                    </button>
                 {% else %}
                     <a href="{{ path('app_login') }}" class="primary-btn text-uppercase">Login To Publish</a>
                 {% endif %}
@@ -332,20 +431,103 @@
 
 <script>
     (function () {
-        const track = document.getElementById('testimonial-track');
-        const prevBtn = document.getElementById('testimonial-prev');
-        const nextBtn = document.getElementById('testimonial-next');
-        if (!track || !prevBtn || !nextBtn) {
-            return;
+        const carousel = document.getElementById('carousel-inner');
+        const items = carousel ? Array.from(carousel.querySelectorAll('.carousel-item')) : [];
+        const prevBtn = document.getElementById('carousel-prev');
+        const nextBtn = document.getElementById('carousel-next');
+        const indicators = document.querySelectorAll('.carousel-indicators button');
+        
+        if (items.length === 0) return;
+
+        let currentIndex = 0;
+        let autoPlayTimer = null;
+        const AUTO_PLAY_INTERVAL = 5000; // 5 seconds
+
+        // Show slide at given index
+        function showSlide(index) {
+            // Ensure index is within bounds
+            currentIndex = (index + items.length) % items.length;
+
+            // Update items
+            items.forEach((item, i) => {
+                item.classList.remove('active');
+                if (i === currentIndex) {
+                    item.classList.add('active');
+                }
+            });
+
+            // Update indicators
+            indicators.forEach((indicator, i) => {
+                indicator.classList.remove('active');
+                if (i === currentIndex) {
+                    indicator.classList.add('active');
+                }
+            });
         }
 
-        const scrollStep = 380;
-        prevBtn.addEventListener('click', function () {
-            track.scrollBy({ left: -scrollStep, behavior: 'smooth' });
+        // Next slide
+        function nextSlide() {
+            showSlide(currentIndex + 1);
+            resetAutoPlay();
+        }
+
+        // Previous slide
+        function prevSlide() {
+            showSlide(currentIndex - 1);
+            resetAutoPlay();
+        }
+
+        // Go to specific slide
+        function goToSlide(index) {
+            showSlide(index);
+            resetAutoPlay();
+        }
+
+        // Auto-play functionality
+        function startAutoPlay() {
+            autoPlayTimer = setInterval(() => {
+                nextSlide();
+            }, AUTO_PLAY_INTERVAL);
+        }
+
+        function resetAutoPlay() {
+            if (autoPlayTimer) {
+                clearInterval(autoPlayTimer);
+            }
+            startAutoPlay();
+        }
+
+        // Event listeners
+        if (prevBtn) {
+            prevBtn.addEventListener('click', prevSlide);
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', nextSlide);
+        }
+
+        indicators.forEach((indicator) => {
+            indicator.addEventListener('click', function () {
+                const slideIndex = parseInt(this.dataset.slideIndex, 10);
+                goToSlide(slideIndex);
+            });
         });
-        nextBtn.addEventListener('click', function () {
-            track.scrollBy({ left: scrollStep, behavior: 'smooth' });
-        });
+
+        // Start auto-play
+        startAutoPlay();
+
+        // Optional: Pause on hover
+        const carouselWrapper = document.querySelector('.carousel-wrapper');
+        if (carouselWrapper) {
+            carouselWrapper.addEventListener('mouseenter', () => {
+                if (autoPlayTimer) {
+                    clearInterval(autoPlayTimer);
+                }
+            });
+
+            carouselWrapper.addEventListener('mouseleave', () => {
+                startAutoPlay();
+            });
+        }
     })();
 </script>
 
