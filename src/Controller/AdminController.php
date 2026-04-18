@@ -3,10 +3,14 @@
 namespace App\Controller;
 
 use App\Entity\Booking;
+use App\Entity\Activities;
+use App\Entity\Events;
 use App\Entity\Place;
 use App\Entity\PlaceImage;
+use App\Entity\Reservations;
 use App\Entity\User;
 use App\Enum\RoleEnum;
+use App\Enum\StatusActiviteEnum;
 use App\Enum\TFAMethod;
 use App\Repository\UserRepository;
 use Doctrine\DBAL\Connection;
@@ -22,13 +26,60 @@ use Symfony\Component\String\Slugger\SluggerInterface;
 
 class AdminController extends AbstractController
 {
+    #[Route('/admin/dashboard/alerts/ack', name: 'app_admin_dashboard_ack_alerts', methods: ['POST'])]
+    public function acknowledgeRiskAlerts(Request $request, Connection $connection): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $user = $this->getUser();
+        if (!$user instanceof User || $user->getId() === null) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if (!$this->isCsrfTokenValid('admin_recent_risk_alert_ack', (string) $request->request->get('_token', ''))) {
+            throw $this->createAccessDeniedException('Invalid alert acknowledgement token.');
+        }
+
+        $alertIds = array_values(array_unique(array_filter(array_map('trim', (array) $request->request->all('alert_ids')), static fn (string $value): bool => $value !== '')));
+        if ($alertIds === []) {
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'risk']);
+        }
+
+        $this->ensureRecentRiskAlertAckTableExists($connection);
+
+        try {
+            $connection->beginTransaction();
+            foreach ($alertIds as $alertId) {
+                $connection->executeStatement(
+                    'INSERT INTO admin_recent_risk_alert_ack (admin_user_id, activity_log_id, acknowledged_at) VALUES (:admin_user_id, :activity_log_id, :acknowledged_at) ON DUPLICATE KEY UPDATE acknowledged_at = VALUES(acknowledged_at)',
+                    [
+                        'admin_user_id' => (string) $user->getId(),
+                        'activity_log_id' => (int) $alertId,
+                        'acknowledged_at' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+                    ]
+                );
+            }
+            $connection->commit();
+            $this->addFlash('success', 'High-risk alerts marked as read and hidden from the dashboard.');
+        } catch (\Throwable) {
+            try {
+                $connection->rollBack();
+            } catch (\Throwable) {
+                // Ignore rollback failures.
+            }
+            $this->addFlash('error', 'Unable to mark alerts as read right now.');
+        }
+
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'risk']);
+    }
+
     #[Route('/admin/dashboard', name: 'app_admin_dashboard', methods: ['GET'])]
     public function dashboard(Request $request, UserRepository $userRepository, EntityManagerInterface $entityManager): Response
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
         $section = (string) $request->query->get('section', 'users');
-        if (!in_array($section, ['users', 'messaging', 'booking', 'marketplace', 'risk', 'activity_logs', 'activity_feed'], true)) {
+        if (!in_array($section, ['users', 'messaging', 'booking', 'experiences', 'marketplace', 'risk', 'activity_logs', 'activity_feed'], true)) {
             $section = 'users';
         }
 
@@ -116,6 +167,23 @@ class AdminController extends AbstractController
             )->fetchAllAssociative();
         } catch (\Throwable $e) {
             // The activity_log table may not exist before migration is applied.
+        }
+
+        $recentRiskAlertAckIds = [];
+        $currentUser = $this->getUser();
+        if ($currentUser instanceof User && $currentUser->getId() !== null) {
+            try {
+                $this->ensureRecentRiskAlertAckTableExists($conn);
+                $recentRiskAlertAckIds = array_map(
+                    static fn (array $row): string => (string) ($row['activity_log_id'] ?? ''),
+                    $conn->executeQuery(
+                        'SELECT activity_log_id FROM admin_recent_risk_alert_ack WHERE admin_user_id = :admin_user_id',
+                        ['admin_user_id' => (string) $currentUser->getId()]
+                    )->fetchAllAssociative()
+                );
+            } catch (\Throwable) {
+                $recentRiskAlertAckIds = [];
+            }
         }
 
         $activityFocusUserId = trim((string) $request->query->get('activity_user', ''));
@@ -239,6 +307,11 @@ class AdminController extends AbstractController
 
                 $riskFlaggedUsers[] = $row;
             }
+
+            $highRiskRecentAlerts = array_values(array_filter(
+                $highRiskRecentAlerts,
+                static fn (array $alert) => !in_array((string) ($alert['id'] ?? ''), $recentRiskAlertAckIds, true)
+            ));
         } catch (\Throwable $e) {
             // risk_assessment table may not exist in early rollout.
         }
@@ -326,6 +399,120 @@ class AdminController extends AbstractController
         $bookingPlaceGalleryImages = $this->buildPlaceGalleryImagesMap($entityManager, $bookingPlaces);
         $bookingPlaceGalleryImageRecords = $this->buildPlaceGalleryImageRecordsMap($entityManager, $bookingPlaces);
 
+        $experienceStats = [
+            'totalActivities' => 0,
+            'pendingActivities' => 0,
+            'acceptedActivities' => 0,
+            'refusedActivities' => 0,
+            'totalEvents' => 0,
+            'pendingEvents' => 0,
+            'activeEvents' => 0,
+            'endedEvents' => 0,
+            'totalReservations' => 0,
+            'pendingReservations' => 0,
+            'confirmedReservations' => 0,
+            'cancelledReservations' => 0,
+        ];
+        $experienceActivities = [];
+        $experienceEvents = [];
+        $experienceReservations = [];
+        $experienceReservationTrend = [];
+        $experienceStatusMixChartData = [];
+
+        try {
+            $experienceStats['totalActivities'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM activites')->fetchOne();
+            $experienceStats['pendingActivities'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM activites WHERE status = 'en_attente'")->fetchOne();
+            $experienceStats['acceptedActivities'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM activites WHERE status = 'accepte'")->fetchOne();
+            $experienceStats['refusedActivities'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM activites WHERE status = 'refuse'")->fetchOne();
+        } catch (\Throwable) {
+            // Activities module tables may be unavailable in early rollout.
+        }
+
+        try {
+            $experienceStats['totalEvents'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM events')->fetchOne();
+            $experienceStats['pendingEvents'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM events WHERE statut = 'en_attente'")->fetchOne();
+            $experienceStats['activeEvents'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM events WHERE date_fin >= NOW()')->fetchOne();
+            $experienceStats['endedEvents'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM events WHERE date_fin < NOW()')->fetchOne();
+        } catch (\Throwable) {
+            // Events module tables may be unavailable in early rollout.
+        }
+
+        try {
+            $experienceStats['totalReservations'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM reservations')->fetchOne();
+            $experienceStats['pendingReservations'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM reservations WHERE statut = 'en_attente'")->fetchOne();
+            $experienceStats['confirmedReservations'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM reservations WHERE statut = 'confirmee'")->fetchOne();
+            $experienceStats['cancelledReservations'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM reservations WHERE statut = 'annulee'")->fetchOne();
+        } catch (\Throwable) {
+            // Reservations module tables may be unavailable in early rollout.
+        }
+
+        try {
+            $experienceActivities = $conn->executeQuery(
+                "SELECT a.id, a.titre, a.categorie, a.type_activite, a.status, a.date_creation,
+                        COALESCE(u.full_name, 'Unknown creator') AS creator_name
+                 FROM activites a
+                 LEFT JOIN users u ON u.id = a.created_by_id
+                 ORDER BY a.date_creation DESC
+                 LIMIT 12"
+            )->fetchAllAssociative();
+        } catch (\Throwable) {
+            $experienceActivities = [];
+        }
+
+        try {
+            $experienceEvents = $conn->executeQuery(
+                "SELECT e.id, e.lieu, e.statut, e.date_debut, e.date_fin, e.date_creation,
+                        e.places_disponibles, e.capacite_max,
+                        COALESCE(u.full_name, e.organisateur, 'Unknown organizer') AS organizer_name
+                 FROM events e
+                 LEFT JOIN users u ON u.id = e.created_by_id
+                 ORDER BY e.date_creation DESC
+                 LIMIT 12"
+            )->fetchAllAssociative();
+        } catch (\Throwable) {
+            $experienceEvents = [];
+        }
+
+        try {
+            $experienceReservations = $conn->executeQuery(
+                "SELECT r.id, r.statut, r.nombre_personnes, r.prix_total, r.date_creation,
+                        COALESCE(r.nom_complet, u.full_name, 'Unknown user') AS reserver_name,
+                        COALESCE(e.lieu, 'Unknown event') AS event_lieu
+                 FROM reservations r
+                 LEFT JOIN users u ON u.id = r.user_id
+                 LEFT JOIN events e ON e.id = r.id_event
+                 ORDER BY r.date_creation DESC
+                 LIMIT 14"
+            )->fetchAllAssociative();
+        } catch (\Throwable) {
+            $experienceReservations = [];
+        }
+
+        try {
+            $reservationTrendRows = $conn->executeQuery(
+                "SELECT DATE(date_creation) AS day_label, COUNT(*) AS total
+                 FROM reservations
+                 WHERE date_creation >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                 GROUP BY DATE(date_creation)
+                 ORDER BY day_label ASC"
+            )->fetchAllAssociative();
+
+            $experienceReservationTrend = array_map(static fn (array $row): array => [
+                'label' => (new \DateTimeImmutable((string) $row['day_label']))->format('M d'),
+                'count' => (int) ($row['total'] ?? 0),
+            ], $reservationTrendRows);
+        } catch (\Throwable) {
+            $experienceReservationTrend = [];
+        }
+
+        $experienceStatusMixChartData = [
+            ['label' => 'Activities Pending', 'count' => (int) $experienceStats['pendingActivities']],
+            ['label' => 'Activities Accepted', 'count' => (int) $experienceStats['acceptedActivities']],
+            ['label' => 'Events Pending', 'count' => (int) $experienceStats['pendingEvents']],
+            ['label' => 'Reservations Pending', 'count' => (int) $experienceStats['pendingReservations']],
+            ['label' => 'Reservations Confirmed', 'count' => (int) $experienceStats['confirmedReservations']],
+        ];
+
         $marketplaceStats = [
             'totalProducts' => 0,
             'activeListings' => 0,
@@ -400,6 +587,98 @@ class AdminController extends AbstractController
             // Users table might not exist or unreachable
         }
 
+        $riskBandChartData = [
+            ['label' => 'Normal', 'count' => (int) ($riskSummary['normal'] ?? 0)],
+            ['label' => 'Suspicious', 'count' => (int) ($riskSummary['suspicious'] ?? 0)],
+            ['label' => 'Abusive', 'count' => (int) ($riskSummary['abusive'] ?? 0)],
+            ['label' => 'Critical', 'count' => (int) ($riskSummary['critical'] ?? 0)],
+        ];
+
+        $riskSignalAverages = [
+            ['label' => 'Anomaly', 'score' => 0.0],
+            ['label' => 'Click Speed', 'score' => 0.0],
+            ['label' => 'Login Failures', 'score' => 0.0],
+            ['label' => 'Toxicity', 'score' => 0.0],
+            ['label' => 'Cancel Abuse', 'score' => 0.0],
+            ['label' => 'Marketplace Fraud', 'score' => 0.0],
+        ];
+
+        if ($riskTopUsers !== []) {
+            $riskRowsCount = (float) count($riskTopUsers);
+            $riskSignalAverages = [
+                ['label' => 'Anomaly', 'score' => round(array_sum(array_map(static fn (array $row): float => (float) ($row['anomaly_score'] ?? 0), $riskTopUsers)) / $riskRowsCount, 2)],
+                ['label' => 'Click Speed', 'score' => round(array_sum(array_map(static fn (array $row): float => (float) ($row['click_speed_score'] ?? 0), $riskTopUsers)) / $riskRowsCount, 2)],
+                ['label' => 'Login Failures', 'score' => round(array_sum(array_map(static fn (array $row): float => (float) ($row['login_failure_score'] ?? 0), $riskTopUsers)) / $riskRowsCount, 2)],
+                ['label' => 'Toxicity', 'score' => round(array_sum(array_map(static fn (array $row): float => (float) ($row['message_toxicity_score'] ?? 0), $riskTopUsers)) / $riskRowsCount, 2)],
+                ['label' => 'Cancel Abuse', 'score' => round(array_sum(array_map(static fn (array $row): float => (float) ($row['cancellation_abuse_score'] ?? 0), $riskTopUsers)) / $riskRowsCount, 2)],
+                ['label' => 'Marketplace Fraud', 'score' => round(array_sum(array_map(static fn (array $row): float => (float) ($row['marketplace_fraud_score'] ?? 0), $riskTopUsers)) / $riskRowsCount, 2)],
+            ];
+        }
+
+        $activityLogsTrendChartData = [];
+        $activityLogsModuleChartData = [];
+        $activityLogsSeverityChartData = [
+            ['label' => 'Low', 'count' => 0],
+            ['label' => 'Medium', 'count' => 0],
+            ['label' => 'High', 'count' => 0],
+        ];
+
+        try {
+            $activityTrendQuery = 'SELECT DATE(created_at) AS day_label, COUNT(*) AS total FROM activity_log WHERE created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)';
+            $activityTrendParams = [];
+            if ($activityFocusUserId !== '') {
+                $activityTrendQuery .= ' AND user_id = :user_id';
+                $activityTrendParams['user_id'] = $activityFocusUserId;
+            }
+            $activityTrendQuery .= ' GROUP BY DATE(created_at) ORDER BY day_label ASC';
+
+            $activityTrendRows = $conn->executeQuery($activityTrendQuery, $activityTrendParams)->fetchAllAssociative();
+            $activityLogsTrendChartData = array_map(static fn (array $row): array => [
+                'label' => (new \DateTimeImmutable((string) $row['day_label']))->format('M d'),
+                'count' => (int) ($row['total'] ?? 0),
+            ], $activityTrendRows);
+        } catch (\Throwable) {
+            $activityLogsTrendChartData = [];
+        }
+
+        if ($activityUserInsights['module_breakdown'] !== []) {
+            $activityLogsModuleChartData = array_map(static fn (array $row): array => [
+                'label' => (string) ($row['module'] ?? 'unknown'),
+                'count' => (int) ($row['action_count'] ?? 0),
+            ], array_slice((array) $activityUserInsights['module_breakdown'], 0, 8));
+        } else {
+            try {
+                $globalModules = $conn->executeQuery(
+                    "SELECT module, COUNT(*) AS action_count
+                     FROM activity_log
+                     WHERE created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                     GROUP BY module
+                     ORDER BY action_count DESC
+                     LIMIT 8"
+                )->fetchAllAssociative();
+
+                $activityLogsModuleChartData = array_map(static fn (array $row): array => [
+                    'label' => (string) ($row['module'] ?? 'unknown'),
+                    'count' => (int) ($row['action_count'] ?? 0),
+                ], $globalModules);
+            } catch (\Throwable) {
+                $activityLogsModuleChartData = [];
+            }
+        }
+
+        foreach ((array) ($activityUserInsights['recent_entries'] ?? []) as $entry) {
+            $severity = (string) ($entry['severity'] ?? 'low');
+            if ($severity === 'high') {
+                $activityLogsSeverityChartData[2]['count']++;
+                continue;
+            }
+            if ($severity === 'medium') {
+                $activityLogsSeverityChartData[1]['count']++;
+                continue;
+            }
+            $activityLogsSeverityChartData[0]['count']++;
+        }
+
         return $this->render('admin/dashboard.html.twig', [
             'users' => $users,
             'roles' => array_map(static fn (RoleEnum $role): array => [
@@ -438,6 +717,12 @@ class AdminController extends AbstractController
             'bookingHosts' => $bookingHosts,
             'bookingPlaceGalleryImages' => $bookingPlaceGalleryImages,
             'bookingPlaceGalleryImageRecords' => $bookingPlaceGalleryImageRecords,
+            'experienceStats' => $experienceStats,
+            'experienceActivities' => $experienceActivities,
+            'experienceEvents' => $experienceEvents,
+            'experienceReservations' => $experienceReservations,
+            'experienceReservationTrend' => $experienceReservationTrend,
+            'experienceStatusMixChartData' => $experienceStatusMixChartData,
             'marketplaceStats' => $marketplaceStats,
             'marketplaceRecentOrders' => $marketplaceRecentOrders,
             'marketplaceTopProducts' => $marketplaceTopProducts,
@@ -455,7 +740,138 @@ class AdminController extends AbstractController
             'activityModuleFilter' => $activityModuleFilter,
             'activityActionFilter' => $activityActionFilter,
             'activityUserInsights' => $activityUserInsights,
+            'riskBandChartData' => $riskBandChartData,
+            'riskSignalAverages' => $riskSignalAverages,
+            'activityLogsTrendChartData' => $activityLogsTrendChartData,
+            'activityLogsModuleChartData' => $activityLogsModuleChartData,
+            'activityLogsSeverityChartData' => $activityLogsSeverityChartData,
         ]);
+    }
+
+    #[Route('/admin/dashboard/activities/{id}/status', name: 'app_admin_activity_status', methods: ['POST'])]
+    public function updateActivityStatus(Request $request, Activities $activity, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_activity_status_' . $activity->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid activity status token.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+        }
+
+        $status = StatusActiviteEnum::tryFrom(mb_strtolower(trim((string) $request->request->get('status', ''))));
+        if (!$status instanceof StatusActiviteEnum) {
+            $this->addFlash('error', 'Invalid activity status value.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+        }
+
+        $activity->setStatus($status);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Activity status updated successfully.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+    }
+
+    #[Route('/admin/dashboard/activities/{id}/delete', name: 'app_admin_activity_delete', methods: ['POST'])]
+    public function deleteActivityFromAdmin(Request $request, Activities $activity, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_activity_delete_' . $activity->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid activity delete token.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+        }
+
+        $entityManager->remove($activity);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Activity deleted from admin dashboard.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+    }
+
+    #[Route('/admin/dashboard/events/{id}/status', name: 'app_admin_event_status', methods: ['POST'])]
+    public function updateEventStatus(Request $request, Events $event, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_event_status_' . $event->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid event status token.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+        }
+
+        $status = mb_strtolower(trim((string) $request->request->get('status', '')));
+        if (!in_array($status, ['en_attente', 'accepte', 'refuse', 'termine'], true)) {
+            $this->addFlash('error', 'Invalid event status value.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+        }
+
+        $event->setStatut($status);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Event status updated successfully.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+    }
+
+    #[Route('/admin/dashboard/events/{id}/delete', name: 'app_admin_event_delete', methods: ['POST'])]
+    public function deleteEventFromAdmin(Request $request, Events $event, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_event_delete_' . $event->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid event delete token.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+        }
+
+        $entityManager->remove($event);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Event deleted from admin dashboard.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+    }
+
+    #[Route('/admin/dashboard/reservations/{id}/status', name: 'app_admin_reservation_status', methods: ['POST'])]
+    public function updateReservationStatus(Request $request, Reservations $reservation, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_reservation_status_' . $reservation->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid reservation status token.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+        }
+
+        $status = mb_strtolower(trim((string) $request->request->get('status', '')));
+        if (!in_array($status, ['en_attente', 'confirmee', 'annulee'], true)) {
+            $this->addFlash('error', 'Invalid reservation status value.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+        }
+
+        $reservation->setStatut($status);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Reservation status updated successfully.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+    }
+
+    #[Route('/admin/dashboard/reservations/{id}/delete', name: 'app_admin_reservation_delete', methods: ['POST'])]
+    public function deleteReservationFromAdmin(Request $request, Reservations $reservation, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_reservation_delete_' . $reservation->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid reservation delete token.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+        }
+
+        $event = $reservation->getEvent();
+        if ($event instanceof Events) {
+            $event->setPlacesDisponibles($event->getPlacesDisponibles() + max(0, $reservation->getNombrePersonnes()));
+            $entityManager->persist($event);
+        }
+
+        $entityManager->remove($reservation);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Reservation deleted from admin dashboard.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
     }
 
     /**
@@ -1124,6 +1540,15 @@ class AdminController extends AbstractController
                 'content' => null,
                 'created_at' => null,
             ];
+        }
+    }
+
+    private function ensureRecentRiskAlertAckTableExists(Connection $connection): void
+    {
+        try {
+            $connection->executeStatement("\n                CREATE TABLE IF NOT EXISTS admin_recent_risk_alert_ack (\n                    admin_user_id VARCHAR(36) NOT NULL,\n                    activity_log_id BIGINT NOT NULL,\n                    acknowledged_at DATETIME NOT NULL,\n                    INDEX idx_admin_recent_risk_alert_ack_admin_user_id (admin_user_id),\n                    INDEX idx_admin_recent_risk_alert_ack_activity_log_id (activity_log_id),\n                    PRIMARY KEY(admin_user_id, activity_log_id)\n                ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci ENGINE = InnoDB\n            ");
+        } catch (\Throwable) {
+            // Best effort for early rollout and local environments.
         }
     }
 

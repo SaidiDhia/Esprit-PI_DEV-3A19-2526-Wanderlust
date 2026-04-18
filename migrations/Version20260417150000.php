@@ -36,10 +36,20 @@ final class Version20260417150000 extends AbstractMigration
             INDEX idx_activity_log_user_id (user_id),
             PRIMARY KEY(id)
         ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_general_ci` ENGINE = InnoDB');
+
+        $this->addSql('CREATE TABLE admin_recent_risk_alert_ack (
+            admin_user_id VARCHAR(36) NOT NULL,
+            activity_log_id BIGINT NOT NULL,
+            acknowledged_at DATETIME NOT NULL,
+            INDEX idx_admin_recent_risk_alert_ack_admin_user_id (admin_user_id),
+            INDEX idx_admin_recent_risk_alert_ack_activity_log_id (activity_log_id),
+            PRIMARY KEY(admin_user_id, activity_log_id)
+        ) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_general_ci` ENGINE = InnoDB');
     }
 
     public function down(Schema $schema): void
     {
+        $this->addSql('DROP TABLE admin_recent_risk_alert_ack');
         $this->addSql('DROP TABLE activity_log');
     }
 }

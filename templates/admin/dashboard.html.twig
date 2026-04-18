@@ -64,7 +64,16 @@
             <div class="rounded-2xl border border-destructive/30 bg-destructive/10 p-5">
                 <div class="mb-3 flex items-center justify-between gap-3">
                     <h2 class="text-lg font-heading font-bold text-destructive">High-Risk Recent Activities</h2>
-                    <span class="rounded-full bg-destructive/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-destructive">Alert</span>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <form method="post" action="{{ path('app_admin_dashboard_ack_alerts') }}">
+                            <input type="hidden" name="_token" value="{{ csrf_token('admin_recent_risk_alert_ack') }}">
+                            {% for alert in highRiskRecentAlerts %}
+                                <input type="hidden" name="alert_ids[]" value="{{ alert.id }}">
+                            {% endfor %}
+                            <button type="submit" class="rounded-full bg-destructive/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-destructive transition-colors hover:bg-destructive/30">Mark visible as read</button>
+                        </form>
+                        <span class="rounded-full bg-destructive/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-destructive">Alert</span>
+                    </div>
                 </div>
                 <div class="space-y-2">
                     {% for alert in highRiskRecentAlerts %}
@@ -83,9 +92,16 @@
                                 <span>{{ alert.created_at|date('Y-m-d H:i:s') }}</span>
                             </div>
                             <p class="mt-1 text-sm text-foreground">{{ alert.content ? alert.content|slice(0, 170) : 'High-risk event without content payload.' }}</p>
-                            {% if alert.user_id %}
-                                <a href="{{ path('app_admin_dashboard', { section: 'activity_logs', activity_user: alert.user_id }) }}" class="mt-2 inline-flex text-xs font-bold text-primary hover:underline">Open user activity log</a>
-                            {% endif %}
+                            <div class="mt-2 flex flex-wrap items-center gap-3">
+                                {% if alert.user_id %}
+                                    <a href="{{ path('app_admin_dashboard', { section: 'activity_logs', activity_user: alert.user_id }) }}" class="inline-flex text-xs font-bold text-primary hover:underline">Open user activity log</a>
+                                {% endif %}
+                                <form method="post" action="{{ path('app_admin_dashboard_ack_alerts') }}">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('admin_recent_risk_alert_ack') }}">
+                                    <input type="hidden" name="alert_ids[]" value="{{ alert.id }}">
+                                    <button type="submit" class="inline-flex text-xs font-bold text-destructive hover:underline">Mark read</button>
+                                </form>
+                            </div>
                         </article>
                     {% endfor %}
                 </div>
@@ -144,6 +160,12 @@
                     <a href="{{ path('app_admin_dashboard', { section: 'booking' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'booking' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
                         <span>Booking</span>
                         {% if activeSection == 'booking' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
+                        {% endif %}
+                    </a>
+                    <a href="{{ path('app_admin_dashboard', { section: 'experiences' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'experiences' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
+                        <span>Experiences</span>
+                        {% if activeSection == 'experiences' %}
                             <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
                         {% endif %}
                     </a>
@@ -752,6 +774,27 @@
                         </div>
                     </div>
 
+                    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Risk Bands Distribution</h3>
+                                <span class="text-xs text-muted-foreground">Doughnut chart</span>
+                            </div>
+                            <div class="h-[280px] w-full">
+                                <canvas id="riskBandsChart" class="h-full w-full"></canvas>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Average AI Signal Scores</h3>
+                                <span class="text-xs text-muted-foreground">Bar chart</span>
+                            </div>
+                            <div class="h-[280px] w-full">
+                                <canvas id="riskSignalsChart" class="h-full w-full"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="rounded-2xl border border-border bg-secondary/10 p-4">
                         <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Flagged Users (Reason + Trigger Activity)</h3>
                         <div class="overflow-x-auto">
@@ -929,6 +972,37 @@
                         <a href="{{ path('app_admin_dashboard', { section: 'users' }) }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">
                             Show Users
                         </a>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4 xl:col-span-2">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Activity Curve (14 Days)</h3>
+                                <span class="text-xs text-muted-foreground">Line chart</span>
+                            </div>
+                            <div class="h-[260px] w-full">
+                                <canvas id="activityLogsTrendChart" class="h-full w-full"></canvas>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Severity Mix</h3>
+                                <span class="text-xs text-muted-foreground">Doughnut chart</span>
+                            </div>
+                            <div class="h-[260px] w-full">
+                                <canvas id="activityLogsSeverityChart" class="h-full w-full"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <div class="mb-3 flex items-center justify-between">
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Module Footprint</h3>
+                            <span class="text-xs text-muted-foreground">Bar chart</span>
+                        </div>
+                        <div class="h-[260px] w-full">
+                            <canvas id="activityLogsModuleChart" class="h-full w-full"></canvas>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 gap-6 xl:grid-cols-[340px_1fr]">
@@ -1207,6 +1281,215 @@
                                     Select a user from the left list, or click “Activity Logs” from Users/Risk to open a full per-user activity timeline.
                                 </div>
                             {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div id="experiences-analytics" class="{{ activeSection == 'experiences' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6 space-y-6">
+                    <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <h2 class="text-xl font-heading font-bold text-foreground">Activities, Events & Reservations</h2>
+                            <p class="text-sm text-muted-foreground">Central moderation and CRUD operations for travel experiences modules.</p>
+                        </div>
+                        <div class="flex flex-wrap items-center gap-2">
+                            <a href="{{ path('app_activities_new') }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">New Activity</a>
+                            <a href="{{ path('app_events_new') }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">New Event</a>
+                            <a href="{{ path('app_events_index') }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">Create Reservation</a>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Activities</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-foreground">{{ experienceStats.totalActivities|default(0) }}</p>
+                            <p class="mt-1 text-xs text-muted-foreground">Pending: {{ experienceStats.pendingActivities|default(0) }} · Accepted: {{ experienceStats.acceptedActivities|default(0) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Events</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-primary">{{ experienceStats.totalEvents|default(0) }}</p>
+                            <p class="mt-1 text-xs text-muted-foreground">Pending: {{ experienceStats.pendingEvents|default(0) }} · Active: {{ experienceStats.activeEvents|default(0) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Reservations</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-accent">{{ experienceStats.totalReservations|default(0) }}</p>
+                            <p class="mt-1 text-xs text-muted-foreground">Pending: {{ experienceStats.pendingReservations|default(0) }} · Confirmed: {{ experienceStats.confirmedReservations|default(0) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Cancelled Reservations</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-destructive">{{ experienceStats.cancelledReservations|default(0) }}</p>
+                            <p class="mt-1 text-xs text-muted-foreground">Ended events: {{ experienceStats.endedEvents|default(0) }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Reservations Curve (14 Days)</h3>
+                                <span class="text-xs text-muted-foreground">Line chart</span>
+                            </div>
+                            <div class="h-[260px] w-full">
+                                <canvas id="experienceReservationTrendChart" class="h-full w-full"></canvas>
+                            </div>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Operations Queue Mix</h3>
+                                <span class="text-xs text-muted-foreground">Bar chart</span>
+                            </div>
+                            <div class="h-[260px] w-full">
+                                <canvas id="experienceStatusMixChart" class="h-full w-full"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Latest Activities (Admin CRUD)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[1080px] border-collapse">
+                                <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Activity</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Creator</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Created</th>
+                                    <th class="py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for item in experienceActivities|default([]) %}
+                                    <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                        <td class="py-3 pr-3 text-sm font-semibold text-foreground">{{ item.titre }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.categorie ?: 'n/a' }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.creator_name }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.date_creation ? item.date_creation|date('Y-m-d H:i') : 'n/a' }}</td>
+                                        <td class="py-3 text-xs">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <form method="post" action="{{ path('app_admin_activity_status', { id: item.id }) }}" class="flex items-center gap-2">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('admin_activity_status_' ~ item.id) }}">
+                                                    <select name="status" class="rounded-lg border border-border bg-background px-2 py-1 text-xs">
+                                                        <option value="en_attente" {% if item.status == 'en_attente' %}selected{% endif %}>Pending</option>
+                                                        <option value="accepte" {% if item.status == 'accepte' %}selected{% endif %}>Accepted</option>
+                                                        <option value="refuse" {% if item.status == 'refuse' %}selected{% endif %}>Refused</option>
+                                                    </select>
+                                                    <button type="submit" class="rounded-lg bg-primary/10 px-2 py-1 font-semibold text-primary hover:bg-primary/20">Update</button>
+                                                </form>
+                                                <form method="post" action="{{ path('app_admin_activity_delete', { id: item.id }) }}" onsubmit="return confirm('Delete this activity from admin dashboard?');">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('admin_activity_delete_' ~ item.id) }}">
+                                                    <button type="submit" class="rounded-lg bg-destructive/10 px-2 py-1 font-semibold text-destructive hover:bg-destructive/20">Delete</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="py-8 text-center text-sm text-muted-foreground">No activities available yet.</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Latest Events (Admin CRUD)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[1120px] border-collapse">
+                                <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Event</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Organizer</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Capacity</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Timeline</th>
+                                    <th class="py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for item in experienceEvents|default([]) %}
+                                    <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                        <td class="py-3 pr-3">
+                                            <p class="text-sm font-semibold text-foreground">{{ item.lieu }}</p>
+                                            <p class="text-xs text-muted-foreground">Status: {{ item.statut ?: 'n/a' }}</p>
+                                        </td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.organizer_name }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.places_disponibles }}/{{ item.capacite_max }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.date_debut ? item.date_debut|date('Y-m-d H:i') : 'n/a' }} → {{ item.date_fin ? item.date_fin|date('Y-m-d H:i') : 'n/a' }}</td>
+                                        <td class="py-3 text-xs">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <form method="post" action="{{ path('app_admin_event_status', { id: item.id }) }}" class="flex items-center gap-2">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('admin_event_status_' ~ item.id) }}">
+                                                    <select name="status" class="rounded-lg border border-border bg-background px-2 py-1 text-xs">
+                                                        <option value="en_attente" {% if item.statut == 'en_attente' %}selected{% endif %}>Pending</option>
+                                                        <option value="accepte" {% if item.statut == 'accepte' %}selected{% endif %}>Accepted</option>
+                                                        <option value="refuse" {% if item.statut == 'refuse' %}selected{% endif %}>Refused</option>
+                                                        <option value="termine" {% if item.statut == 'termine' %}selected{% endif %}>Ended</option>
+                                                    </select>
+                                                    <button type="submit" class="rounded-lg bg-primary/10 px-2 py-1 font-semibold text-primary hover:bg-primary/20">Update</button>
+                                                </form>
+                                                <form method="post" action="{{ path('app_admin_event_delete', { id: item.id }) }}" onsubmit="return confirm('Delete this event from admin dashboard?');">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('admin_event_delete_' ~ item.id) }}">
+                                                    <button type="submit" class="rounded-lg bg-destructive/10 px-2 py-1 font-semibold text-destructive hover:bg-destructive/20">Delete</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="py-8 text-center text-sm text-muted-foreground">No events available yet.</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Latest Reservations (Admin CRUD)</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[1120px] border-collapse">
+                                <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Reservation</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">User</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Event</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">People / Price</th>
+                                    <th class="py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for item in experienceReservations|default([]) %}
+                                    <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                        <td class="py-3 pr-3">
+                                            <p class="text-sm font-semibold text-foreground">#{{ item.id }}</p>
+                                            <p class="text-xs text-muted-foreground">{{ item.date_creation ? item.date_creation|date('Y-m-d H:i') : 'n/a' }}</p>
+                                        </td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.reserver_name }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.event_lieu }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ item.nombre_personnes }} · {{ item.prix_total }}</td>
+                                        <td class="py-3 text-xs">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <form method="post" action="{{ path('app_admin_reservation_status', { id: item.id }) }}" class="flex items-center gap-2">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('admin_reservation_status_' ~ item.id) }}">
+                                                    <select name="status" class="rounded-lg border border-border bg-background px-2 py-1 text-xs">
+                                                        <option value="en_attente" {% if item.statut == 'en_attente' %}selected{% endif %}>Pending</option>
+                                                        <option value="confirmee" {% if item.statut == 'confirmee' %}selected{% endif %}>Confirmed</option>
+                                                        <option value="annulee" {% if item.statut == 'annulee' %}selected{% endif %}>Cancelled</option>
+                                                    </select>
+                                                    <button type="submit" class="rounded-lg bg-primary/10 px-2 py-1 font-semibold text-primary hover:bg-primary/20">Update</button>
+                                                </form>
+                                                <form method="post" action="{{ path('app_admin_reservation_delete', { id: item.id }) }}" onsubmit="return confirm('Delete this reservation from admin dashboard?');">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('admin_reservation_delete_' ~ item.id) }}">
+                                                    <button type="submit" class="rounded-lg bg-destructive/10 px-2 py-1 font-semibold text-destructive hover:bg-destructive/20">Delete</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="5" class="py-8 text-center text-sm text-muted-foreground">No reservations available yet.</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -1940,6 +2223,201 @@
         }
     }
 
+    function initExperienceCharts() {
+        if (typeof Chart === 'undefined') {
+            return;
+        }
+
+        const reservationTrendElement = document.getElementById('experienceReservationTrendChart');
+        if (reservationTrendElement) {
+            const trendData = {{ experienceReservationTrend|json_encode|raw }};
+            new Chart(reservationTrendElement, {
+                type: 'line',
+                data: {
+                    labels: trendData.map((item) => item.label),
+                    datasets: [{
+                        label: 'Reservations',
+                        data: trendData.map((item) => item.count),
+                        borderColor: '#16a34a',
+                        backgroundColor: 'rgba(22, 163, 74, 0.14)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
+
+        const statusMixElement = document.getElementById('experienceStatusMixChart');
+        if (statusMixElement) {
+            const mixData = {{ experienceStatusMixChartData|json_encode|raw }};
+            new Chart(statusMixElement, {
+                type: 'bar',
+                data: {
+                    labels: mixData.map((item) => item.label),
+                    datasets: [{
+                        label: 'Queue Size',
+                        data: mixData.map((item) => item.count),
+                        backgroundColor: ['#f59e0b', '#22c55e', '#fb7185', '#38bdf8', '#6366f1'],
+                        borderRadius: 8,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
+    }
+
+    function initRiskCharts() {
+        if (typeof Chart === 'undefined') {
+            return;
+        }
+
+        const riskBandsElement = document.getElementById('riskBandsChart');
+        if (riskBandsElement) {
+            const bandsData = {{ riskBandChartData|json_encode|raw }};
+            new Chart(riskBandsElement, {
+                type: 'doughnut',
+                data: {
+                    labels: bandsData.map((item) => item.label),
+                    datasets: [{
+                        data: bandsData.map((item) => item.count),
+                        backgroundColor: ['#22c55e', '#f59e0b', '#fb7185', '#dc2626'],
+                        borderColor: ['#22c55e', '#f59e0b', '#fb7185', '#dc2626'],
+                        borderWidth: 1,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, boxWidth: 8 },
+                        },
+                    },
+                },
+            });
+        }
+
+        const riskSignalsElement = document.getElementById('riskSignalsChart');
+        if (riskSignalsElement) {
+            const signalsData = {{ riskSignalAverages|json_encode|raw }};
+            new Chart(riskSignalsElement, {
+                type: 'bar',
+                data: {
+                    labels: signalsData.map((item) => item.label),
+                    datasets: [{
+                        label: 'Average score',
+                        data: signalsData.map((item) => item.score),
+                        backgroundColor: '#0ea5e9',
+                        borderRadius: 8,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: 100,
+                        },
+                    },
+                },
+            });
+        }
+    }
+
+    function initActivityLogsCharts() {
+        if (typeof Chart === 'undefined') {
+            return;
+        }
+
+        const trendElement = document.getElementById('activityLogsTrendChart');
+        if (trendElement) {
+            const trendData = {{ activityLogsTrendChartData|json_encode|raw }};
+            new Chart(trendElement, {
+                type: 'line',
+                data: {
+                    labels: trendData.map((item) => item.label),
+                    datasets: [{
+                        label: 'Actions',
+                        data: trendData.map((item) => item.count),
+                        borderColor: '#0ea5e9',
+                        backgroundColor: 'rgba(14, 165, 233, 0.14)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
+
+        const severityElement = document.getElementById('activityLogsSeverityChart');
+        if (severityElement) {
+            const severityData = {{ activityLogsSeverityChartData|json_encode|raw }};
+            new Chart(severityElement, {
+                type: 'doughnut',
+                data: {
+                    labels: severityData.map((item) => item.label),
+                    datasets: [{
+                        data: severityData.map((item) => item.count),
+                        backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'],
+                        borderColor: ['#22c55e', '#f59e0b', '#ef4444'],
+                        borderWidth: 1,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } },
+                },
+            });
+        }
+
+        const moduleElement = document.getElementById('activityLogsModuleChart');
+        if (moduleElement) {
+            const moduleData = {{ activityLogsModuleChartData|json_encode|raw }};
+            new Chart(moduleElement, {
+                type: 'bar',
+                data: {
+                    labels: moduleData.map((item) => item.label),
+                    datasets: [{
+                        label: 'Actions',
+                        data: moduleData.map((item) => item.count),
+                        backgroundColor: '#8b5cf6',
+                        borderRadius: 8,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
+    }
+
     function openCreateUserModal() {
         userForm.action = '{{ path('app_admin_user_create') }}';
         userFormToken.value = '{{ csrf_token('admin_user_create') }}';
@@ -2598,6 +3076,15 @@
     {% endif %}
     {% if activeSection == 'marketplace' %}
     initMarketplaceCharts();
+    {% endif %}
+    {% if activeSection == 'experiences' %}
+    initExperienceCharts();
+    {% endif %}
+    {% if activeSection == 'risk' %}
+    initRiskCharts();
+    {% endif %}
+    {% if activeSection == 'activity_logs' %}
+    initActivityLogsCharts();
     {% endif %}
     initImageUploaders();
     initExistingImageRemoval();
