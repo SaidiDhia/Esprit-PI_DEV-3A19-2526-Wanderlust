@@ -1,0 +1,65 @@
+WanderLust Chat Export
+=====================
+Conversation: dhia shia
+Type: PERSONAL
+Exported: 2026-04-16 18:10:23
+
+MESSAGES
+========
+
+[2026-04-13 20:34:41] Chaima: chaima
+[2026-04-15 19:13:52] test: dhia
+[2026-04-15 19:13:58] test: saidi
+[2026-04-15 19:14:01] test: video
+[2026-04-15 19:14:14] test: [FILE] Atelier Conception architecturale-.docx
+[2026-04-15 19:14:20] test: hide
+[2026-04-15 19:14:29] test: everything is hard
+[2026-04-15 19:15:23] test: r
+[2026-04-15 19:15:23] test: rr
+[2026-04-15 19:15:28] test: r
+[2026-04-15 23:08:02] test: ↗️ Forwarded: ↗️ Forwarded: chaima hh
+[2026-04-15 23:16:55] test: jfe
+[2026-04-15 23:26:26] test: jfe
+[2026-04-15 23:26:50] test: hello
+[2026-04-15 23:33:49] test: hello
+[2026-04-16 00:37:52] test: dzla
+[2026-04-16 00:38:15] test: fezf
+[2026-04-16 00:43:58] test: hello
+[2026-04-16 00:47:22] test: **Replying to test:**
+> hello
+
+zn
+[2026-04-16 00:53:10] test: **Replying to Chaima:**
+> chaima
+
+hello
+[2026-04-16 01:05:53] test: **Replying to test:**
+> **Replying to Chaima:**
+> chaima
+
+hello
+
+n
+[2026-04-16 01:06:03] test: **Replying to test:**
+> **Replying to test:**
+> hello
+
+zn
+
+h
+[2026-04-16 01:06:18] test: z
+[2026-04-16 01:07:45] test: **Replying to test:**
+> z
+
+L
+[2026-04-16 01:07:58] test: **Replying to test:**
+> L
+
+LL
+[2026-04-16 16:05:24] Chaima: **Replying to test:**
+> everything is hard
+
+hi
+
+=====================
+End of conversation
