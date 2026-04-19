@@ -1,0 +1,844 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Suggestions d'Événements — Wanderlust{% endblock %}
+
+{% block stylesheets %}
+    {{ parent() }}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* ── Variables ── */
+        :root {
+            --primary: #0ea5e9;
+            --primary-dark: #0284c7;
+            --accent: #f97316;
+            --bg-page: #f8fafc;
+            --bg-card: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border-light: #e2e8f0;
+            --radius-xl: 16px;
+            --radius-md: 10px;
+            --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.05);
+            --shadow-hover: 0 10px 25px rgba(14, 165, 233, 0.15);
+        }
+
+        /* ── Page wrapper ── */
+        .suggestions-page {
+            min-height: 60vh;
+            background: var(--bg-page);
+            font-family: 'Outfit', sans-serif;
+            padding-bottom: 80px;
+        }
+
+        /* ── Hero Header ── */
+        .module-hero {
+            position: relative;
+            padding: 120px 20px 80px;
+            color: #fff;
+            margin-bottom: 40px;
+            overflow: hidden;
+            text-align: center;
+        }
+        
+        .video-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.8) 0%, rgba(2, 132, 199, 0.85) 100%);
+            z-index: 0;
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .hero-icon {
+            font-size: 3.5rem;
+            display: block;
+            margin-bottom: 10px;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%,100% { transform: translateY(0); }
+            50%      { transform: translateY(-8px); }
+        }
+        
+        .module-hero h1 {
+            font-size: clamp(2rem, 4vw, 3rem);
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: #fff;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .module-hero p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .btn-back {
+            position: absolute;
+            top: 30px;
+            left: 30px;
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: #fff;
+            border-radius: 50px;
+            padding: 8px 20px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s;
+            z-index: 2;
+            font-family: 'Outfit', sans-serif;
+        }
+        .btn-back:hover { background: #fff; color: var(--primary); transform: translateX(-5px); }
+
+        /* ── Tabs ── */
+        .suggestion-tabs {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 0 20px 30px;
+            position: relative;
+            z-index: 10;
+            margin-top: -25px;
+        }
+        .tab-btn {
+            background: #fff;
+            border: 1px solid var(--border-light);
+            color: var(--text-muted);
+            border-radius: 50px;
+            padding: 12px 28px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            font-family: 'Outfit', sans-serif;
+        }
+        .tab-btn:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+        .tab-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+            box-shadow: 0 6px 15px rgba(14, 165, 233, 0.3);
+            transform: translateY(-2px);
+        }
+
+        /* ── Filter Panel ── */
+        .filter-panel { max-width: 880px; margin: 0 auto 40px; padding: 0 20px; }
+        .filter-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-xl);
+            box-shadow: var(--shadow-card);
+            padding: 35px;
+            display: none;
+            animation: slideIn 0.3s ease;
+        }
+        .filter-card.active { display: block; }
+        @keyframes slideIn { from { opacity:0; transform:translateY(15px); } to { opacity:1; transform:translateY(0); } }
+
+        /* ── Category cards ── */
+        .cat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; margin-bottom: 25px; }
+        .cat-card {
+            background: var(--bg-page);
+            border: 2px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 18px 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--text-muted);
+            user-select: none;
+        }
+        .cat-card:hover { border-color: var(--primary); background: #f0f9ff; color: var(--primary); transform: translateY(-3px); }
+        .cat-card.selected { border-color: var(--primary); background: #e0f2fe; color: var(--primary-dark); box-shadow: 0 4px 12px rgba(14,165,233,0.15); }
+        .cat-card .cat-emoji { font-size: 2.2rem; display: block; margin-bottom: 8px; }
+        .cat-card .cat-label { font-size: 0.85rem; font-weight: 700; }
+
+        /* ── Children toggle ── */
+        .children-toggle { display: flex; gap: 15px; margin-bottom: 25px; }
+        .toggle-opt {
+            flex: 1;
+            background: var(--bg-page);
+            border: 2px solid var(--border-light);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 1rem;
+            font-family: 'Outfit', sans-serif;
+        }
+        .toggle-opt .t-icon { font-size: 2.2rem; display: block; margin-bottom: 10px; }
+        .toggle-opt:hover { border-color: var(--primary); color: var(--primary); background: #f0f9ff; }
+        .toggle-opt.selected { border-color: var(--primary); background: #e0f2fe; color: var(--primary-dark); }
+        .children-extra { display: none; margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--border-light); }
+        .children-extra.visible { display: block; animation: slideIn 0.3s ease; }
+
+        /* ── Sliders ── */
+        .range-group { margin-bottom: 25px; }
+        .range-header { display: flex; justify-content: space-between; color: var(--text-main); margin-bottom: 10px; font-size: 0.95rem; font-weight: 700; }
+        .range-val { color: var(--primary); font-size: 1.1rem; font-weight: 800; }
+        input[type=range] { -webkit-appearance: none; width: 100%; height: 6px; border-radius: 3px; background: #cbd5e1; outline: none; margin: 10px 0; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--primary); cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: transform 0.2s; border: 3px solid #fff; }
+        input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.15); background: var(--primary-dark); }
+
+        /* ── Inputs ── */
+        .filter-label { color: var(--text-main); font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .filter-input {
+            background: #fff;
+            border: 2px solid var(--border-light);
+            border-radius: var(--radius-md);
+            color: var(--text-main);
+            padding: 13px 18px;
+            width: 100%;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1rem;
+            transition: all 0.3s;
+            box-sizing: border-box;
+        }
+        .filter-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 4px rgba(14,165,233,0.1); }
+        .filter-input::placeholder { color: #94a3b8; }
+
+        /* ── Location row ── */
+        .location-row { display: flex; gap: 12px; align-items: stretch; flex-wrap: wrap; margin-bottom: 5px; }
+        .location-row .city-wrap { flex: 1; min-width: 200px; }
+        .btn-geo {
+            background: var(--bg-page);
+            border: 2px solid var(--border-light);
+            color: var(--text-main);
+            border-radius: var(--radius-md);
+            padding: 0 20px;
+            cursor: pointer;
+            font-family: 'Outfit', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: all 0.3s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-geo:hover { border-color: var(--primary); color: var(--primary); background: #f0f9ff; }
+
+        /* ── Submit ── */
+        .btn-search {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: 14px 38px;
+            font-size: 1rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(14,165,233,0.3);
+            margin-top: 10px;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-search:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(14,165,233,0.4); background: var(--primary-dark); }
+
+        /* ── Results header ── */
+        .results-header {
+            max-width: 1200px;
+            margin: 0 auto 30px;
+            padding: 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .results-badge {
+            background: #e0f2fe;
+            border: 1.5px solid #bae6fd;
+            color: var(--primary-dark);
+            border-radius: 50px;
+            padding: 8px 20px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'Outfit', sans-serif;
+        }
+        .filter-tag {
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            border-radius: 50px;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* ── Event Cards ── */
+        .cards-grid {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 30px;
+        }
+        .event-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            transition: all 0.3s;
+            box-shadow: var(--shadow-card);
+        }
+        .event-card:hover { transform: translateY(-8px); box-shadow: var(--shadow-hover); border-color: #bae6fd; }
+        .card-image { position: relative; height: 210px; overflow: hidden; background: #e2e8f0; }
+        .card-image img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s; }
+        .event-card:hover .card-image img { transform: scale(1.08); }
+        .card-image-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 4rem; }
+        .card-overlay { position: absolute; inset: 0; background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%); }
+        .card-badges { position: absolute; top: 12px; left: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+        .badge-cat {
+            border-radius: 50px;
+            padding: 5px 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(255,255,255,0.95);
+            color: var(--text-main);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-family: 'Outfit', sans-serif;
+        }
+        .badge-age { background: var(--accent); color: #fff; border-radius: 50px; padding: 5px 12px; font-size: 0.75rem; font-weight: 700; font-family: 'Outfit', sans-serif; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .badge-complet { position: absolute; top: 12px; right: 12px; background: #ef4444; color: #fff; border-radius: 50px; padding: 5px 14px; font-size: 0.75rem; font-weight: 700; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+
+        .card-body { padding: 22px; display: flex; flex-direction: column; gap: 12px; }
+        .card-title { font-weight: 800; font-size: 1.25rem; color: var(--text-main); margin: 0; line-height: 1.3; }
+        .card-location { display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 0.9rem; font-family: 'Outfit', sans-serif; }
+        .card-location i { color: var(--primary); }
+        .card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; margin-bottom: 5px; }
+        .meta-item { background: var(--bg-page); border-radius: 10px; padding: 10px; font-size: 0.85rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; font-family: 'Outfit', sans-serif; font-weight: 600; }
+        .meta-item i { color: var(--primary); font-size: 0.95rem; }
+        .meta-item .meta-val { color: var(--text-main); font-weight: 700; }
+
+        /* Availability bar */
+        .avail-label { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 6px; font-weight: 600; font-family: 'Outfit', sans-serif; }
+        .avail-bar { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+        .avail-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+
+        /* Price */
+        .card-price-container { display: flex; justify-content: space-between; align-items: baseline; margin-top: 5px; }
+        .card-price { font-size: 1.6rem; font-weight: 800; color: var(--primary); display: flex; align-items: baseline; gap: 4px; font-family: 'Outfit', sans-serif; }
+        .card-price .currency { font-size: 0.95rem; font-weight: 700; opacity: 0.8; }
+
+        /* Actions */
+        .card-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .btn-voir {
+            flex: 1;
+            background: #fff;
+            border: 2px solid var(--border-light);
+            color: var(--text-main);
+            border-radius: 50px;
+            padding: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-family: 'Outfit', sans-serif;
+        }
+        .btn-voir:hover { background: var(--bg-page); border-color: #cbd5e1; color: var(--primary); }
+        .btn-inscrire {
+            flex: 1;
+            background: var(--primary);
+            color: #fff;
+            border: 2px solid var(--primary);
+            border-radius: 50px;
+            padding: 12px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-align: center;
+            text-decoration: none;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(14,165,233,0.3);
+        }
+        .btn-inscrire:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(14,165,233,0.4); }
+
+        /* Activities chips */
+        .card-activities { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+        .act-chip { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 50px; padding: 4px 12px; font-size: 0.75rem; color: #475569; font-family: 'Outfit', sans-serif; font-weight: 600; }
+
+        /* ── Empty / Welcome state ── */
+        .empty-state { max-width: 500px; margin: 60px auto; text-align: center; padding: 40px 20px; background: #fff; border-radius: var(--radius-xl); box-shadow: var(--shadow-card); border: 1px solid var(--border-light); }
+        .empty-icon { font-size: 4rem; display: block; margin-bottom: 20px; opacity: 1; filter: drop-shadow(0 4px 10px rgba(0,0,0,0.1)); }
+        .empty-state h3 { color: var(--text-main); font-weight: 800; font-size: 1.5rem; margin-bottom: 12px; font-family: 'Outfit', sans-serif; }
+        .empty-state p  { color: var(--text-muted); font-size: 1.05rem; font-family: 'Outfit', sans-serif; line-height: 1.6; }
+
+        /* ── Geo spinner ── */
+        .geo-spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(14,165,233,0.3); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="suggestions-page">
+
+    <!-- Hero -->
+    <div class="module-hero">
+        <!-- Video Background -->
+        <video class="video-background" autoplay muted loop playsinline>
+            <source src="{{ asset('adventure/video/letsDiscover.mp4') }}" type="video/mp4">
+        </video>
+        <!-- Video Overlay -->
+        <div class="video-overlay"></div>
+        
+        <div class="hero-content">
+           
+            <span class="hero-icon">✨</span>
+            <h1>Découvrez Votre Prochain Événement</h1>
+            <p>Des suggestions personnalisées selon vos préférences, votre famille ou votre localisation.</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <form method="GET" action="{{ path('app_events_suggestions') }}" id="suggestionsForm">
+
+        <!-- Tabs -->
+        <div class="suggestion-tabs">
+            <button type="button" class="tab-btn {% if suggestion_type == '' or suggestion_type == 'general' %}active{% endif %}"
+                    onclick="switchTab('general')" id="tab-general">
+                🌟 Tous les événements
+            </button>
+            <button type="button" class="tab-btn {% if suggestion_type == 'category' %}active{% endif %}"
+                    onclick="switchTab('category')" id="tab-category">
+                🏷️ Par catégorie
+            </button>
+            <button type="button" class="tab-btn {% if suggestion_type == 'age' %}active{% endif %}"
+                    onclick="switchTab('age')" id="tab-age">
+                👶 Avec des enfants
+            </button>
+            <button type="button" class="tab-btn {% if suggestion_type == 'location' %}active{% endif %}"
+                    onclick="switchTab('location')" id="tab-location">
+                📍 Près de chez moi
+            </button>
+        </div>
+
+        <input type="hidden" name="suggestion_type" id="suggestionTypeInput" value="{{ suggestion_type }}">
+
+        <div class="filter-panel">
+
+            <!-- Panel Général -->
+            <div class="filter-card {% if suggestion_type == '' or suggestion_type == 'general' %}active{% endif %}" id="panel-general">
+                <div class="range-group">
+                    <div class="range-header">
+                        <span>🎟️ Nombre de places minimum</span>
+                        <span class="range-val" id="participantValGeneral">{{ participant_count > 0 ? participant_count ~ ' places' : 'Peu importe' }}</span>
+                    </div>
+                    <input type="range" name="participant_count" min="0" max="50" step="1"
+                           value="{{ participant_count }}"
+                           oninput="document.getElementById('participantValGeneral').textContent = this.value > 0 ? this.value + ' places' : 'Peu importe'">
+                </div>
+                <button type="submit" class="btn-search">
+                    <i class="fa fa-magic"></i> Afficher les suggestions
+                </button>
+            </div>
+
+            <!-- Panel Catégorie -->
+            <div class="filter-card {% if suggestion_type == 'category' %}active{% endif %}" id="panel-category">
+                <p class="filter-label">🏷️ Choisissez une catégorie d'activité</p>
+                <div class="cat-grid">
+                    {% for cat in categories %}
+                        {% set catSlug = cat.value|lower|replace({' ': '', 'é': 'e', 'É': 'E', 'ã©': 'e'}) %}
+                        <div class="cat-card {% if selected_category == cat.value %}selected{% endif %}"
+                             onclick="selectCategory('{{ cat.value }}', this)"
+                             data-value="{{ cat.value }}">
+                            <span class="cat-emoji">{{ cat.getIcone() }}</span>
+                            <span class="cat-label">{{ cat.getLabel() }}</span>
+                        </div>
+                    {% endfor %}
+                </div>
+                <input type="hidden" name="category" id="selectedCategory" value="{{ selected_category }}">
+
+                <div class="range-group" style="margin-top:14px;">
+                    <div class="range-header">
+                        <span>👥 Nombre de participants</span>
+                        <span class="range-val" id="participantValCat">{{ participant_count > 0 ? participant_count ~ ' personnes' : 'Peu importe' }}</span>
+                    </div>
+                    <input type="range" name="participant_count" min="0" max="50" step="1"
+                           value="{{ participant_count }}"
+                           oninput="document.getElementById('participantValCat').textContent = this.value > 0 ? this.value + ' personnes' : 'Peu importe'">
+                </div>
+                <button type="submit" class="btn-search">
+                    <i class="fa fa-search"></i> Trouver des événements
+                </button>
+            </div>
+
+            <!-- Panel Enfants/Âge -->
+            <div class="filter-card {% if suggestion_type == 'age' %}active{% endif %}" id="panel-age">
+                <p class="filter-label">👨‍👩‍👧 Cet événement est-il avec des enfants ?</p>
+                <div class="children-toggle">
+                    <div class="toggle-opt {% if children_friendly %}selected{% endif %}"
+                         onclick="setChildrenFriendly(true, this)">
+                        <span class="t-icon">👶</span>
+                        Oui, avec enfants
+                    </div>
+                    <div class="toggle-opt {% if not children_friendly and suggestion_type == 'age' %}selected{% endif %}"
+                         onclick="setChildrenFriendly(false, this)">
+                        <span class="t-icon">🧑‍💻</span>
+                        Non, sans enfants
+                    </div>
+                </div>
+                <input type="hidden" name="children_friendly" id="childrenFriendlyInput" value="{{ children_friendly ? '1' : '0' }}">
+
+                <div class="children-extra {% if children_friendly %}visible{% endif %}" id="childrenExtra">
+                    <div class="range-group">
+                        <div class="range-header">
+                            <span>🎂 Âge de l'enfant le plus jeune</span>
+                            <span class="range-val" id="ageVal">{{ min_age is not null ? min_age ~ ' ans' : '3 ans' }}</span>
+                        </div>
+                        <input type="range" name="min_age" id="minAgeRange" min="0" max="18" step="1"
+                               value="{{ min_age is not null ? min_age : 3 }}"
+                               oninput="document.getElementById('ageVal').textContent = this.value + ' ans'">
+                    </div>
+
+                    <div class="range-group">
+                        <div class="range-header">
+                            <span>👧👦 Nombre d'enfants</span>
+                            <span class="range-val" id="nbrEnfantsVal">{{ nbr_enfants is not null and nbr_enfants > 0 ? nbr_enfants ~ ' enfant(s)' : 'Non précisé' }}</span>
+                        </div>
+                        <input type="range" name="nbr_enfants" min="0" max="10" step="1"
+                               value="{{ nbr_enfants is not null ? nbr_enfants : 0 }}"
+                               oninput="document.getElementById('nbrEnfantsVal').textContent = this.value > 0 ? this.value + ' enfant(s)' : 'Non précisé'">
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-search">
+                    <i class="fa fa-child"></i> Trouver des événements adaptés
+                </button>
+            </div>
+
+            <!-- Panel Localisation -->
+            <div class="filter-card {% if suggestion_type == 'location' %}active{% endif %}" id="panel-location">
+                <p class="filter-label">📍 Où habitez-vous ?</p>
+                <div class="location-row">
+                    <div class="city-wrap">
+                        <input type="text" name="city" id="cityInput" class="filter-input"
+                               placeholder="Ex: Tunis, Sousse, Sfax..."
+                               value="{{ city }}"
+                               autocomplete="off">
+                    </div>
+                    <button type="button" class="btn-geo" id="geoBtn" onclick="detectLocation()">
+                        <i class="fa fa-crosshairs"></i>
+                        <span id="geoBtnText">Ma position GPS</span>
+                    </button>
+                </div>
+                <p style="font-size:0.78rem; color:rgba(255,255,255,0.38); margin-top:7px;">
+                    💡 Cliquez sur "Ma position GPS" pour détecter votre ville automatiquement
+                </p>
+
+                <div class="range-group" style="margin-top:18px;">
+                    <div class="range-header">
+                        <span>👥 Nombre de participants minimum</span>
+                        <span class="range-val" id="participantValLoc">{{ participant_count > 0 ? participant_count ~ ' personnes' : 'Peu importe' }}</span>
+                    </div>
+                    <input type="range" name="participant_count" min="0" max="50" step="1"
+                           value="{{ participant_count }}"
+                           oninput="document.getElementById('participantValLoc').textContent = this.value > 0 ? this.value + ' personnes' : 'Peu importe'">
+                </div>
+                <button type="submit" class="btn-search">
+                    <i class="fa fa-map-marker"></i> Chercher près de moi
+                </button>
+            </div>
+
+        </div><!-- /.filter-panel -->
+    </form>
+
+    <!-- ── Results ── -->
+    {% if suggestion_type is not empty %}
+
+        <div class="results-header">
+            {% if suggestions|length > 0 %}
+                <span class="results-badge">
+                    <i class="fa fa-check-circle"></i>
+                    {{ suggestions|length }} événement{% if suggestions|length > 1 %}s{% endif %} trouvé{% if suggestions|length > 1 %}s{% endif %}
+                </span>
+                <div style="display:flex; gap:7px; flex-wrap:wrap;">
+                    {% if suggestion_type == 'category' and selected_category %}
+                        <span class="filter-tag">🏷️ {{ selected_category }}</span>
+                    {% elseif suggestion_type == 'age' %}
+                        <span class="filter-tag">{% if children_friendly %}👶 Avec enfants{% if min_age is not null %} ({{ min_age }}+ ans){% endif %}{% else %}🧑 Sans enfants{% endif %}</span>
+                    {% elseif suggestion_type == 'location' and city %}
+                        <span class="filter-tag">📍 {{ city }}</span>
+                    {% endif %}
+                    {% if participant_count > 0 %}
+                        <span class="filter-tag">👥 {{ participant_count }}+ places</span>
+                    {% endif %}
+                </div>
+            {% else %}
+                <span class="results-badge" style="background:rgba(239,68,68,0.1); border-color:rgba(239,68,68,0.28); color:#fca5a5;">
+                    <i class="fa fa-times-circle"></i> Aucun résultat
+                </span>
+            {% endif %}
+        </div>
+
+        {% if suggestions|length > 0 %}
+            <div class="cards-grid">
+                {% for event in suggestions %}
+                    {% set cap   = event.capaciteMax %}
+                    {% set avail = event.placesDisponibles %}
+                    {% set availPct = cap > 0 ? (avail / cap * 100)|round : 100 %}
+
+                    <div class="event-card">
+                        <!-- Image -->
+                        <div class="card-image">
+                            {% if event.images is defined and event.images|length > 0 %}
+                                <img src="{{ asset('uploads/events/' ~ event.images[0].imagePath) }}" alt="{{ event.lieu }}">
+                            {% else %}
+                                <div class="card-image-placeholder">
+                                    {% if event.activities|length > 0 and event.activities[0].categorie is not null %}
+                                        {{ event.activities[0].categorie.getIcone() }}
+                                    {% else %}
+                                        🗓️
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                            <div class="card-overlay"></div>
+
+                            <!-- Badges -->
+                            <div class="card-badges">
+                                {% for act in event.activities|slice(0, 2) %}
+                                    {% if act.categorie is not null %}
+                                        {% set catSlug = act.categorie.value|lower|replace({' ': '', 'é': 'e', 'ã©': 'e'}) %}
+                                        <span class="badge-cat {{ catSlug }}">
+                                            {{ act.categorie.getIcone() }} {{ act.categorie.getLabel() }}
+                                        </span>
+                                    {% endif %}
+                                    {% if act.ageMinimum is not null %}
+                                        <span class="badge-age">👶 {{ act.ageMinimum }}+ ans</span>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+
+                            {% if avail == 0 %}
+                                <span class="badge-complet">Complet</span>
+                            {% endif %}
+                        </div><!-- /.card-image -->
+
+                        <!-- Body -->
+                        <div class="card-body">
+                            <div class="card-location">
+                                <i class="fa fa-map-marker"></i> {{ event.lieu }}
+                            </div>
+
+                            {% if event.activities|length > 0 %}
+                                <div class="card-activities">
+                                    {% for act in event.activities|slice(0, 3) %}
+                                        <span class="act-chip">{{ act.titre }}</span>
+                                    {% endfor %}
+                                    {% if event.activities|length > 3 %}
+                                        <span class="act-chip">+{{ event.activities|length - 3 }}</span>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+
+                            <div class="card-meta">
+                                <div class="meta-item">
+                                    <i class="fa fa-calendar"></i>
+                                    <span class="meta-val">{{ event.dateDebut|date('d/m/Y') }}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fa fa-clock-o"></i>
+                                    <span class="meta-val">{{ event.dateDebut|date('H:i') }}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fa fa-users"></i>
+                                    <span class="meta-val">{{ avail }}/{{ cap }}</span>
+                                </div>
+                                <div class="meta-item">
+                                    <i class="fa fa-user"></i>
+                                    <span class="meta-val" style="font-size:0.76rem;">{{ event.organisateur|slice(0,13) }}{% if event.organisateur|length > 13 %}…{% endif %}</span>
+                                </div>
+                            </div>
+
+                            <!-- Availability bar -->
+                            <div>
+                                <div class="avail-label">
+                                    <span>Disponibilité</span>
+                                    <span>{{ availPct }}% libre</span>
+                                </div>
+                                <div class="avail-bar">
+                                    <div class="avail-fill" style="width:{{ availPct }}%;
+                                        background: {% if availPct > 60 %}linear-gradient(to right,#22c55e,#4ade80){% elseif availPct > 25 %}linear-gradient(to right,#f7971e,#ffd200){% else %}linear-gradient(to right,#ef4444,#f87171){% endif %};"></div>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; align-items:center; justify-content:space-between;">
+                                <div class="card-price">{{ event.prix }} <span class="currency">DT</span></div>
+                            </div>
+
+                            <div class="card-actions">
+                                <a href="{{ path('app_events_show', {'id': event.id}) }}" class="btn-voir">
+                                    <i class="fa fa-eye"></i> Voir
+                                </a>
+                                {% if avail > 0 %}
+                                    
+                                {% else %}
+                                    <span class="btn-voir" style="opacity:0.38; pointer-events:none;">Complet</span>
+                                {% endif %}
+                            </div>
+                        </div><!-- /.card-body -->
+                    </div><!-- /.event-card -->
+                {% endfor %}
+            </div><!-- /.cards-grid -->
+
+        {% else %}
+            <div class="empty-state">
+                <span class="empty-icon">🔍</span>
+                <h3>Aucun événement trouvé</h3>
+                <p>Essayez de modifier vos critères ou d'explorer une autre catégorie.</p>
+            </div>
+        {% endif %}
+
+    {% else %}
+        <!-- Welcome state -->
+        <div class="empty-state">
+            <span class="empty-icon">👆</span>
+            <h3>Choisissez un type de suggestion</h3>
+            <p>Sélectionnez un onglet ci-dessus pour personnaliser vos recommandations.</p>
+        </div>
+    {% endif %}
+
+</div><!-- /.suggestions-page -->
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    // ── Tab switching ──
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.filter-card').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-' + tabName).classList.add('active');
+        document.getElementById('panel-' + tabName).classList.add('active');
+        document.getElementById('suggestionTypeInput').value = tabName === 'general' ? '' : tabName;
+    }
+
+    // ── Category selection ──
+    function selectCategory(value, el) {
+        document.querySelectorAll('.cat-card').forEach(c => c.classList.remove('selected'));
+        el.classList.add('selected');
+        document.getElementById('selectedCategory').value = value;
+    }
+
+    // ── Children toggle ──
+    function setChildrenFriendly(val, el) {
+        document.querySelectorAll('.toggle-opt').forEach(t => t.classList.remove('selected'));
+        el.classList.add('selected');
+        document.getElementById('childrenFriendlyInput').value = val ? '1' : '0';
+        const extra = document.getElementById('childrenExtra');
+        if (val) {
+            extra.classList.add('visible');
+        } else {
+            extra.classList.remove('visible');
+            document.getElementById('minAgeRange').value = 0;
+            document.getElementById('ageVal').textContent = '3 ans';
+        }
+    }
+
+    // ── Geolocation via Nominatim ──
+    function detectLocation() {
+        const btn     = document.getElementById('geoBtn');
+        const btnText = document.getElementById('geoBtnText');
+        const cityInput = document.getElementById('cityInput');
+
+        if (!navigator.geolocation) {
+            alert("La géolocalisation n'est pas supportée par votre navigateur.");
+            return;
+        }
+
+        btn.style.opacity = '0.6';
+        btn.style.pointerEvents = 'none';
+        btnText.innerHTML = '<span class="geo-spinner"></span> Détection...';
+
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=json&accept-language=fr')
+                    .then(r => r.json())
+                    .then(data => {
+                        const addr = data.address || {};
+                        const city = addr.city || addr.town || addr.village || addr.county || addr.state || '';
+                        if (city) {
+                            cityInput.value = city;
+                            btnText.textContent = '✅ ' + city;
+                        } else {
+                            btnText.textContent = 'Position détectée';
+                        }
+                        btn.style.opacity = '1';
+                        btn.style.pointerEvents = 'auto';
+                    })
+                    .catch(() => {
+                        btn.style.opacity = '1';
+                        btn.style.pointerEvents = 'auto';
+                        btnText.textContent = 'Ma position GPS';
+                        alert("Impossible d'obtenir le nom de la ville. Entrez-la manuellement.");
+                    });
+            },
+            function(err) {
+                btn.style.opacity = '1';
+                btn.style.pointerEvents = 'auto';
+                btnText.textContent = 'Ma position GPS';
+                const msgs = { 1: "Permission refusée.", 2: "Position introuvable.", 3: "Délai dépassé." };
+                alert(msgs[err.code] || "Erreur de géolocalisation.");
+            },
+            { timeout: 10000, maximumAge: 60000 }
+        );
+    }
+    </script>
+{% endblock %}

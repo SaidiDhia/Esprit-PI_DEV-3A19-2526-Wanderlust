@@ -1,801 +1,276 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Détails Événement{% endblock %}
+{% block title %}Détails Événement - {{ event.lieu }}{% endblock %}
 
 {% block stylesheets %}
 {{ parent() }}
+
+<!-- Open Graph Meta Tags -->
+<meta property="og:title" content="{{ event.lieu }} - Wanderlust" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="{{ app.request.uri }}" />
+{% if event.images|length > 0 %}
+<meta property="og:image" content="{{ absolute_url(asset('uploads/events/' ~ event.images|first.imagePath)) }}" />
+{% endif %}
+<meta property="og:description" content="Découvrez cet événement exceptionnel organisé par {{ event.organisateur }}. Ne ratez pas ça !" />
+
 <style>
-    :root {
-        --primary-color: #667eea;
-        --secondary-color: #764ba2;
-        --success-color: #28a745;
-        --danger-color: #dc3545;
-        --warning-color: #ffc107;
-        --light-color: #f8f9fa;
-        --dark-color: #343a40;
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --card-shadow: 0 15px 35px rgba(0,0,0,0.1);
-        --hover-shadow: 0 20px 40px rgba(0,0,0,0.15);
-        --border-radius: 20px;
+    .module-hero {
+        background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url('{{ event.images|length > 0 ? asset("uploads/events/" ~ event.images|first.imagePath) : asset("adventure/img/slider2.jpg") }}') center center/cover no-repeat;
+        padding: 140px 0 100px;
+        color: #fff;
+        margin-bottom: 50px;
     }
-
-    body {
-        background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-        min-height: 100vh;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    /* Hero Section */
-    .hero-section {
-        background: var(--primary-gradient);
-        padding: 4rem 0;
-        position: relative;
-        overflow: hidden;
-        margin-bottom: 3rem;
-    }
-
-    .hero-section::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
-        background-size: cover;
-        opacity: 0.2;
-    }
-
-    .hero-content {
-        position: relative;
-        z-index: 2;
-        text-align: left;
-        color: white;
-    }
-
-    .hero-content h1 {
-        font-size: 3rem;
-        font-weight: 700;
-        margin-bottom: 1rem;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        animation: fadeInUp 0.8s ease;
-    }
-
-    .hero-content p {
-        font-size: 1.2rem;
-        opacity: 0.95;
-        margin-bottom: 0;
-        animation: fadeInUp 1s ease;
-    }
-
-    /* Main Container */
-    .main-container {
-        max-width: 1400px;
-        margin: 0 auto;
-        padding: 0 1rem;
-    }
-
-    /* Text color - all black for clarity */
-    body, .main-container, .event-card, h1, h2, h3, h4, h5, h6, p, label {
-        color: #000 !important;
-    }
-
-    /* Cards */
-    .event-card {
-        background: white;
-        border-radius: var(--border-radius);
-        box-shadow: var(--card-shadow);
-        overflow: hidden;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        margin-bottom: 2rem;
-        position: relative;
-    }
-
-    .event-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--primary-gradient);
-    }
-
-    .event-card:hover {
-        transform: translateY(-8px);
-        box-shadow: var(--hover-shadow);
-    }
-
-    .card-header-custom {
-        background: var(--primary-gradient);
-        color: white;
-        padding: 2.5rem;
-        text-align: center;
-        position: relative;
-    }
-
-    .card-header-custom h2 {
-        margin: 0 0 0.5rem 0;
-        font-size: 2.2rem;
-        font-weight: 700;
-        letter-spacing: -0.5px;
-    }
-
-    .card-header-custom p {
-        margin: 0;
-        opacity: 0.9;
-        font-size: 1.1rem;
-    }
-
-    .card-body-custom {
-        padding: 2.5rem;
-    }
-
-    /* Images */
-    .image-gallery {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 1.5rem;
-        margin-bottom: 2rem;
-    }
-
-    .gallery-image {
-        width: 100%;
-        height: 250px;
-        object-fit: cover;
-        border-radius: 15px;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-        transition: all 0.3s ease;
-        cursor: pointer;
-    }
-
-    .gallery-image:hover {
-        transform: scale(1.05);
-        box-shadow: 0 12px 30px rgba(0,0,0,0.2);
-    }
-
-    .no-image-container {
-        width: 100%;
-        height: 250px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-radius: 15px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 3px dashed #dee2e6;
-        margin-bottom: 2rem;
-    }
-
-    /* Info Grid */
-    .info-grid-modern {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 2rem;
-        margin-bottom: 2rem;
-    }
-
-    .info-card {
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-        padding: 2rem;
-        border-radius: 15px;
-        border: 1px solid #e9ecef;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .info-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: var(--primary-gradient);
-    }
-
-    .info-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-        border-color: var(--primary-color);
-    }
-
-    .info-card h5 {
-        color: var(--primary-color);
-        font-weight: 600;
-        margin-bottom: 1.5rem;
-        font-size: 1.2rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .info-card p {
-        margin-bottom: 0.75rem;
-        color: var(--dark-color);
-        font-size: 1rem;
-    }
-
-    .info-card strong {
-        color: var(--dark-color);
-        font-weight: 600;
-    }
-
-    /* Buttons */
-    .btn-custom {
-        padding: 1rem 2rem;
-        border: none;
+    .module-hero h1, .module-hero p { color: #fff; }
+    
+    .show-card {
+        background: #fff;
         border-radius: 12px;
-        font-weight: 600;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: all 0.3s ease;
-        cursor: pointer;
-        font-size: 1rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .btn-primary-custom {
-        background: var(--primary-gradient);
-        color: white;
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
-    }
-
-    .btn-primary-custom:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 25px rgba(102, 126, 234, 0.4);
-    }
-
-    .btn-secondary-custom {
-        background: #6c757d;
-        color: white;
-        box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3);
-    }
-
-    .btn-secondary-custom:hover {
-        background: #5a6268;
-        transform: translateY(-3px);
-        box-shadow: 0 12px 25px rgba(108, 117, 125, 0.4);
-    }
-
-    .btn-disabled-custom {
-        background: #e9ecef;
-        color: #6c757d;
-        cursor: not-allowed;
-        opacity: 0.6;
-    }
-
-    /* Badges */
-    .badge-custom {
-        background: var(--primary-color);
-        color: white;
-        padding: 0.5rem 1rem;
-        border-radius: 25px;
-        font-size: 0.9rem;
-        font-weight: 600;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-    }
-
-    /* Carousel */
-    .carousel-card {
-        background: white;
-        border-radius: var(--border-radius);
-        box-shadow: var(--card-shadow);
-        overflow: hidden;
-        position: sticky;
-        top: 20px;
-        margin-bottom: 2rem;
-    }
-
-    .carousel-header-custom {
-        background: var(--primary-gradient);
-        color: white;
-        padding: 1.5rem;
-        text-align: center;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-    }
-
-    .carousel-header-custom h4 {
-        margin: 0;
-        font-size: 1.3rem;
-        font-weight: 600;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-
-    .carousel-header-custom .badge {
-        background: rgba(255,255,255,0.2);
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        margin-left: 0.5rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        padding: 2.5rem;
+        margin-bottom: 30px;
     }
 
     .carousel-container {
         position: relative;
-        width: 100%;
-        height: 450px;
+        border-radius: 12px;
         overflow: hidden;
-        background: #f8f9fa;
+        height: 450px;
+        background: #f7f7f7;
     }
-
+    
     .carousel-track {
         display: flex;
-        transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: transform 0.5s ease-in-out;
         height: 100%;
     }
-
+    
     .carousel-slide {
         min-width: 100%;
         height: 100%;
-        position: relative;
     }
-
+    
     .carousel-slide img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
 
-    .slide-info {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 100%);
-        color: white;
-        padding: 1.5rem;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-
-    .carousel-slide:hover .slide-info {
-        opacity: 1;
-    }
-
-    .slide-info h6 {
-        margin: 0 0 0.5rem;
-        font-size: 1rem;
-        font-weight: 600;
-    }
-
-    .slide-info small {
-        font-size: 0.85rem;
-        opacity: 0.9;
-    }
-
     .carousel-nav {
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
-        background: rgba(255,255,255,0.95);
+        background: rgba(255,255,255,0.8);
         border: none;
-        width: 50px;
-        height: 50px;
+        width: 40px; height: 40px;
         border-radius: 50%;
-        cursor: pointer;
         z-index: 10;
-        transition: all 0.3s ease;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--primary-color);
-        font-size: 1.2rem;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        cursor: pointer;
     }
-
-    .carousel-nav:hover {
-        background: white;
-        transform: translateY(-50%) scale(1.1);
-        box-shadow: 0 6px 20px rgba(0,0,0,0.3);
-    }
-
-    .carousel-prev {
-        left: 15px;
-    }
-
-    .carousel-next {
-        right: 15px;
-    }
-
+    .carousel-prev { left: 15px; }
+    .carousel-next { right: 15px; }
+    
     .carousel-indicators {
-        position: absolute;
-        bottom: 15px;
-        left: 50%;
-        transform: translateX(-50%);
-        display: flex;
-        gap: 0.75rem;
-        z-index: 10;
+        position: absolute; bottom: 15px; left: 50%; transform: translateX(-50%);
+        display: flex; gap: 8px; z-index: 10;
     }
-
     .indicator {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        border: 2px solid var(--primary-color);
-        background: rgba(255,255,255,0.5);
-        cursor: pointer;
-        transition: all 0.3s ease;
+        width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.5); border: none;
     }
+    .indicator.active { background: #fff; }
 
-    .indicator.active {
-        background: var(--primary-color);
-        border-color: var(--primary-color);
-        transform: scale(1.3);
+    .info-list { list-style: none; padding: 0; margin: 0; }
+    .info-list li {
+        display: flex; justify-content: space-between; align-items: center;
+        padding: 12px 0; border-bottom: 1px solid #f0f0f0;
     }
+    .info-list li:last-child { border-bottom: none; }
+    .info-list i { color: #f6214b; margin-right: 8px; width: 20px; text-align: center; }
 
-    /* Status Cards */
-    .status-card {
-        padding: 2rem;
-        border-radius: 15px;
-        text-align: center;
-        margin-bottom: 1.5rem;
-        transition: all 0.3s ease;
-    }
-
-    .status-card.success {
-        background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
-        border: 1px solid #c3e6cb;
-        color: #155724;
-    }
-
-    .status-card.danger {
-        background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
-        border: 1px solid #f5c6cb;
-        color: #721c24;
-    }
-
-    .status-card h5 {
-        margin-bottom: 1rem;
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-
-    .status-card h3 {
-        margin-bottom: 0.5rem;
-        font-weight: 700;
-        font-size: 2rem;
-    }
-
-    /* Activities */
-    .activities-section {
-        margin-top: 2rem;
-    }
-
-    .activity-card {
-        background: white;
-        border: 2px solid #e9ecef;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 1rem;
-        transition: all 0.3s ease;
-    }
-
-    .activity-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-        border-color: var(--primary-color);
-    }
-
-    .activity-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 1rem;
-        padding-bottom: 1rem;
-        border-bottom: 2px solid #f8f9fa;
-    }
-
-    .activity-header i {
-        color: var(--primary-color);
-        font-size: 1.2rem;
-        margin-right: 0.75rem;
-    }
-
-    .activity-header strong {
-        color: var(--dark-color);
-        font-weight: 600;
-        font-size: 1.1rem;
-    }
-
-    .activity-content {
-        display: flex;
-        flex-direction: column;
-        gap: 0.75rem;
-    }
-
-    .activity-info {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.95rem;
-    }
-
-    .activity-category {
-        background: var(--primary-color);
-        color: white;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
+    .btn-reserve {
+        background: #f6214b;
+        color: #fff;
+        padding: 15px 30px;
+        border-radius: 30px;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        display: block;
+        text-align: center;
+        transition: all 0.3s;
+        margin-top: 20px;
     }
+    .btn-reserve:hover { background: #d81b40; color: #fff; }
 
-    /* Animations */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
+    /* Auto-discount styles */
+    .price-block-show { display: inline-flex; align-items: center; gap: 8px; }
+    .price-original-show { text-decoration: line-through; color: #9ca3af; font-size: 0.95rem; }
+    .price-discounted-show { font-size: 1.4rem; font-weight: 800; color: #dc2626; }
+    .price-normal-show { font-size: 1.2rem; font-weight: 700; color: #1a3a5c; }
+    .discount-badge-show {
+        background: linear-gradient(135deg, #dc2626, #f97316); color: #fff;
+        font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 20px;
     }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .hero-content h1 {
-            font-size: 2rem;
-        }
-        
-        .main-container {
-            padding: 0 0.5rem;
-        }
-        
-        .card-body-custom {
-            padding: 1.5rem;
-        }
-        
-        .info-grid-modern {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-        
-        .carousel-container {
-            height: 300px;
-        }
-        
-        .gallery-image {
-            height: 200px;
-        }
-        
-        .btn-custom {
-            padding: 0.75rem 1.5rem;
-            font-size: 0.9rem;
-        }
+    .promo-hint {
+        background: #fff7ed; border: 1px solid #fdba74; border-radius: 8px;
+        padding: 8px 12px; font-size: 0.85rem; color: #92400e; margin-top: 10px; display: none;
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <!-- Hero Section -->
-<section class="hero-section">
+<section class="module-hero">
     <div class="container">
-        <div class="hero-content">
-            <h1>Détails de l'événement</h1>
-            <p>Découvrez toutes les informations sur cet événement</p>
-        </div>
+        <h1>{{ event.lieu }}</h1>
+        <p class="mb-0">Organisé par {{ event.organisateur }}</p>
     </div>
 </section>
 
-<!-- Main Content -->
-<div class="main-container">
-    <div class="row">
-        <!-- Colonne gauche : Informations principales -->
-        <div class="col-lg-8">
-            <div class="event-card">
-                <div class="card-header-custom">
-                    <h2>{{ event.lieu }}</h2>
-                    <p>Organisé par {{ event.organisateur }}</p>
-                </div>
-                
-                <div class="col-lg-4">
-            {% if event.images is not empty %}
-                <div class="carousel-card">
-                    
-                    
-                    <div class="carousel-container">
-                        <!-- Navigation Controls -->
-                        <button class="carousel-nav carousel-prev" onclick="changeSlide(-1)">
-                            <i class="fas fa-chevron-left"></i>
-                        </button>
-                        <button class="carousel-nav carousel-next" onclick="changeSlide(1)">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                        
-                        <!-- Carousel Track -->
-                        <div class="carousel-track" id="carousel-track">
-                            {% for image in event.images %}
-                                <div class="carousel-slide" data-index="{{ loop.index0 }}">
-                                    <img src="{{ asset('uploads/events/' ~ image.imagePath) }}" 
-                                         alt="{{ image.originalName ?: event.lieu }}"
-                                         onclick="openLightbox('{{ asset('uploads/events/' ~ image.imagePath) }}')">
-                                
-                                </div>
-                            {% endfor %}
-                        </div>
-                        
-                        <!-- Indicators -->
-                        <div class="carousel-indicators">
-                            {% for image in event.images %}
-                                <button class="indicator" onclick="goToSlide({{ loop.index0 }})" data-index="{{ loop.index0 }}"></button>
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
-            {% endif %}
-        </div>
-                    
-                    
-                    <!-- Informations Grid -->
-                    <div class="info-grid-modern">
-                        <div class="info-card">
-                            <h5><i class="fas fa-clock"></i>Dates</h5>
-                            <p><strong>Début:</strong> {{ event.dateDebut ? event.dateDebut|date('d/m/Y H:i') : 'Non défini' }}</p>
-                            <p><strong>Fin:</strong> {{ event.dateFin ? event.dateFin|date('d/m/Y H:i') : 'Non défini' }}</p>
-                        </div>
-                        
-                        <div class="info-card">
-                            <h5>Prix & Capacité</h5>
-                            <p><strong>Prix:</strong> <span class="badge-custom">{{ event.prix }} TND</span></p>
-                            <p><strong>Capacité:</strong> {{ event.placesDisponibles }}/{{ event.capaciteMax }} places</p>
-                        </div>
-                        
-                        <div class="info-card">
-                            <h5><i class="fas fa-phone"></i>Contact</h5>
-                            <p><strong>Téléphone:</strong> {{ event.telephone }}</p>
-                            <p><strong>Email:</strong> <a href="mailto:{{ event.email }}">{{ event.email }}</a></p>
-                        </div>
-                        
-                        <!-- Bouton Réserver -->
-                        <div class="info-card">
-                            <h5><i class="fas fa-calendar-plus"></i>Réservation</h5>
-                            {% set eventDate = event.getDateDebut() %}
-                            {% set now = "now"|date("Y-m-d H:i:s") %}
-                            {% if event.placesDisponibles > 0 and eventDate > now %}
-                                {% if app.user %}
-                                    <a href="{{ path('app_reservations_new', {'event_id': event.id}) }}" class="btn-custom btn-primary-custom w-100">
-                                        <i class="fas fa-calendar-plus"></i>Réserver cet événement
-                                    </a>
-                                    <p class="text-success mt-3 mb-0">
-                                        <i class="fas fa-check-circle me-1"></i>
-                                        {{ event.placesDisponibles }} places disponibles
-                                    </p>
-                                {% else %}
-                                    <a href="{{ path('app_login') }}" class="btn-custom btn-secondary-custom w-100">
-                                        <i class="fas fa-sign-in-alt"></i>Se connecter pour réserver
-                                    </a>
-                                {% endif %}
-                            {% else %}
-                                {% if event.placesDisponibles <= 0 %}
-                                    <button class="btn-custom btn-disabled-custom w-100" disabled>
-                                        <i class="fas fa-times-circle"></i>Plus de places disponibles
-                                    </button>
-                                    <p class="text-danger mt-3 mb-0">
-                                        <i class="fas fa-times-circle me-1"></i>
-                                        Événement complet
-                                    </p>
-                                {% else %}
-                                    <button class="btn-custom btn-disabled-custom w-100" disabled>
-                                        <i class="fas fa-clock"></i>Événement terminé
-                                    </button>
-                                    <p class="text-warning mt-3 mb-0">
-                                        <i class="fas fa-clock me-1"></i>
-                                        Événement terminé
-                                    </p>
-                                {% endif %}
-                            {% endif %}
-                        </div>
-                    </div>
-                    
-                    <!-- Matériels nécessaires -->
-                    {% if event.materielsNecessaires %}
-                    <div class="info-card">
-                        <h5><i class="fas fa-tools"></i>Matériels nécessaires</h5>
-                        <p>{{ event.materielsNecessaires }}</p>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Vidéo -->
-                    {% if event.video %}
-                    <div class="info-card">
-                        <h5><i class="fas fa-video"></i>Vidéo</h5>
-                        <a href="{{ event.video }}" target="_blank" class="btn-custom btn-primary-custom">
-                            <i class="fas fa-play"></i>Voir la vidéo
-                        </a>
-                    </div>
-                    {% endif %}
-                    
-                    <!-- Activités associées -->
-                    {% if event.activities|length > 0 %}
-                    <div class="activities-section">
-                        <div class="info-card">
-                            <h5><i class="fas fa-running"></i>Activités associées</h5>
-                            <div class="row">
-                                {% for activity in event.activities %}
-                                    <div class="col-md-6 mb-3">
-                                        <div class="activity-card">
-                                            <div class="activity-header">
-                                                <i class="fas fa-star"></i>
-                                                <strong>{{ activity.titre }}</strong>
-                                            </div>
-                                            <div class="activity-content">
-                                                <div class="activity-info">
-                                                    <span class="activity-category">{{ activity.categorie.value }}</span>
-                                                    <span>
-                                                        <i class="fas fa-tag"></i>
-                                                        {{ activity.typeActivite }}
-                                                    </span>
-                                                </div>
-                                                {% if activity.image %}
-                                                    <div class="activity-info">
-                                                        <span>
-                                                            
-                                                            
-                                                        </span>
-                                                    </div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
+<!-- Content -->
+<section class="section-gap pt-0">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Carousel -->
+                {% if event.images is not empty %}
+                    <div class="show-card p-0 mb-4">
+                        <div class="carousel-container">
+                            <button class="carousel-nav carousel-prev" onclick="changeSlide(-1)"><i class="fa fa-chevron-left"></i></button>
+                            <button class="carousel-nav carousel-next" onclick="changeSlide(1)"><i class="fa fa-chevron-right"></i></button>
+                            <div class="carousel-track" id="carousel-track">
+                                {% for image in event.images %}
+                                    <div class="carousel-slide" data-index="{{ loop.index0 }}">
+                                        <img src="{{ asset('uploads/events/' ~ image.imagePath) }}" alt="{{ event.lieu }}" onclick="openLightbox('{{ asset('uploads/events/' ~ image.imagePath) }}')">
                                     </div>
+                                {% endfor %}
+                            </div>
+                            <div class="carousel-indicators">
+                                {% for image in event.images %}
+                                    <button class="indicator" onclick="goToSlide({{ loop.index0 }})" data-index="{{ loop.index0 }}"></button>
                                 {% endfor %}
                             </div>
                         </div>
                     </div>
-                    {% endif %}
+                {% endif %}
+
+                <!-- Description & Activities -->
+                <div class="show-card">
+                    <h3 class="mb-4">À propos de l'événement</h3>
                     
-                    <!-- Disponibilité -->
-                    <div class="row mt-4">
-                        <div class="col-md-6">
-                            {% if event.placesDisponibles > 0 %}
-                                <div class="status-card success">
-                                    <h5><i class="fas fa-check-circle me-2"></i>Disponibilité</h5>
-                                    <h3>{{ event.placesDisponibles }}</h3>
-                                    <p>places encore disponibles</p>
-                                    <div class="progress mt-3">
-                                        <div class="progress-bar bg-success" role="progressbar" 
-                                             style="width: {{ (event.placesDisponibles / event.capaciteMax) * 100 }}%"
-                                             aria-valuenow="{{ event.placesDisponibles }}" 
-                                             aria-valuemin="0" 
-                                             aria-valuemax="{{ event.capaciteMax }}">
-                                        </div>
+                    {% if event.materielsNecessaires %}
+                    <h5 class="mt-4"><i class="fa fa-shopping-bag text-danger me-2"></i>Matériels nécessaires</h5>
+                    <p>{{ event.materielsNecessaires }}</p>
+                    {% endif %}
+
+                    {% if event.video %}
+                    <h5 class="mt-4"><i class="fa fa-video-camera text-danger me-2"></i>Vidéo de présentation</h5>
+                    <a href="{{ event.video }}" target="_blank" class="genric-btn danger circle"><i class="fa fa-play me-2"></i>Voir la vidéo</a>
+                    {% endif %}
+
+                    {% if event.activities|length > 0 %}
+                    <h4 class="mt-5 mb-4">Activités incluses</h4>
+                    <div class="row">
+                        {% for activity in event.activities %}
+                            <div class="col-md-6 mb-3">
+                                <div class="border rounded p-3 d-flex align-items-center">
+                                    <div class="flex-shrink-0 me-3">
+                                        {% if activity.image %}
+                                            <img src="{{ asset('uploads/activities/' ~ activity.image) }}" alt="{{ activity.titre }}" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px;">
+                                        {% else %}
+                                            <div class="bg-light rounded d-flex justify-content-center align-items-center" style="width: 60px; height: 60px;">
+                                                <i class="fa fa-image text-muted"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-1">{{ activity.titre }}</h6>
+                                        <small class="text-muted"><i class="fa fa-tag me-1"></i>{{ activity.categorie.value }}</small>
                                     </div>
                                 </div>
-                            {% else %}
-                                <div class="status-card danger">
-                                    <h5><i class="fas fa-times-circle me-2"></i>Disponibilité</h5>
-                                    <h3>Complet</h3>
-                                    <p>Aucune place disponible</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="text-center mt-4">
-                                <a href="{{ path('app_events_index') }}" class="btn-custom btn-secondary-custom">
-                                    <i class="fas fa-arrow-left"></i>Retour à la liste
-                                </a>
                             </div>
-                        </div>
+                        {% endfor %}
                     </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-lg-4">
+                <div class="show-card">
+                    <h4 class="mb-4">Détails</h4>
+                    <ul class="info-list">
+                        <li>
+                            <span><i class="fa fa-calendar"></i> Date de début</span>
+                            <strong>{{ event.dateDebut ? event.dateDebut|date('d/m/Y H:i') : 'N/A' }}</strong>
+                        </li>
+                        <li>
+                            <span><i class="fa fa-flag-checkered"></i> Date de fin</span>
+                            <strong>{{ event.dateFin ? event.dateFin|date('d/m/Y H:i') : 'N/A' }}</strong>
+                        </li>
+                        <li>
+                            <span><i class="fa fa-phone"></i> Contact</span>
+                            <strong>{{ event.telephone }}</strong>
+                        </li>
+                        <li>
+                            <span><i class="fa fa-envelope"></i> Email</span>
+                            <strong>{{ event.email }}</strong>
+                        </li>
+                        <li>
+                            <span><i class="fa fa-users"></i> Disponibilité</span>
+                            <strong>{{ event.placesDisponibles }} / {{ event.capaciteMax }} places</strong>
+                        </li>
+                    </ul>
+
+                    <div class="mt-4 p-3 bg-light rounded text-center">
+                        <span class="text-muted d-block mb-1">Prix par personne</span>
+                        <div class="price-block-show justify-content-center"
+                             id="show-price-block"
+                             data-prix="{{ event.prix }}"
+                             data-places="{{ event.placesDisponibles }}"
+                             data-capacite="{{ event.capaciteMax }}"
+                             data-debut="{{ event.dateDebut ? event.dateDebut|date('Y-m-d') : '' }}"
+                             data-status="{{ event.status.value }}">
+                            <span class="price-normal-show">{{ event.prix }} TND</span>
+                        </div>
+                        <div class="promo-hint" id="show-promo-hint"></div>
+                    </div>
+
+                    {% set eventDate = event.getDateDebut() %}
+                    {% set now = "now"|date("Y-m-d H:i:s") %}
                     
+                    {% if event.placesDisponibles > 0 and eventDate > now %}
+                        {% if app.user %}
+                            <a href="{{ path('app_reservations_new', {'event_id': event.id}) }}" class="btn-reserve mt-4">
+                                Réserver maintenant
+                            </a>
+                        {% else %}
+                            <a href="{{ path('app_login') }}" class="btn-reserve mt-4" style="background: #333;">
+                                Connectez-vous pour réserver
+                            </a>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-warning mt-4 text-center mb-0">
+                            <strong><i class="fa fa-exclamation-circle"></i> Complet ou terminé</strong>
+                        </div>
+                    {% endif %}
+
+                    <hr class="mt-4 mb-4">
                     
+                    <!-- Share Section -->
+                    <div class="text-center">
+                        <h6 class="text-muted mb-3"><i class="fa fa-share-alt me-2"></i>Partager cet événement</h6>
+                        <div class="d-flex justify-content-center mb-2" style="gap: 10px;">
+                            <button class="btn btn-primary share-btn rounded-circle" data-network="facebook" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center;" title="Partager sur Facebook"><i class="fa fa-facebook-f"></i></button>
+                            <button class="btn btn-info share-btn rounded-circle" data-network="twitter" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; color:white; background-color: #1da1f2; border-color: #1da1f2;" title="Partager sur X (Twitter)"><i class="fa fa-twitter"></i></button>
+                            <button class="btn btn-success share-btn rounded-circle" data-network="whatsapp" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; background-color: #25d366; border-color: #25d366;" title="Envoyer sur WhatsApp"><i class="fa fa-whatsapp"></i></button>
+                            <button class="btn btn-secondary share-btn rounded-circle" data-network="copy" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center;" title="Copier le lien"><i class="fa fa-link"></i></button>
+                        </div>
+                        <small class="text-muted"><span id="share-count-display">{{ event.shareCount|default(0) }}</span> partages</small>
+                    </div>
                 </div>
             </div>
         </div>
-        
-        
-        
     </div>
-</div>
+</section>
 
 <!-- Lightbox -->
 <div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.9);z-index:9999;align-items:center;justify-content:center;">
@@ -808,18 +283,17 @@
     const totalSlides = {{ event.images|length }};
 
     function changeSlide(direction) {
+        if(totalSlides <= 1) return;
         const track = document.getElementById('carousel-track');
-        
         currentSlide += direction;
-        
         if (currentSlide < 0) currentSlide = 0;
         if (currentSlide >= totalSlides) currentSlide = totalSlides - 1;
-        
         track.style.transform = `translateX(-${currentSlide * 100}%)`;
         updateIndicators();
     }
 
     function goToSlide(index) {
+        if(totalSlides <= 1) return;
         currentSlide = index;
         const track = document.getElementById('carousel-track');
         track.style.transform = `translateX(-${index * 100}%)`;
@@ -829,62 +303,121 @@
     function updateIndicators() {
         const indicators = document.querySelectorAll('.indicator');
         indicators.forEach((indicator, index) => {
-            if (index === currentSlide) {
-                indicator.classList.add('active');
-            } else {
-                indicator.classList.remove('active');
-            }
+            if (index === currentSlide) indicator.classList.add('active');
+            else indicator.classList.remove('active');
         });
     }
 
     function openLightbox(src) {
-        const lightbox = document.getElementById('lightbox');
-        const lightboxImg = document.getElementById('lightbox-img');
-        
-        lightbox.style.display = 'flex';
-        lightboxImg.src = src;
+        document.getElementById('lightbox').style.display = 'flex';
+        document.getElementById('lightbox-img').src = src;
         document.body.style.overflow = 'hidden';
     }
 
     function closeLightbox() {
-        const lightbox = document.getElementById('lightbox');
-        lightbox.style.display = 'none';
+        document.getElementById('lightbox').style.display = 'none';
         document.body.style.overflow = 'auto';
     }
 
-    // Keyboard navigation
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowLeft') changeSlide(-1);
-        if (e.key === 'ArrowRight') changeSlide(1);
-        if (e.key === 'Escape') closeLightbox();
-    });
+    updateIndicators();
 
-    // Touch navigation for mobile
-    let touchStartX = 0;
-    let touchEndX = 0;
+    // Discount logic
+    (function () {
+        function calcAutoDiscount(places, capacite, dateDebutStr, statut) {
+            if (statut !== 'accepte') return 0;
+            if (!dateDebutStr) return 0;
+            const daysLeft = (new Date(dateDebutStr) - new Date()) / 86400000;
+            if (daysLeft < 0) return 0;
+            if (!capacite || capacite <= 0 || places <= 0) return 0;
+            if (daysLeft > 30) return 0;
+            const occupancyRate = (capacite - places) / capacite;
+            if (occupancyRate < 0.70) return 0;
 
-    const carousel = document.querySelector('.carousel-container');
-    
-    if (carousel) {
-        carousel.addEventListener('touchstart', (e) => {
-            touchStartX = e.touches[0].clientX;
-        });
+            const occDiscount  = ((occupancyRate - 0.70) / 0.30) * 0.15;
+            const timeDiscount = ((30 - daysLeft) / 30) * 0.15;
+            return Math.min(Math.round((occDiscount + timeDiscount) * 100) / 100, 0.30);
+        }
 
-        carousel.addEventListener('touchend', (e) => {
-            touchEndX = e.changedTouches[0].clientX;
-            const diff = touchStartX - touchEndX;
-            
-            if (Math.abs(diff) > 50) {
-                if (diff > 0) {
-                    changeSlide(1);
-                } else {
-                    changeSlide(-1);
+        document.addEventListener('DOMContentLoaded', function () {
+            const block = document.getElementById('show-price-block');
+            const hint = document.getElementById('show-promo-hint');
+            if (!block) return;
+
+            const prix = parseFloat(block.dataset.prix);
+            const places = parseInt(block.dataset.places, 10);
+            const capacite = parseInt(block.dataset.capacite, 10);
+            const debut = block.dataset.debut || '';
+            const statut = block.dataset.status || '';
+
+            const discount = calcAutoDiscount(places, capacite, debut, statut);
+
+            if (discount >= 0.05) {
+                const pct = Math.round(discount * 100);
+                const prixReduit = (prix * (1 - discount)).toFixed(2);
+                
+                block.innerHTML = `
+                    <span class="price-original-show">${prix.toFixed(2)} TND</span>
+                    <span class="price-discounted-show">${prixReduit} TND</span>
+                    <span class="discount-badge-show">-${pct}%</span>
+                `;
+
+                const reasons = [];
+                const occ = Math.round((capacite - places) / capacite * 100);
+                if (occ >= 70) reasons.push(`${occ}% réservé`);
+                const dLeft = Math.round((new Date(debut) - new Date()) / 86400000);
+                if (dLeft >= 0 && dLeft <= 30) reasons.push(`J-${dLeft}`);
+
+                if (hint && reasons.length > 0) {
+                    hint.style.display = 'block';
+                    hint.innerHTML = `🔥 Offre spéciale — ${reasons.join(' · ')}`;
                 }
+            } else {
+                block.innerHTML = `<span class="price-normal-show">${prix.toFixed(2)} TND</span>`;
             }
         });
-    }
 
-    // Initialize first indicator
-    updateIndicators();
+        // Logique de partage & AJAX
+        const shareBtns = document.querySelectorAll('.share-btn');
+        const shareCountDisplay = document.getElementById('share-count-display');
+        const shareUrlInput = "{{ url('app_events_show', {'id': event.id}) }}";
+        const shareText = "Découvrez cet événement incroyable : {{ event.lieu }} !";
+
+        shareBtns.forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const network = this.dataset.network;
+                let finalUrl = '';
+
+                if (network === 'facebook') {
+                    finalUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrlInput)}`;
+                } else if (network === 'twitter') {
+                    finalUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrlInput)}&text=${encodeURIComponent(shareText)}`;
+                } else if (network === 'whatsapp') {
+                    finalUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + shareUrlInput)}`;
+                } else if (network === 'copy') {
+                    navigator.clipboard.writeText(shareUrlInput).then(() => alert("Lien copié dans le presse-papier !"));
+                }
+
+                // Ouvrir le popup si URL existe (pas pour COPY)
+                if (finalUrl !== '') {
+                    window.open(finalUrl, '_blank', 'width=600,height=400');
+                }
+
+                // Incrémenter en base de données de manière asynchrone (AJAX)
+                fetch("{{ path('app_events_share', {'id': event.id}) }}", {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        shareCountDisplay.textContent = data.count; // Met à jour le compteur en temps réel !
+                    }
+                })
+                .catch(err => console.error('Erreur incrémentation partage:', err));
+            });
+        });
+    })();
 </script>
+{% include '_chatbot.html.twig' with { chatContext: 'events' } %}
 {% endblock %}

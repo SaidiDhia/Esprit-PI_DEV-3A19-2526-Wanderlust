@@ -137,7 +137,158 @@
 <script src="{{ asset('adventure/js/jquery.magnific-popup.min.js') }}"></script>
 <script src="{{ asset('adventure/js/main.js') }}"></script>
 
-{% block javascripts %}{% endblock %}
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+/* Premium SweetAlert2 Styling */
+.swal2-popup.premium-swal {
+    border-radius: 20px;
+    padding: 0;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    font-family: 'Outfit', 'Poppins', sans-serif;
+    border: 1px solid #e2e8f0;
+}
+.swal2-popup.premium-swal .swal2-header {
+    border-top: 8px solid #0f375b; /* Top blue border */
+    padding-top: 35px;
+    background: #ffffff;
+}
+.swal2-popup.premium-swal .swal2-icon {
+    border: none !important;
+    background: #0f375b !important;
+    color: white !important;
+    font-size: 1.2rem;
+    width: 70px;
+    height: 70px;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.swal2-popup.premium-swal .swal2-icon.swal2-success .swal2-success-ring {
+    border: none;
+}
+.swal2-popup.premium-swal .swal2-icon.swal2-success [class^="swal2-success-line"] {
+    background-color: white !important;
+}
+/* For warnings / errors */
+.swal2-popup.premium-swal .swal2-icon.swal2-warning, 
+.swal2-popup.premium-swal .swal2-icon.swal2-error {
+    background: #f87171 !important;
+    color: white !important;
+}
+.swal2-popup.premium-swal .swal2-title {
+    color: #0f375b;
+    font-weight: 700;
+    font-size: 1.8rem;
+    padding-bottom: 5px;
+}
+.swal2-popup.premium-swal .swal2-html-container {
+    color: #64748b;
+    font-size: 1.05rem;
+    font-weight: 400;
+    margin: 15px 30px 30px;
+    line-height: 1.5;
+}
+.swal2-popup.premium-swal .swal2-actions {
+    background: #ffffff;
+    padding-bottom: 30px;
+    width: 100%;
+}
+.swal2-popup.premium-swal .swal2-confirm {
+    background-color: #0f375b !important;
+    color: white !important;
+    border-radius: 50px !important;
+    padding: 14px 35px !important;
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+    width: 85%;
+    margin: 0 auto 15px !important;
+    box-shadow: 0 4px 15px rgba(15, 55, 91, 0.2);
+    transition: all 0.3s ease;
+}
+.swal2-popup.premium-swal .swal2-confirm:hover {
+    background-color: #092440 !important;
+    transform: translateY(-2px);
+}
+.swal2-popup.premium-swal .swal2-cancel {
+    background-color: #f1f5f9 !important;
+    color: #475569 !important;
+    border-radius: 50px !important;
+    padding: 14px 35px !important;
+    font-size: 1.05rem !important;
+    font-weight: 600 !important;
+    width: 85%;
+    margin: 0 auto !important;
+    transition: all 0.3s ease;
+}
+.swal2-popup.premium-swal .swal2-cancel:hover {
+    background-color: #e2e8f0 !important;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Transform basic Bootstrap flashes into Premium SweetAlerts
+    const flashes = document.querySelectorAll('.alert-success, .alert-danger, .alert-warning, .alert-info');
+    let hasShownGlobalAlert = false;
+
+    flashes.forEach(flash => {
+        const text = flash.innerText.trim();
+        flash.style.display = 'none'; // Hide the boring native alert
+        
+        let type = 'info';
+        if (flash.classList.contains('alert-success')) type = 'success';
+        if (flash.classList.contains('alert-danger')) type = 'error';
+        if (flash.classList.contains('alert-warning')) type = 'warning';
+        
+        if (!hasShownGlobalAlert) {
+            Swal.fire({
+                icon: type,
+                title: type === 'success' ? 'Success' : 'Notification',
+                text: text,
+                customClass: { popup: 'premium-swal' },
+                confirmButtonText: 'Continue',
+                buttonsStyling: false
+            });
+            hasShownGlobalAlert = true;
+        }
+    });
+
+    // 2. Intercept Default Deletion Forms
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        const onsubmitStr = form.getAttribute('onsubmit');
+        // Check if it's using the standard JS confirm dialog
+        if (onsubmitStr && onsubmitStr.includes('confirm(')) {
+            // Remove native confirm
+            form.removeAttribute('onsubmit');
+            
+            // Add modern SweetAlert interception
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Êtes-vous sûr ?',
+                    text: 'Cette action est irréversible.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Oui, continuer',
+                    cancelButtonText: 'Annuler',
+                    customClass: { popup: 'premium-swal' },
+                    buttonsStyling: false,
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        form.submit();
+                    }
+                });
+            });
+        }
+    });
+});
+</script>
+{% endblock %}
 {% block importmap %}{{ importmap('app') }}{% endblock %}
 </body>
 </html>

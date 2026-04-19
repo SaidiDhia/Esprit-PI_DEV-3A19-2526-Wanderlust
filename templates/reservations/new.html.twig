@@ -5,606 +5,207 @@
 {% block stylesheets %}
 {{ parent() }}
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap');
-
-    :root {
-        --primary-color: #667eea;
-        --primary-dark: #5a67d8;
-        --secondary-color: #764ba2;
-        --success-color: #28a745;
-        --danger-color: #dc3545;
-        --warning-color: #ffc107;
-        --border-radius: 16px;
-        --shadow-sm: 0 2px 8px rgba(0,0,0,0.1);
-        --shadow-md: 0 8px 24px rgba(0,0,0,0.12);
-        --shadow-lg: 0 16px 40px rgba(0,0,0,0.15);
-        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    body { 
-        background: #fffcf5; 
-        font-family: 'DM Sans', sans-serif;
-        color: #0f0e17;
-    }
-
-    /* Section Header */
-    .res-hero {
-        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-        padding: 4rem 0 2rem;
+    .module-hero {
+        background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url('{{ event.images|length > 0 ? asset("uploads/events/" ~ event.images|first.imagePath) : asset("adventure/img/slider2.jpg") }}') center center/cover no-repeat;
+        padding: 140px 0 80px;
+        color: #fff;
+        margin-bottom: 50px;
         text-align: center;
-        color: white;
-        margin-bottom: 2.5rem;
-        position: relative;
-        overflow: hidden;
     }
+    .module-hero h1, .module-hero p { color: #fff; }
 
-    .res-hero::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
-        background-size: cover;
-        opacity: 0.3;
-    }
+    .res-wrapper { max-width: 800px; margin: 0 auto; padding: 0 15px 60px; }
 
-    .res-hero h1 { 
-        font-family: 'Syne', sans-serif; 
-        font-size: 2rem; 
-        font-weight: 800; 
-        margin-bottom: .4rem; 
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    .show-card {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        padding: 2.5rem;
+        margin-bottom: 25px;
     }
     
-    .res-hero p  { 
-        opacity: .6; 
-        font-size: .95rem; 
+    .show-card h4 {
+        border-bottom: 2px solid #f0f0f0;
+        padding-bottom: 12px;
+        margin-bottom: 25px;
+        font-weight: 700;
+        display: flex; align-items: center; gap: 10px;
+        color: #1a3a5c;
     }
 
-    .res-wrapper { 
-        max-width: 780px; 
-        margin: 0 auto; 
-        padding: 0 1.5rem 4rem; 
-    }
-
-    /* Event recap */
     .event-recap {
-        background: white;
-        border: 1px solid #e4e1d8;
-        border-radius: var(--border-radius);
-        padding: 1.25rem 1.5rem;
-        margin-bottom: 2rem;
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-        box-shadow: var(--shadow-sm);
+        display: flex; align-items: center; gap: 20px;
+        background: #fdfdfd; border: 1px solid #ebebeb;
+        padding: 20px; border-radius: 10px;
     }
-
     .recap-icon {
-        width: 48px; 
-        height: 48px;
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        border-radius: 12px;
-        display: flex; 
-        align-items: center; 
-        justify-content: center;
+        width: 60px; height: 60px; background: #f6214b; color: #fff;
+        border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 24px;
     }
-
-    .recap-icon i {
-        font-size: 1.25rem;
-        color: white;
-    }
-
-    .recap-content h3 {
-        font-family: 'Syne', sans-serif;
-        font-size: 1.2rem;
-        font-weight: 700;
-        color: #0f0e17;
-        margin-bottom: 0.25rem;
-    }
-
-    .recap-content p {
-        color: #6b6b80;
-        font-size: 0.9rem;
-        margin-bottom: 0;
-    }
-
-    .recap-info h3 { 
-        font-family: 'Syne', sans-serif; 
-        font-size: 1rem; 
-        font-weight: 700; 
-        margin: 0 0 .2rem; 
-    }
+    .recap-info h3 { font-size: 1.2rem; font-weight: 700; margin: 0 0 5px; color: #1a3a5c; }
+    .recap-info p { margin: 0; color: #6b7280; font-size: 0.9rem; }
     
-    .recap-info p  { 
-        color: var(--mid); 
-        font-size: .82rem; 
-        margin: 0; 
+    .recap-price { margin-left: auto; text-align: right; }
+    .price-normal-show { font-size: 1.5rem; font-weight: 800; color: #1a3a5c; }
+    .price-discounted-show { font-size: 1.5rem; font-weight: 900; color: #dc2626; }
+    .price-original-show { text-decoration: line-through; color: #9ca3af; font-size: 0.9rem; display: block; }
+    .discount-badge-show {
+        background: linear-gradient(135deg, #dc2626, #f97316); color: #fff;
+        font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 20px;
     }
 
-    .recap-price {
-        margin-left: auto; 
-        text-align: right; 
-        flex-shrink: 0;
-    }
+    .form-group label { font-weight: 600; color: #1a3a5c; margin-bottom: 8px; }
+    .form-control { border-radius: 8px; padding: 12px 15px; border: 1px solid #e2e8f0; }
+    .form-control:focus { border-color: #f6214b; box-shadow: 0 0 0 3px rgba(246, 33, 75, 0.1); }
 
-    .recap-price .price { 
-        font-family: 'Syne', sans-serif; 
-        font-size: 1.5rem; 
-        font-weight: 800; 
-        color: var(--primary-color); 
-    }
-    
-    .recap-price small  { 
-        color: var(--mid); 
-        font-size: .75rem; 
-        display: block; 
-    }
-
-    /* Form Card */
-    .form-card {
-        background: white;
-        border: 1px solid var(--line);
-        border-radius: var(--border-radius);
-        padding: 1.75rem 2rem;
-        margin-bottom: 1.25rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,.04);
-    }
-
-    .form-header {
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        padding: 1.5rem 2rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .form-title {
-        font-family: 'Syne', sans-serif;
-        font-size: 1.3rem;
-        font-weight: 700;
-        margin: 0;
-    }
-
-    .form-body {
-        padding: 2rem;
-    }
-
-    /* Form Groups */
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-
-    .form-group label {
-        display: block;
-        font-weight: 600;
-        color: #0f0e17;
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
-    }
-
-    .form-group .form-control {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 1px solid #e4e1d8;
-        border-radius: var(--border-radius);
-        font-size: 0.95rem;
-        transition: var(--transition);
-        background: white;
-    }
-
-    .form-group .form-control:focus {
-        outline: none;
-        border-color: var(--primary-color);
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-
-    /* Counter Section */
-    .counter-group {
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
-    }
-
-    .counter-item {
-        flex: 1;
-        background: white;
-        border: 1px solid #e4e1d8;
-        border-radius: var(--border-radius);
-        padding: 1rem;
-        text-align: center;
-    }
-
-    .counter-label {
-        font-weight: 600;
-        color: #6b6b80;
-        font-size: 0.85rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .counter-controls {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.5rem;
-    }
-
-    .counter-btn {
-        width: 36px;
-        height: 36px;
-        border: none;
-        border-radius: 50%;
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: var(--transition);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .counter-btn:hover {
-        transform: scale(1.1);
-        box-shadow: var(--shadow-md);
-    }
-
-    .counter-value {
-        font-family: 'Syne', sans-serif;
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--primary-color);
-        min-width: 40px;
-    }
-
-    /* Total Section */
-    .total-section {
-        background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
-        border: 1px solid #e4e1d8;
-        border-radius: var(--border-radius);
-        padding: 1.5rem;
-        margin-bottom: 1.5rem;
-        text-align: center;
-    }
-
-    .total-amount {
-        font-family: 'Syne', sans-serif;
-        font-size: 2rem;
-        font-weight: 800;
-        color: var(--primary-color);
-        margin-bottom: 0.5rem;
-    }
-
-    .total-detail {
-        color: #6b6b80;
-        font-size: 0.9rem;
-    }
-
-    /* Buttons */
-    .btn-submit {
-        background: #209cd1;
-        color: white;
-        border: none;
-        padding: 1rem 2rem;
-        border-radius: var(--border-radius);
-        font-size: 1rem;
-        font-weight: 600;
-        cursor: pointer;
-        transition: var(--transition);
-        width: 100%;
-        font-family: 'DM Sans', sans-serif;
-    }
-
-    .btn-submit:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--shadow-lg);
-    }
-
-    .btn-submit:disabled {
-        background: #e4e1d8;
-        color: #6b6b80;
-        cursor: not-allowed;
-        transform: none;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .res-hero {
-            padding: 3rem 0 1.5rem;
-        }
-        
-        .res-hero h1 {
-            font-size: 1.75rem;
-        }
-        
-        .res-wrapper {
-            padding: 0 1rem 2rem;
-        }
-        
-        .event-recap {
-            flex-direction: column;
-            text-align: center;
-        }
-        
-        .counter-group {
-            flex-direction: column;
-            gap: 1rem;
-        }
-    }
-
-    /* ── Form card ── */
-    .form-card {
-        background: white;
-        border: 1px solid var(--line);
-        border-radius: var(--border-radius);
-        border-radius: 16px;
-        padding: 1.75rem 2rem;
-        margin-bottom: 1.25rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,.04);
-    }
-
-    .form-section-title {
-        font-family: 'Syne', sans-serif;
-        font-size: .82rem;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: .1em;
-        color: var(--accent);
-        margin-bottom: 1.25rem;
-        display: flex;
-        align-items: center;
-        gap: .5rem;
-    }
-    .form-section-title::after { content:''; flex:1; height:1px; background:var(--line); margin-left:.4rem; }
-
-    .form-group { margin-bottom: 1.1rem; }
-    .form-group label { display:block; font-size:.84rem; font-weight:500; color:var(--ink); margin-bottom:.4rem; }
-
-    .form-control {
-        width: 100%;
-        padding: .7rem 1rem;
-        border: 1.5px solid var(--line);
-        border-radius: 10px;
-        font-size: .92rem;
-        font-family: 'DM Sans', sans-serif;
-        color: var(--ink);
-        background: var(--paper);
-        transition: border-color .2s, box-shadow .2s;
-        outline: none;
-    }
-    .form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,87,42,.1); }
-
-    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-    @media(max-width:600px) { .two-col { grid-template-columns: 1fr; } }
-
-    /* ── Compteurs adultes/enfants ── */
-    .counter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem; }
-    @media(max-width:500px) { .counter-grid { grid-template-columns: 1fr; } }
-
+    .counter-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     .counter-box {
-        border: 1.5px solid var(--line);
-        border-radius: 12px;
-        padding: 1rem 1.25rem;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        background: var(--paper);
-        transition: border-color .2s;
+        border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px;
+        display: flex; justify-content: space-between; align-items: center;
+        background: #f8fafc;
     }
-    .counter-box:focus-within { border-color: var(--accent); }
-
-    .counter-label { font-size: .88rem; font-weight: 500; color: var(--ink); }
-    .counter-label small { display:block; color:var(--mid); font-size:.74rem; font-weight:400; margin-top:.1rem; }
-
-    .counter-controls { display: flex; align-items: center; gap: .5rem; }
-
-    .counter-btn {
-        width: 30px; height: 30px;
-        border-radius: 50%;
-        border: 1.5px solid var(--line);
-        background: white;
-        color: var(--ink);
-        font-size: 1.1rem;
-        display: flex; align-items: center; justify-content: center;
-        cursor: pointer; transition: all .2s; line-height: 1;
-        flex-shrink: 0;
+    .counter-label { font-weight: 600; color: #1a3a5c; }
+    .counter-label small { display: block; color: #64748b; font-weight: 400; font-size: 0.8rem; }
+    
+    .counter-controls { display: flex; align-items: center; gap: 10px; }
+    .btn-counter {
+        width: 35px; height: 35px; border-radius: 50%; border: none;
+        background: #e2e8f0; color: #1a3a5c; font-weight: bold; font-size: 18px;
+        display: flex; align-items: center; justify-content: center; cursor: pointer; transition: 0.2s;
     }
-    .counter-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(232,87,42,.05); }
+    .btn-counter:hover { background: #cbd5e1; }
+    .counter-value { font-size: 1.2rem; font-weight: 700; color: #f6214b; width: 30px; text-align: center; }
 
-    .counter-value {
-        font-family: 'Syne', sans-serif;
-        font-size: 1.2rem; font-weight: 700;
-        min-width: 28px; text-align: center;
+    .total-box {
+        background: #1a3a5c; color: #fff; border-radius: 10px; padding: 25px;
+        display: flex; justify-content: space-between; align-items: center;
+        margin-top: 15px; box-shadow: 0 5px 15px rgba(26,58,92,0.2);
     }
+    .total-left span { display: block; opacity: 0.8; font-size: 0.9rem; }
+    .total-price { font-size: 2.2rem; font-weight: 800; color: #4ade80; }
 
-    /* ── Résumé total ── */
-    .total-summary {
-        background: linear-gradient(135deg, #0f0e17 0%, #2d2b3d 100%);
-        border-radius: 14px;
-        padding: 1.25rem 1.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        color: white;
-    }
-
-    .total-left .label  { font-size: .82rem; opacity: .6; margin-bottom: .15rem; }
-    .total-left .detail { font-size: .8rem; opacity: .5; }
-    .total-amount { font-family: 'Syne',sans-serif; font-size: 2rem; font-weight: 800; }
-
-    /* ── Bouton submit ── */
     .btn-submit {
-        width: 100%;
-        padding: 1rem;
-        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-        color: white;
-        border: none;
-        border-radius: 12px;
-        font-family: 'Syne', sans-serif;
-        font-size: 1rem;
-        font-weight: 700;
-        letter-spacing: .04em;
-        cursor: pointer;
-        transition: all .2s;
-        box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
-        margin-top: 1.5rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: .5rem;
-        text-decoration: none;
+        background: #f6214b; color: #fff; padding: 18px; width: 100%;
+        border: none; border-radius: 10px; font-weight: 700; font-size: 1.1rem;
+        cursor: pointer; transition: 0.3s; margin-top: 25px; box-shadow: 0 5px 15px rgba(246, 33, 75, 0.3);
     }
-    .btn-submit:hover { background: linear-gradient(135deg, var(--primary-dark), var(--secondary-color)); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5); }
+    .btn-submit:hover { background: #d81b40; transform: translateY(-2px); }
 
-    .btn-back {
-        display: flex; align-items: center; justify-content: center; gap: .5rem;
-        color: var(--mid); font-size: .88rem; text-decoration: none;
-        margin-top: .75rem; transition: color .2s;
-    }
-    .btn-back:hover { color: var(--ink); }
-
-    .flash-error {
-        background: #fee2e2; color: #991b1b;
-        padding: .9rem 1.1rem; border-radius: 10px;
-        margin-bottom: 1.25rem; font-size: .88rem;
-        display: flex; align-items: center; gap: .5rem;
-    }
+    .flash-error { background: #fee2e2; color: #991b1b; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-weight: 600; }
 </style>
 {% endblock %}
 
 {% block content %}
 
-<div class="res-hero">
+<section class="module-hero">
     <div class="container">
-        <h1><i class="fas fa-calendar-check me-2"></i>Réserver un événement</h1>
-        <p>Complétez le formulaire pour confirmer votre réservation</p>
+        <h1 class="mb-2"><i class="fa fa-ticket me-3"></i>Réservation</h1>
+        <p class="mb-0">Confirmez vos places pour cet événement exceptionnel</p>
     </div>
-</div>
+</section>
 
 <div class="res-wrapper">
-
-    {# Flash messages #}
     {% for msg in app.flashes('error') %}
-        <div class="flash-error">
-            <i class="fas fa-exclamation-circle"></i> {{ msg }}
-        </div>
+        <div class="flash-error"><i class="fa fa-exclamation-triangle me-2"></i> {{ msg }}</div>
     {% endfor %}
 
-    {# Récap event #}
-    <div class="event-recap">
-        <div class="recap-icon"><i class="fas fa-map-marker-alt"></i></div>
+    <!-- Recap de l'événement -->
+    <div class="show-card event-recap mb-4">
+        <div class="recap-icon"><i class="fa fa-map-marker"></i></div>
         <div class="recap-info">
             <h3>{{ event.lieu }}</h3>
-            <p>
-                <i class="fas fa-calendar me-1"></i>{{ event.dateDebut|date('d/m/Y à H:i') }}
-                &nbsp;·&nbsp;
-                <i class="fas fa-users me-1"></i>{{ event.placesDisponibles }} place(s) dispo
-            </p>
+            <p><i class="fa fa-calendar me-2"></i>{{ event.dateDebut|date('d/m/Y H:i') }}</p>
+            <p><i class="fa fa-users me-2"></i>{{ event.placesDisponibles }} places disponibles</p>
         </div>
-        <div class="recap-price">
-            <div class="price">{{ event.prix }} TND</div>
-            <small>par personne</small>
+        <div class="recap-price text-end" id="recap-price-block">
+            <!-- Price loaded via JS -->
+            <div class="price-normal-show">{{ event.prix }} TND</div>
         </div>
     </div>
 
     {{ form_start(form, {'attr': {'id': 'res-form', 'novalidate': 'novalidate'}}) }}
 
-        {# Informations personnelles #}
-        <div class="form-card">
-            <div class="form-section-title">
-                <i class="fas fa-user"></i> Informations personnelles
-            </div>
-
-            <div class="form-group">
+        <!-- Infos perso -->
+        <div class="show-card">
+            <h4><i class="fa fa-user"></i> Informations personnelles</h4>
+            
+            <div class="form-group mb-4">
                 {{ form_label(form.nomComplet) }}
-                {{ form_widget(form.nomComplet, {'attr': {'class': 'form-control'}}) }}
+                {{ form_widget(form.nomComplet, {'attr': {'class': 'form-control', 'placeholder': 'Ex: Jean Dupont'}}) }}
                 {{ form_errors(form.nomComplet) }}
             </div>
 
-            <div class="two-col">
-                <div class="form-group">
+            <div class="row mb-4">
+                <div class="col-md-6 form-group">
                     {{ form_label(form.email) }}
-                    {{ form_widget(form.email, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_widget(form.email, {'attr': {'class': 'form-control', 'placeholder': 'votre.email@example.com'}}) }}
                     {{ form_errors(form.email) }}
                 </div>
-                <div class="form-group">
+                <div class="col-md-6 form-group mt-3 mt-md-0">
                     {{ form_label(form.telephone) }}
-                    {{ form_widget(form.telephone, {'attr': {'class': 'form-control'}}) }}
+                    {{ form_widget(form.telephone, {'attr': {'class': 'form-control', 'placeholder': '+216 XX XXX XXX'}}) }}
                     {{ form_errors(form.telephone) }}
                 </div>
             </div>
 
-            {# Demandes spéciales #}
             <div class="form-group">
                 {{ form_label(form.demandesSpeciales, 'Demandes spéciales (optionnel)') }}
-                {{ form_widget(form.demandesSpeciales, {'attr': {'class': 'form-control', 'placeholder': 'Indiquez ici vos demandes spéciales...'}}) }}
+                {{ form_widget(form.demandesSpeciales, {'attr': {'class': 'form-control', 'placeholder': 'Régimes alimentaires, besoins spécifiques...', 'rows': '3'}}) }}
                 {{ form_errors(form.demandesSpeciales) }}
             </div>
         </div>
 
-        {# Participants #}
-        <div class="form-card">
-            <div class="form-section-title">
-                <i class="fas fa-users"></i> Participants
-            </div>
+        <!-- Participants & Total -->
+        <div class="show-card">
+            <h4><i class="fa fa-users"></i> Participants</h4>
 
-            {# Compteurs visuels #}
             <div class="counter-grid">
                 <div class="counter-box">
-                    <div class="counter-label">
-                        Adultes
-                        <small>18 ans et plus</small>
-                    </div>
+                    <div class="counter-label">Adultes <small>18 ans et plus</small></div>
                     <div class="counter-controls">
-                        <button type="button" class="counter-btn" onclick="decrement('adultes')">−</button>
+                        <button type="button" class="btn-counter" onclick="decrement('adultes')">−</button>
                         <span class="counter-value" id="val-adultes">1</span>
-                        <button type="button" class="counter-btn" onclick="increment('adultes', {{ event.placesDisponibles }})">+</button>
+                        <button type="button" class="btn-counter" onclick="increment('adultes', {{ event.placesDisponibles }})">+</button>
                     </div>
-                    {{ form_widget(form.nombreAdultes, {
-                        'id': 'input-adultes',
-                        'attr': {
-                            'class': 'form-control',
-                            'style': 'display:none'
-                        }
-                    }) }}
                 </div>
 
                 <div class="counter-box">
-                    <div class="counter-label">
-                        Enfants
-                        <small>Moins de 18 ans</small>
-                    </div>
+                    <div class="counter-label">Enfants <small>Moins de 18 ans</small></div>
                     <div class="counter-controls">
-                        <button type="button" class="counter-btn" onclick="decrement('enfants')">−</button>
+                        <button type="button" class="btn-counter" onclick="decrement('enfants')">−</button>
                         <span class="counter-value" id="val-enfants">0</span>
-                        <button type="button" class="counter-btn" onclick="increment('enfants', {{ event.placesDisponibles }})">+</button>
+                        <button type="button" class="btn-counter" onclick="increment('enfants', {{ event.placesDisponibles }})">+</button>
                     </div>
-                    {{ form_widget(form.nombreEnfants, {
-                        'id': 'input-enfants',
-                        'attr': {
-                            'class': 'form-control',
-                            'style': 'display:none'
-                        }
-                    }) }}
                 </div>
             </div>
 
-            {{ form_errors(form.nombreAdultes) }}
-            {{ form_errors(form.nombreEnfants) }}
+            <!-- Hidden Inputs that Symfony reads -->
+            <div style="display:none;">
+                {{ form_widget(form.nombreAdultes, {'id': 'input-adultes', 'attr': {'class': 'form-control'}}) }}
+                {{ form_widget(form.nombreEnfants, {'id': 'input-enfants', 'attr': {'class': 'form-control'}}) }}
+            </div>
+            
+            <div class="text-danger mt-2">
+                {{ form_errors(form.nombreAdultes) }}
+                {{ form_errors(form.nombreEnfants) }}
+            </div>
 
+            <!-- Dynamic Total Block -->
+            <div class="total-box mt-5">
+                <div class="total-left">
+                    <span style="font-size:1.1rem; font-weight: 700; opacity:1">Total à régler</span>
+                    <span id="total-detail">1 personne</span>
+                </div>
+                <div class="total-right">
+                    <div class="total-price" id="total-amount">0.00 TND</div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">Confirmer la réservation <i class="fa fa-arrow-right ms-2"></i></button>
+            <div class="text-center mt-4">
+                <a href="{{ path('app_events_show', {'id': event.id}) }}" class="text-muted text-decoration-none"><i class="fa fa-arrow-left me-2"></i>Retour à l'événement</a>
+            </div>
         </div>
-
-        <button type="submit" class="btn-submit">
-            <i class="fas fa-check-circle"></i> Confirmer la réservation
-        </button>
-
-        <a href="{{ path('app_events_show', {'id': event.id}) }}" class="btn-back">
-            <i class="fas fa-arrow-left"></i> Retour à l'événement
-        </a>
-
     {{ form_end(form) }}
 </div>
 
@@ -613,93 +214,106 @@
 {% block javascripts %}
 {{ parent() }}
 <script>
-const PRIX_UNIT  = parseFloat('{{ event.prix }}');
-const MAX_PLACES = parseInt('{{ event.placesDisponibles }}');
-
-function getAdultes() { 
-    const el = document.getElementById('val-adultes');
-    return el ? parseInt(el.textContent) || 0 : 0; 
-}
-
-function getEnfants() { 
-    const el = document.getElementById('val-enfants');
-    return el ? parseInt(el.textContent) || 0 : 0; 
-}
-
-function increment(type, max) {
-    console.log('increment called with type:', type);
+    const BasePrix = parseFloat('{{ event.prix }}');
+    const Places   = parseInt('{{ event.placesDisponibles }}', 10);
+    const Capacite = parseInt('{{ event.capaciteMax }}', 10);
+    const DateDeb  = '{{ event.dateDebut ? event.dateDebut|date('Y-m-d') : '' }}';
+    const Statut   = '{{ event.status.value }}';
     
-    if (getAdultes() + getEnfants() >= max) {
-        console.log('max reached');
-        return;
+    let CurrentPrix = BasePrix;
+
+    // ----- Logique de Réduction Intelligente -----
+    function calcAutoDiscount(places, capacite, dateDebutStr, statut) {
+        if (statut !== 'accepte') return 0;
+        if (!dateDebutStr) return 0;
+        const daysLeft = (new Date(dateDebutStr) - new Date()) / 86400000;
+        if (daysLeft < 0) return 0;
+        if (!capacite || capacite <= 0 || places <= 0) return 0;
+        if (daysLeft > 30) return 0;
+        const occupancyRate = (capacite - places) / capacite;
+        if (occupancyRate < 0.70) return 0;
+
+        const occDiscount  = ((occupancyRate - 0.70) / 0.30) * 0.15;
+        const timeDiscount = ((30 - daysLeft) / 30) * 0.15;
+        return Math.min(Math.round((occDiscount + timeDiscount) * 100) / 100, 0.30);
     }
-    
-    const el = document.getElementById('val-' + type);
-    const input = document.getElementById('input-' + type);
-    
-    console.log('el:', el);
-    console.log('input:', input);
-    
-    if (el && input) {
-        const val = parseInt(el.textContent) + 1;
-        console.log('new val:', val);
+
+    // Calculer le prix remisé (ce qui paiera le client final si éligible)
+    document.addEventListener('DOMContentLoaded', function() {
+        const discount = calcAutoDiscount(Places, Capacite, DateDeb, Statut);
+        const recapBlock = document.getElementById('recap-price-block');
+        
+        if (discount >= 0.05) {
+            const pct = Math.round(discount * 100);
+            CurrentPrix = BasePrix * (1 - discount);
+            
+            if (recapBlock) {
+                recapBlock.innerHTML = `
+                    <span class="price-original-show">${BasePrix.toFixed(2)} TND</span>
+                    <span class="price-discounted-show">${CurrentPrix.toFixed(2)} TND</span>
+                    <span class="discount-badge-show">-${pct}% de réduction AI !</span>
+                    <small class="d-block text-muted">par personne</small>
+                `;
+            }
+        } else {
+            if (recapBlock) {
+                recapBlock.innerHTML = `
+                    <span class="price-normal-show">${BasePrix.toFixed(2)} TND</span>
+                    <small class="d-block text-muted">par personne</small>
+                `;
+            }
+        }
+
+        // Initialize counters and total
+        const adultesInput = document.getElementById('input-adultes');
+        const enfantsInput = document.getElementById('input-enfants');
+        if (adultesInput && !adultesInput.value) adultesInput.value = 1;
+        if (enfantsInput && !enfantsInput.value) enfantsInput.value = 0;
+        
+        updateTotal();
+    });
+
+    // ----- Compteurs -----
+    function getAdultes() { return parseInt(document.getElementById('val-adultes').textContent) || 0; }
+    function getEnfants() { return parseInt(document.getElementById('val-enfants').textContent) || 0; }
+
+    function increment(type, max) {
+        if (getAdultes() + getEnfants() >= max) return;
+        
+        const el = document.getElementById('val-' + type);
+        const input = document.getElementById('input-' + type);
+        
+        if (el && input) {
+            const val = parseInt(el.textContent) + 1;
+            el.textContent = val;
+            input.value = val;
+            updateTotal();
+        }
+    }
+
+    function decrement(type) {
+        const el = document.getElementById('val-' + type);
+        const input = document.getElementById('input-' + type);
+        if (!el || !input) return;
+        
+        let val = parseInt(el.textContent) - 1;
+        if (type === 'adultes' && val === 0 && getEnfants() === 0) return; // Forcer min 1 participant
+        if (val < 0) return;
+
         el.textContent = val;
         input.value = val;
         updateTotal();
-    } else {
-        console.log('elements not found');
     }
-}
 
-function decrement(type) {
-    const el = document.getElementById('val-' + type);
-    const input = document.getElementById('input-' + type);
-    
-    console.log('el:', el);
-    console.log('input:', input);
-    
-    if (!el || !input) {
-        console.log('elements not found');
-        return;
+    function updateTotal() {
+        const total = getAdultes() + getEnfants();
+        const montant = (CurrentPrix * total).toFixed(2);
+        
+        const totalAmount = document.getElementById('total-amount');
+        const totalDetail = document.getElementById('total-detail');
+        
+        if (totalAmount) totalAmount.textContent = montant + ' TND';
+        if (totalDetail) totalDetail.textContent = `${total} personne${total > 1 ? 's' : ''}`;
     }
-    
-    let val = parseInt(el.textContent) - 1;
-    
-    if (type === 'adultes' && val === 0 && getEnfants() === 0) return;
-    if (val < 0) return;
-
-    console.log('new val:', val);
-    el.textContent = val;
-    input.value = val;
-    updateTotal();
-}
-
-function updateTotal() {
-    const total = getAdultes() + getEnfants();
-    const montant = (PRIX_UNIT * total).toFixed(2);
-    
-    // Mettre à jour seulement si les éléments existent
-    const totalAmount = document.getElementById('total-amount');
-    const totalDetail = document.getElementById('total-detail');
-    
-    if (totalAmount) {
-        totalAmount.textContent = montant + ' TND';
-    }
-    
-    if (totalDetail) {
-        totalDetail.textContent = `${total} personne${total > 1 ? 's' : ''} × ${PRIX_UNIT} TND`;
-    }
-}
-
-// Init
-document.addEventListener('DOMContentLoaded', function() {
-    const adultesInput = document.getElementById('input-adultes');
-    const enfantsInput = document.getElementById('input-enfants');
-    
-    if (adultesInput) adultesInput.value = 1;
-    if (enfantsInput) enfantsInput.value = 0;
-    
-    updateTotal();
-});
 </script>
 {% endblock %}

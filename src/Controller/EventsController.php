@@ -16,6 +16,7 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Knp\Component\Pager\PaginatorInterface;
 
 #[Route('/events')]
 final class EventsController extends AbstractController
@@ -45,10 +46,26 @@ final class EventsController extends AbstractController
     //  INDEX
     // ─────────────────────────────────────────────────────────────────
     #[Route(name: 'app_events_index', methods: ['GET'])]
-    public function index(EventsRepository $eventsRepository): Response
+    public function index(Request $request, EventsRepository $eventsRepository, PaginatorInterface $paginator): Response
     {
+        $user = $this->getUser();
+        $canManage = $user && in_array('ROLE_ADMIN', $user->getRoles());
+        
+        $query = $eventsRepository->createQueryBuilder('e')
+            ->leftJoin('e.activities', 'a')
+            ->addSelect('a')
+            ->orderBy('e.dateCreation', 'DESC')
+            ->getQuery();
+
+        $pagination = $paginator->paginate(
+            $query,
+            $request->query->getInt('page', 1),
+            6 // Limite par page demandée par l'utilisateur
+        );
+
         return $this->render('events/index.html.twig', [
-            'events' => $eventsRepository->findAllWithActivites(),
+            'events' => $pagination,
+            'canManage' => $canManage,
         ]);
     }
 
@@ -56,22 +73,23 @@ final class EventsController extends AbstractController
     //  NEW
     // ─────────────────────────────────────────────────────────────────
     #[Route('/new', name: 'app_events_new', methods: ['GET', 'POST'])]
-public function new(
-    Request $request,
-    EntityManagerInterface $entityManager,
-    SluggerInterface $slugger,
-    ActivitiesRepository $activitiesRepo
-): Response {
-    $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
+    public function new(
+        Request $request,
+        EntityManagerInterface $entityManager,
+        SluggerInterface $slugger,
+        ActivitiesRepository $activitiesRepo
+    ): Response {
+        $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
 
-    $event = new Events();
-    $event->setCreatedBy($this->getAuthenticatedUser());
-    $form = $this->createForm(EventsType::class, $event);
-    $form->handleRequest($request);
+        $event = new Events();
+        $event->setCreatedBy($this->getAuthenticatedUser());
+        $user = $this->getUser();
+        $isAdmin = $user && in_array('ROLE_ADMIN', $user->getRoles());
+        $form = $this->createForm(EventsType::class, $event, ['is_admin' => $isAdmin]);
+        $form->handleRequest($request);
 
-    // Récupérer les conditions acceptées
-    $selectedConditions = $request->request->all('event_conditions', []);
-    
+        // Récupérer les conditions acceptées
+        $selectedConditions = $request->request->all('event_conditions', []);
     // 🔥 Récupérer les activités sélectionnées depuis le formulaire
     $eventActivities = $request->request->all('event_activities', []);
     if (!is_array($eventActivities)) {
@@ -165,7 +183,7 @@ public function new(
         // ── Valeurs automatiques ────────────────────────────────────
         $event->setDateCreation(new \DateTime());
         $event->setPlacesDisponibles($event->getCapaciteMax());
-        $event->setStatut('en_attente');
+        // Le statut sera automatiquement 'en_attente' grâce à la valeur par défaut dans l'entité
 
         $entityManager->persist($event);
         $entityManager->flush();
@@ -201,6 +219,18 @@ public function new(
     }
 
     // ─────────────────────────────────────────────────────────────────
+    //  SHARE (AJAX)
+    // ─────────────────────────────────────────────────────────────────
+    #[Route('/{id}/share', name: 'app_events_share', methods: ['POST'])]
+    public function share(Events $event, EntityManagerInterface $em): Response
+    {
+        $event->setShareCount($event->getShareCount() + 1);
+        $em->flush();
+
+        return $this->json(['success' => true, 'count' => $event->getShareCount()]);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
     //  EDIT
     // ─────────────────────────────────────────────────────────────────
     #[Route('/{id}/edit', name: 'app_events_edit', methods: ['GET', 'POST'])]
@@ -214,7 +244,9 @@ public function new(
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $this->denyUnlessEventOwner($event);
 
-        $form = $this->createForm(EventsType::class, $event);
+        $user = $this->getUser();
+        $isAdmin = $user && in_array('ROLE_ADMIN', $user->getRoles());
+        $form = $this->createForm(EventsType::class, $event, ['is_admin' => $isAdmin]);
         $form->handleRequest($request);
 
         $selectedConditions = $request->request->all('event_conditions', []);

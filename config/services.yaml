@@ -6,6 +6,8 @@
 parameters:
     app.mail_from_address: '%env(string:SMTP_USERNAME)%'
     app.mail_from_name: 'Wanderlust'
+    gemini.api_key: '%env(string:GEMINI_API_KEY)%'
+    google.vision_api_key: '%env(string:GOOGLE_VISION_API_KEY)%'
 
 services:
     # default configuration for services in *this* file
@@ -24,3 +26,12 @@ services:
 
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
+
+    App\Service\GeminiService:
+        arguments:
+            $apiKey: '%gemini.api_key%'
+
+    App\Controller\AiEnhanceController:
+        arguments:
+            $groqApiKey: '%gemini.api_key%'
+            $googleVisionApiKey: '%google.vision_api_key%'

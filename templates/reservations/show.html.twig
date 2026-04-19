@@ -1,122 +1,410 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Details Reservation{% endblock %}
+{% block title %}Détails Réservation #{{ reservation.id }}{% endblock %}
 
 {% block stylesheets %}
     {{ parent() }}
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
+        /* ── Page hero ── */
         .module-hero {
-            background: linear-gradient(rgba(0, 0, 0, 0.38), rgba(0, 0, 0, 0.38)), url('{{ asset('adventure/img/video-bg.jpg') }}') center center/cover no-repeat;
+            background: linear-gradient(rgba(0,0,0,0.45), rgba(0,0,0,0.45)),
+                        url('{{ asset('adventure/img/video-bg.jpg') }}') center/cover no-repeat;
             color: #fff;
             padding: 120px 0 80px;
             margin-bottom: 40px;
         }
+        .module-hero h1, .module-hero p { text-shadow: 0 4px 12px rgba(0,0,0,0.4); }
 
-        .module-hero h1,
-        .module-hero p {
-            text-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-        }
-
+        /* ── Reservation card ── */
         .reservation-card {
             border: 1px solid #ececec;
-            border-radius: 14px;
+            border-radius: 16px;
             background: #fff;
-            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 8px 28px rgba(0,0,0,0.08);
             overflow: hidden;
             margin-bottom: 60px;
         }
-
         .reservation-head {
-            padding: 20px 24px;
+            padding: 20px 28px;
             border-bottom: 1px solid #eee;
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 12px;
             flex-wrap: wrap;
+            background: #fafafa;
         }
-
-        .reservation-body {
-            padding: 24px;
-        }
+        .reservation-body { padding: 28px; }
 
         .badge-status {
             border-radius: 999px;
-            padding: 6px 12px;
+            padding: 6px 14px;
             font-size: 11px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: .05em;
-            display: inline-flex;
-            align-items: center;
+            letter-spacing: .06em;
         }
-
         .status-en_attente { background: #fff4cf; color: #8a6d00; }
-        .status-confirmee { background: #d7f7e4; color: #10663b; }
-        .status-annulee { background: #ffe0e0; color: #a01b1b; }
+        .status-confirmee  { background: #d7f7e4; color: #10663b; }
+        .status-annulee    { background: #ffe0e0; color: #a01b1b; }
 
         .details-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 14px;
-            margin-bottom: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 12px;
+            margin-bottom: 22px;
         }
-
         .detail-item {
             border: 1px solid #efefef;
             border-radius: 10px;
-            padding: 14px;
-            background: #fafafa;
+            padding: 14px 16px;
+            background: #f9f9f9;
         }
-
         .detail-item .label {
-            color: #7b7b7b;
-            font-size: 12px;
+            color: #9ca3af;
+            font-size: 11px;
             text-transform: uppercase;
-            letter-spacing: .06em;
+            letter-spacing: .07em;
             font-weight: 700;
             margin-bottom: 4px;
         }
+        .detail-item .value { color: #1e1e1e; font-size: 15px; font-weight: 700; margin: 0; }
+        .section-title { font-size: 16px; font-weight: 700; margin-bottom: 12px; color: #374151; }
 
-        .detail-item .value {
-            color: #1e1e1e;
-            font-size: 16px;
+        /* ── Get Ticket Button ── */
+        .btn-get-ticket {
+            background: linear-gradient(135deg, #1a3a5c, #2c5364);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: 14px 32px;
+            font-size: 1rem;
             font-weight: 700;
-            margin: 0;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 18px rgba(26,58,92,0.35);
+            text-decoration: none;
+            margin-bottom: 14px;
+            width: 100%;
+            justify-content: center;
+        }
+        .btn-get-ticket:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(26,58,92,0.45); color: #fff; }
+        .btn-get-ticket .ticket-icon { font-size: 1.3rem; }
+
+        /* ── Modal overlay ── */
+        .eticket-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.72);
+            backdrop-filter: blur(6px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+            animation: fadeIn 0.3s ease;
+        }
+        .eticket-overlay.open { display: flex; }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+        /* ── E-Ticket card ── */
+        .eticket-modal {
+            background: #fff;
+            border-radius: 24px;
+            max-width: 860px;
+            width: 100%;
+            overflow: hidden;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+            animation: slideUp 0.4s ease;
+            position: relative;
+        }
+        @keyframes slideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+
+        /* Close button */
+        .eticket-close {
+            position: absolute;
+            top: 14px; right: 14px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: #fff;
+            border-radius: 50%;
+            width: 34px; height: 34px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            transition: background 0.2s;
+        }
+        .eticket-close:hover { background: rgba(255,255,255,0.35); }
+
+        /* ── Ticket top label ── */
+        .eticket-label {
+            background: linear-gradient(135deg, #1a3a5c, #2c5364);
+            color: rgba(255,255,255,0.75);
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            padding: 10px 28px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .eticket-label .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; display: inline-block; }
+
+        /* ── Ticket body ── */
+        .eticket-body {
+            display: flex;
+            min-height: 320px;
         }
 
-        .section-title {
-            font-size: 18px;
+        /* Left image panel */
+        .eticket-img {
+            width: 220px;
+            flex-shrink: 0;
+            background: linear-gradient(180deg, #0f2027 0%, #2c5364 100%);
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            padding: 20px;
+            overflow: hidden;
+        }
+        .eticket-img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.7; }
+        .eticket-img-placeholder {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 4rem;
+        }
+        .eticket-tier {
+            position: relative;
+            z-index: 2;
+            background: rgba(255,210,0,0.9);
+            color: #1a1a1a;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            padding: 4px 12px;
+            border-radius: 50px;
+        }
+
+        /* Center info panel */
+        .eticket-info {
+            flex: 1;
+            padding: 28px 28px 24px;
+            border-right: 2px dashed #e5e7eb;
+        }
+        .eticket-event-type {
+            font-size: 0.72rem;
             font-weight: 700;
-            margin-bottom: 12px;
+            color: #1a5c8a;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .eticket-event-name {
+            font-size: clamp(1.2rem, 2.5vw, 1.7rem);
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            font-family: 'Outfit', sans-serif;
+        }
+        .eticket-meta-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .eticket-meta-item .meta-label {
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #9ca3af;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 3px;
+        }
+        .eticket-meta-item .meta-val {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #0f172a;
+            font-family: 'Outfit', sans-serif;
+        }
+        .eticket-meta-item .meta-sub {
+            font-size: 0.8rem;
+            color: #6b7280;
+            margin-top: 1px;
+        }
+        .eticket-divider { border: none; border-top: 1px solid #f0f0f0; margin: 16px 0; }
+        .eticket-passenger-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        /* Right QR panel */
+        .eticket-qr {
+            width: 190px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px 18px;
+            gap: 12px;
+            background: #f8fafc;
+        }
+        .eticket-qr img { width: 140px; height: 140px; border-radius: 12px; border: 2px solid #e5e7eb; }
+        .qr-label {
+            text-align: center;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #1a3a5c;
+        }
+        .qr-sub { text-align: center; font-size: 0.7rem; color: #9ca3af; }
+        .authentic-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 50px;
+            padding: 4px 12px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #15803d;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .authentic-badge .check { color: #22c55e; }
+
+        /* Tear line at top of actions */
+        .eticket-tear {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            padding: 0 12px;
+        }
+        .tear-c { width: 22px; height: 22px; border-radius: 50%; background: #f1f5f9; flex-shrink: 0; }
+        .tear-l { flex: 1; border: none; border-top: 2px dashed #d1d5db; }
+
+        /* Action bar */
+        .eticket-actions {
+            display: flex;
+            gap: 12px;
+            padding: 18px 28px;
+            background: #f8fafc;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .eticket-actions .btn-dl {
+            background: #1a3a5c;
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 26px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .eticket-actions .btn-dl:hover { background: #0f2744; transform: translateY(-1px); color: #fff; }
+        .eticket-actions .btn-print-t {
+            background: #fff;
+            color: #374151;
+            border: 2px solid #d1d5db;
+            border-radius: 50px;
+            padding: 11px 26px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .eticket-actions .btn-print-t:hover { border-color: #9ca3af; transform: translateY(-1px); }
+        .eticket-actions .btn-wallet {
+            background: #0f172a;
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 26px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .eticket-actions .btn-wallet:hover { background: #1e293b; transform: translateY(-1px); color: #fff; }
+
+        /* ── Print ── */
+        @media print {
+            .eticket-overlay { display: flex !important; position: static; background: #fff; padding: 0; }
+            .eticket-close, .eticket-actions { display: none !important; }
+            .module-hero, .reservation-card, .eticket-label { display: none !important; }
+            .eticket-modal { box-shadow: none; }
+        }
+
+        /* ── Responsive ── */
+        @media (max-width: 620px) {
+            .eticket-body { flex-direction: column; }
+            .eticket-img { width: 100%; height: 160px; }
+            .eticket-qr { width: 100%; flex-direction: row; justify-content: center; }
+            .eticket-info { border-right: none; border-bottom: 2px dashed #e5e7eb; }
+            .eticket-meta-row, .eticket-passenger-row { grid-template-columns: 1fr; }
         }
     </style>
 {% endblock %}
 
 {% block content %}
+
+{# ── Hero ── #}
 <section class="module-hero">
     <div class="container">
-        <h1 class="mb-2">Reservation #{{ reservation.id }}</h1>
-        <p class="mb-0">Consultez toutes les informations de votre reservation.</p>
+        <h1 class="mb-2">Réservation #{{ reservation.id }}</h1>
+        <p class="mb-0">Consultez les détails de votre réservation et obtenez votre ticket d'entrée.</p>
     </div>
 </section>
 
 <div class="container">
     <article class="reservation-card">
         <div class="reservation-head">
-            <h3 class="mb-0">Details de la reservation</h3>
+            <h3 class="mb-0" style="font-family:'Outfit',sans-serif;">Détails de la réservation</h3>
             <span class="badge-status status-{{ reservation.statut }}">{{ reservation.statut|replace({'_': ' '})|title }}</span>
         </div>
 
         <div class="reservation-body">
-            <h4 class="section-title">Evenement</h4>
+
+            {# ── Événement ── #}
+            <h4 class="section-title">🗓️ Événement</h4>
             <div class="details-grid">
                 <div class="detail-item">
                     <p class="label">Lieu</p>
                     <p class="value">{{ reservation.event ? reservation.event.lieu : 'N/A' }}</p>
                 </div>
                 <div class="detail-item">
-                    <p class="label">Date evenement</p>
+                    <p class="label">Date de l'événement</p>
                     <p class="value">{{ reservation.event ? reservation.event.dateDebut|date('d/m/Y H:i') : 'N/A' }}</p>
                 </div>
                 <div class="detail-item">
@@ -125,7 +413,8 @@
                 </div>
             </div>
 
-            <h4 class="section-title">Informations client</h4>
+            {# ── Client ── #}
+            <h4 class="section-title">👤 Informations client</h4>
             <div class="details-grid">
                 <div class="detail-item">
                     <p class="label">Nom complet</p>
@@ -137,13 +426,14 @@
                 </div>
                 {% if reservation.telephone %}
                     <div class="detail-item">
-                        <p class="label">Telephone</p>
+                        <p class="label">Téléphone</p>
                         <p class="value">{{ reservation.telephone }}</p>
                     </div>
                 {% endif %}
             </div>
 
-            <h4 class="section-title">Participants</h4>
+            {# ── Participants ── #}
+            <h4 class="section-title">👥 Participants</h4>
             <div class="details-grid">
                 <div class="detail-item">
                     <p class="label">Nombre total</p>
@@ -159,23 +449,185 @@
                 </div>
             </div>
 
-            <h4 class="section-title">Prix</h4>
+            {# ── Prix ── #}
+            <h4 class="section-title">💰 Prix</h4>
             <div class="details-grid">
                 <div class="detail-item">
                     <p class="label">Total</p>
-                    <p class="value">{{ reservation.prixTotal }} TND</p>
+                    <p class="value" style="color:#1a3a5c; font-size:1.2rem;">{{ reservation.prixTotal }} TND</p>
                 </div>
+                {% if reservation.event %}
+                    <div class="detail-item">
+                        <p class="label">Prix unitaire × participants</p>
+                        <p class="value">{{ reservation.event.prix }} TND × {{ reservation.nombrePersonnes }}</p>
+                    </div>
+                {% endif %}
             </div>
 
             {% if reservation.demandesSpeciales %}
-                <h4 class="section-title">Demandes speciales</h4>
-                <div class="detail-item" style="margin-bottom: 20px;">
-                    <p class="value" style="font-size: 15px; font-weight: 500;">{{ reservation.demandesSpeciales }}</p>
+                <h4 class="section-title">✏️ Demandes spéciales</h4>
+                <div class="detail-item" style="margin-bottom:20px;">
+                    <p class="value" style="font-size:14px; font-weight:500;">{{ reservation.demandesSpeciales }}</p>
                 </div>
             {% endif %}
 
-            <a href="{{ path('app_reservations_index') }}" class="genric-btn default-border">Retour a la liste</a>
+            {# ── Actions ── #}
+            <div style="display:flex; flex-direction:column; gap:10px; max-width:380px; margin-top:28px;">
+                {# ★ GET YOUR TICKET ★ #}
+                <button class="btn-get-ticket" onclick="openTicket()">
+                    <span class="ticket-icon">🎫</span>
+                    Get Your Ticket
+                </button>
+                <a href="{{ path('app_reservations_index') }}" class="genric-btn default-border" style="text-align:center;">
+                    ← Retour à la liste
+                </a>
+            </div>
+
         </div>
     </article>
 </div>
+
+{# ══════════════════════════════════════════════════════════════
+   E-TICKET MODAL
+══════════════════════════════════════════════════════════════ #}
+<div class="eticket-overlay" id="eticketOverlay" onclick="closeTicketOutside(event)">
+    <div class="eticket-modal" id="eticketModal">
+
+        {# ── Close ── #}
+        <button class="eticket-close" onclick="closeTicket()">✕</button>
+
+        {# ── Top label ── #}
+        <div class="eticket-label">
+            <span class="dot"></span>
+             WANDERLUST E-TICKET
+        </div>
+
+        {# ── Body ── #}
+        <div class="eticket-body">
+
+            {# Left: image / placeholder #}
+            <div class="eticket-img">
+                {% if event and event.images is defined and event.images|length > 0 %}
+                    <img src="{{ asset('uploads/events/' ~ event.images[0].imagePath) }}" alt="{{ event.lieu }}">
+                {% else %}
+                    <div class="eticket-img-placeholder">
+                        {% if event and event.activities|length > 0 and event.activities[0].categorie is not null %}
+                            {{ event.activities[0].categorie.getIcone() }}
+                        {% else %}
+                            🌍
+                        {% endif %}
+                    </div>
+                {% endif %}
+                <span class="eticket-tier">WANDERLUST PASS</span>
+            </div>
+
+            {# Center: info #}
+            <div class="eticket-info">
+                <div class="eticket-event-type">
+                    🧭 GRAND EXPEDITION
+                </div>
+                <div class="eticket-event-name">
+                    {% if event %}{{ event.lieu }}{% else %}Événement Wanderlust{% endif %}
+                </div>
+
+                <div class="eticket-meta-row">
+                    <div class="eticket-meta-item">
+                        <div class="meta-label">Date &amp; Heure</div>
+                        {% if event %}
+                            <div class="meta-val">{{ event.dateDebut|date('d/m/Y') }}</div>
+                            <div class="meta-sub">{{ event.dateDebut|date('H:i') }} (GMT+1)</div>
+                        {% else %}
+                            <div class="meta-val">—</div>
+                        {% endif %}
+                    </div>
+                    <div class="eticket-meta-item">
+                        <div class="meta-label">Localisation</div>
+                        {% if event %}
+                            <div class="meta-val">{{ event.lieu }}</div>
+                            <div class="meta-sub">{{ event.organisateur }}</div>
+                        {% else %}
+                            <div class="meta-val">—</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr class="eticket-divider">
+
+                <div class="eticket-passenger-row">
+                    <div class="eticket-meta-item">
+                        <div class="meta-label">Passager</div>
+                        <div class="meta-val">{{ reservation.nomComplet }}</div>
+                    </div>
+                    <div class="eticket-meta-item">
+                        <div class="meta-label">Ticket ID</div>
+                        <div class="meta-val" style="font-family:'Courier New',monospace; color:#1a3a5c;">
+                            WDL-{{ '%05d'|format(reservation.id) }}-{{ reservation.dateCreation|date('Y') }}
+                        </div>
+                    </div>
+                    <div class="eticket-meta-item">
+                        <div class="meta-label">Participants</div>
+                        <div class="meta-val">{{ reservation.nombrePersonnes }} personne(s)</div>
+                    </div>
+                    <div class="eticket-meta-item">
+                        <div class="meta-label">Total</div>
+                        <div class="meta-val" style="color:#1a3a5c; font-size:1.1rem;">{{ reservation.prixTotal }} TND</div>
+                    </div>
+                </div>
+            </div>
+
+            {# Right: QR code #}
+            <div class="eticket-qr">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=WDL-{{ '%05d'|format(reservation.id) }}-{{ reservation.dateCreation|date('Ymd') }}&color=0f172a&bgcolor=ffffff"
+                     alt="QR Code Ticket">
+                <div class="qr-label">Check-in Gate A{{ reservation.id % 9 + 1 }}</div>
+                <div class="qr-sub">Scan QR for instant<br>verification</div>
+                <div class="authentic-badge">
+                    <span class="check">✔</span> AUTHENTIC PASS
+                </div>
+            </div>
+
+        </div><!-- /.eticket-body -->
+
+        {# Tear line #}
+        <div class="eticket-tear">
+            <div class="tear-c"></div>
+            <div class="tear-l"></div>
+            <div class="tear-c"></div>
+        </div>
+
+        {# Action buttons #}
+        <div class="eticket-actions">
+            <button class="btn-dl" onclick="window.print()">
+                <i class="fa fa-download"></i> Download PDF
+            </button>
+            <a href="{{ path('app_marketplace') }}" class="btn-wallet">
+                <i class="fa fa-credit-card"></i> Add to Wallet
+            </a>
+        </div>
+
+    </div><!-- /.eticket-modal -->
+</div><!-- /.eticket-overlay -->
+
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script>
+    function openTicket() {
+        document.getElementById('eticketOverlay').classList.add('open');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeTicket() {
+        document.getElementById('eticketOverlay').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+    function closeTicketOutside(e) {
+        if (e.target === document.getElementById('eticketOverlay')) closeTicket();
+    }
+    // ESC key closes modal
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closeTicket();
+    });
+    </script>
+{% include '_chatbot.html.twig' with { chatContext: 'reservations' } %}
 {% endblock %}

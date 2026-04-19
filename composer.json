@@ -10,6 +10,8 @@
         "doctrine/doctrine-bundle": "^2.18",
         "doctrine/doctrine-migrations-bundle": "^3.7",
         "doctrine/orm": "^3.6",
+        "endroid/qr-code-bundle": "^6.1",
+        "knplabs/knp-paginator-bundle": "^6.10",
         "lexik/jwt-authentication-bundle": "^2.18",
         "symfony/asset": "6.4.*",
         "symfony/asset-mapper": "6.4.*",
@@ -23,6 +25,7 @@
         "symfony/mime": "6.4.*",
         "symfony/runtime": "6.4.*",
         "symfony/security-bundle": "6.4.*",
+        "symfony/translation": "6.4.*",
         "symfony/twig-bundle": "6.4.*",
         "symfony/validator": "6.4.*",
         "symfony/yaml": "6.4.*",
@@ -33,7 +36,8 @@
         "allow-plugins": {
             "php-http/discovery": true,
             "symfony/flex": true,
-            "symfony/runtime": true
+            "symfony/runtime": true,
+            "endroid/installer": true
         },
         "sort-packages": true
     },

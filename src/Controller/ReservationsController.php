@@ -239,8 +239,8 @@ class ReservationsController extends AbstractController
 
         if ($this->isCsrfTokenValid('confirm'.$reservation->getId(), $request->request->get('_token'))) {
             $reservation->setStatut('confirmee');
-            $em->flush();
-            $this->addFlash('success', 'Réservation confirmée.');
+            $em->flush(); // Va déclencher le ReservationStatusListener (Envoi email !)
+            $this->addFlash('success', 'Réservation confirmée. Le ticket virtuel part par email !');
         }
         return $this->redirectToRoute('app_reservations_index');
     }
@@ -254,7 +254,7 @@ class ReservationsController extends AbstractController
 
         if ($this->isCsrfTokenValid('cancel'.$reservation->getId(), $request->request->get('_token'))) {
             $reservation->setStatut('annulee');
-            $em->flush();
+            $em->flush(); // Va déclencher le ReservationStatusListener (Envoi email !)
             $this->addFlash('success', 'Réservation annulée.');
         }
         return $this->redirectToRoute('app_reservations_index');

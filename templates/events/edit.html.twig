@@ -42,7 +42,7 @@
 
         /* Styles pour la modale */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
-        .modal { background: white; border-radius: 12px; max-width: 800px; max-height: 80vh; width: 90%; overflow: hidden; }
+        .modal-dialog-custom { background: white; border-radius: 12px; max-width: 800px; max-height: 80vh; width: 90%; overflow: hidden; }
         .modal-header { padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
         .modal-title { font-size: 1.2rem; font-weight: 600; }
         .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #6b7280; }
@@ -124,7 +124,7 @@
         </div>
 
         <div id="activitiesModal" class="modal-overlay" aria-hidden="true">
-            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="activitiesModalTitle">
+            <div class="modal-dialog-custom" role="dialog" aria-modal="true" aria-labelledby="activitiesModalTitle">
                 <div class="modal-header">
                     <div class="modal-title" id="activitiesModalTitle">Sélectionner des activités</div>
                     <button class="modal-close" id="closeModalBtn" type="button">&times;</button>

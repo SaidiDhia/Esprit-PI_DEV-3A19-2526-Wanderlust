@@ -3,16 +3,19 @@
 namespace App\Controller;
 
 use App\Entity\Booking;
+use App\Entity\Events;
 use App\Entity\Place;
 use App\Entity\PlaceImage;
 use App\Entity\User;
 use App\Enum\RoleEnum;
+use App\Enum\StatusEventEnum;
 use App\Enum\TFAMethod;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
@@ -27,7 +30,7 @@ class AdminController extends AbstractController
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
         $section = (string) $request->query->get('section', 'users');
-        if (!in_array($section, ['users', 'messaging', 'booking', 'marketplace'], true)) {
+        if (!in_array($section, ['users', 'messaging', 'booking', 'marketplace', 'events'], true)) {
             $section = 'users';
         }
 
@@ -35,6 +38,38 @@ class AdminController extends AbstractController
         $role = strtoupper(trim((string) $request->query->get('role', '')));
         $status = strtolower(trim((string) $request->query->get('status', '')));
 
+        // ── GESTION DES ÉVÉNEMENTS ──────────────────────────────────────
+        $events = [];
+        $eventsStats = null;
+        if ($section === 'events') {
+            $eventsRepo = $entityManager->getRepository(Events::class);
+            $qb = $eventsRepo->createQueryBuilder('e')
+                ->orderBy('e.dateCreation', 'DESC');
+            
+            if ($q !== '') {
+                $qb->andWhere('LOWER(e.lieu) LIKE :search OR LOWER(e.organisateur) LIKE :search')
+                    ->setParameter('search', '%' . mb_strtolower($q) . '%');
+            }
+            
+            if ($status !== '') {
+                $qb->andWhere('e.status = :status')
+                    ->setParameter('status', StatusEventEnum::from($status));
+            }
+            
+            $events = $qb->getQuery()->getResult();
+            
+            // Statistiques des événements
+            $eventsStats = [
+                'total' => count($events),
+                'pending' => count(array_filter($events, fn($e) => $e->isPending())),
+                'accepted' => count(array_filter($events, fn($e) => $e->isAccepted())),
+                'refused' => count(array_filter($events, fn($e) => $e->isRefused())),
+                'cancelled' => count(array_filter($events, fn($e) => $e->isCancelled())),
+                'finished' => count(array_filter($events, fn($e) => $e->isFinished())),
+            ];
+        }
+
+        // ── GESTION DES UTILISATEURS ────────────────────────────────────
         $qb = $userRepository->createQueryBuilder('u')
             ->orderBy('u.createdAt', 'DESC');
 
@@ -262,6 +297,8 @@ class AdminController extends AbstractController
             ],
             'activeSection' => $section,
             'stats' => $stats,
+            'events' => $events,
+            'eventsStats' => $eventsStats,
             'messagingStats' => [
                 'totalConversations' => $totalConversations,
                 'totalMessages' => $totalMessages,
@@ -1269,5 +1306,98 @@ class AdminController extends AbstractController
         }
 
         return $newFilename;
+    }
+
+    // ── GESTION DES STATUTS DES ÉVÉNEMENTS ──────────────────────────────────────
+    
+    /**
+     * API pour changer le statut d'un événement
+     */
+    #[Route('/admin/events/{id}/status', name: 'admin_event_status', methods: ['POST'])]
+    public function changeEventStatus(
+        int $id, 
+        Request $request, 
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        
+        $event = $entityManager->find(Events::class, $id);
+        if (!$event) {
+            return new JsonResponse(['error' => 'Événement non trouvé'], 404);
+        }
+        
+        $newStatus = $request->request->get('status');
+        if (!$newStatus || !in_array($newStatus, array_map(fn($case) => $case->value, StatusEventEnum::cases()))) {
+            return new JsonResponse(['error' => 'Statut invalide'], 400);
+        }
+        
+        try {
+            $event->setStatus(StatusEventEnum::from($newStatus));
+            $entityManager->flush();
+            
+            return new JsonResponse([
+                'success' => true,
+                'message' => 'Statut mis à jour avec succès',
+                'new_status' => [
+                    'value' => $event->getStatus()->value,
+                    'label' => $event->getStatus()->getLabel(),
+                    'color' => $event->getStatus()->getColor(),
+                    'icon' => $event->getStatus()->getIcon()
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return new JsonResponse(['error' => 'Erreur lors de la mise à jour du statut'], 500);
+        }
+    }
+    
+    /**
+     * API pour valider/refuser plusieurs événements en lot
+     */
+    #[Route('/admin/events/bulk-status', name: 'admin_events_bulk_status', methods: ['POST'])]
+    public function bulkUpdateEventStatus(
+        Request $request, 
+        EntityManagerInterface $entityManager
+    ): JsonResponse {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+        
+        $eventIds = $request->request->all('event_ids', []);
+        $status = $request->request->get('status');
+        
+        if (empty($eventIds) || !in_array($status, array_map(fn($case) => $case->value, StatusEventEnum::cases()))) {
+            return new JsonResponse(['error' => 'Paramètres invalides'], 400);
+        }
+        
+        $updated = 0;
+        $errors = [];
+        
+        foreach ($eventIds as $eventId) {
+            $event = $entityManager->find(Events::class, (int)$eventId);
+            if ($event) {
+                try {
+                    $event->setStatus(StatusEventEnum::from($status));
+                    $updated++;
+                } catch (\Exception $e) {
+                    $errors[] = "Événement #{$eventId}: " . $e->getMessage();
+                }
+            }
+        }
+        
+        if (!empty($errors)) {
+            $entityManager->flush();
+            return new JsonResponse([
+                'success' => true,
+                'message' => "Mise à jour partielle: {$updated} événements mis à jour",
+                'updated_count' => $updated,
+                'errors' => $errors
+            ], 207); // Multi-Status
+        }
+        
+        $entityManager->flush();
+        
+        return new JsonResponse([
+            'success' => true,
+            'message' => "{$updated} événements mis à jour avec succès",
+            'updated_count' => $updated
+        ]);
     }
 }
