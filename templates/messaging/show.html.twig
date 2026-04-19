@@ -160,6 +160,120 @@
             border: 1px solid rgba(148, 163, 184, 0.2);
         }
 
+        .msg-warning-popup {
+            position: fixed;
+            left: 50%;
+            bottom: 32px;
+            transform: translateX(-50%) translateY(16px);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 1400;
+            background: #111827;
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px;
+            padding: 11px 14px;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.38);
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: opacity .2s ease, transform .2s ease;
+        }
+
+        .msg-warning-popup.is-visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .ai-result-pre {
+            white-space: pre-wrap;
+            line-height: 1.5;
+            color: #0f172a;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 12px;
+            margin: 0;
+            max-height: 320px;
+            overflow: auto;
+            font-size: 14px;
+        }
+
+        .translate-language-select {
+            width: 100%;
+            min-height: 44px;
+            border-radius: 10px;
+            border: 1px solid #cbd5e1;
+            background: #ffffff;
+            color: #0f172a;
+            padding: 8px 10px;
+        }
+
+        .emoji-suggestion-bar {
+            margin-bottom: 10px;
+            padding: 8px 12px;
+            background: #f0f8f0;
+            border: 1px solid #d4ead4;
+            border-radius: 24px;
+            display: none;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .emoji-suggestion-btn {
+            background: #e0e0e0;
+            border: none;
+            border-radius: 20px;
+            padding: 4px 12px;
+            cursor: pointer;
+            min-width: 42px;
+            font-size: 16px;
+            line-height: 1.2;
+        }
+
+        .emoji-suggestion-btn:hover {
+            background: #d5d5d5;
+        }
+
+        .chat-file-picker {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #cbd5e1;
+            border-radius: 10px;
+            background: #ffffff;
+            color: #0f172a;
+            cursor: pointer;
+            padding: 8px 10px;
+            min-height: 42px;
+            min-width: 46px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .chat-file-picker:hover {
+            background: #f8fafc;
+        }
+
+        .chat-file-name {
+            flex: 1;
+            font-size: 13px;
+            color: #64748b;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #ffffff;
+            padding: 10px 12px;
+            min-height: 42px;
+            display: inline-flex;
+            align-items: center;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         @media (max-width: 640px) {
             .conversation-search-form {
                 flex-wrap: wrap;
@@ -183,10 +297,10 @@
 
 <div class="container conversation-wrap conversation-page">
     {% for message in app.flashes('success') %}
-        <div class="flash flash-success">{{ message }}</div>
+        <div class="flash flash-success">✅ {{ message }}</div>
     {% endfor %}
     {% for message in app.flashes('error') %}
-        <div class="flash flash-error">{{ message }}</div>
+        <div class="flash flash-error">⚠️ {{ message }}</div>
     {% endfor %}
 
     <!-- Manage Members Button (for GROUP conversations) -->
@@ -194,10 +308,22 @@
         <div class="conversation-toolbar">
             <a href="{{ path('messaging_conversation_participants', {id: conversation.id}) }}" class="btn btn-outline msg-btn-action" style="border: 2px solid #cbd5e1; color: #0f172a; background: #f8fafc; display: inline-flex; align-items: center; gap: 8px;">👥 Manage Members</a>
             <a href="{{ path('messaging_export', {id: conversation.id}) }}" class="btn msg-btn-export" style="border: 2px solid #2554d9; color: #ffffff; background: linear-gradient(135deg, #2554d9 0%, #1e40af 100%); display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37, 84, 217, 0.25);">📥 Export Chat</a>
+            <button type="button" onclick="summarizeConversation()" class="btn" style="border: 2px solid #0f766e; color: #ffffff; background: #0f766e; display: inline-flex; align-items: center; gap: 8px;">📋 Summarize Chat</button>
+            {% if currentUserRole == 'CREATOR' %}
+                <form method="POST" action="{{ path('messaging_conversation_delete', {id: conversation.id}) }}" style="display:inline;" onsubmit="return confirm('Delete this conversation and all messages? This action cannot be undone.');">
+                    <button type="submit" class="btn" style="border: 2px solid #dc2626; color: #ffffff; background: #dc2626; display: inline-flex; align-items: center; gap: 8px;">🗑️ Delete Conversation</button>
+                </form>
+            {% endif %}
         </div>
     {% else %}
         <div class="conversation-toolbar">
             <a href="{{ path('messaging_export', {id: conversation.id}) }}" class="btn msg-btn-export" style="border: 2px solid #2554d9; color: #ffffff; background: linear-gradient(135deg, #2554d9 0%, #1e40af 100%); display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 12px rgba(37, 84, 217, 0.25);">📥 Export Chat</a>
+            <button type="button" onclick="summarizeConversation()" class="btn" style="border: 2px solid #0f766e; color: #ffffff; background: #0f766e; display: inline-flex; align-items: center; gap: 8px;">📋 Summarize Chat</button>
+            {% if currentUserRole == 'CREATOR' %}
+                <form method="POST" action="{{ path('messaging_conversation_delete', {id: conversation.id}) }}" style="display:inline;" onsubmit="return confirm('Delete this conversation and all messages? This action cannot be undone.');">
+                    <button type="submit" class="btn" style="border: 2px solid #dc2626; color: #ffffff; background: #dc2626; display: inline-flex; align-items: center; gap: 8px;">🗑️ Delete Conversation</button>
+                </form>
+            {% endif %}
         </div>
     {% endif %}
 
@@ -217,7 +343,7 @@
     <div class="conversation-chat-shell" style="display: flex; flex-direction: column; height: 100%;">
     <!-- Messages Area -->
     <div id="messagesContainer" style="background: white; border-radius: 0; border: none; flex: 1; overflow-y: auto; padding: 24px;">
-    {% if messages is empty %}
+    {% if messages|length == 0 %}
         <div style="text-align: center; padding: 60px; color: var(--gray-400);">
             <div style="font-size: 48px; margin-bottom: 16px;">💬</div>
             <p>No messages yet. Start the conversation!</p>
@@ -232,17 +358,23 @@
                     <div style="flex-shrink: 0;">
                         <div class="msg-bubble-content {% if msg.sender_id == currentUserId %}msg-bubble-own{% else %}msg-bubble-other{% endif %}" style="transition: all 0.3s ease;">
                             <div class="msg-bubble-info">
-                                <span>{{ msg.sender_name ?: 'User ' ~ msg.sender_id|slice(0,8) }} • {{ msg.created_at|date('H:i') }}</span>
+                                <span>{{ msg.sender_name ?: 'User ' ~ msg.sender_id|slice(0,8) }} • {{ msg.created_at|time_diff }}</span>
                             </div>
                             <div id="message-content-{{ msg.id }}" style="margin-top: 6px; word-wrap: break-word; word-break: break-word;">
                                 {% if msg.message_type == 'IMAGE' %}
-                                    📷 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit; text-decoration: underline;">{{ msg.file_name ?: 'Image' }}</a>
+                                    <div style="margin-top: 8px;">
+                                        {% set uploadFilename = msg.file_url|split('/')|last %}
+                                        <img src="{{ asset('uploads/' ~ uploadFilename) }}"
+                                             alt="{{ msg.file_name ?: 'Image' }}"
+                                             style="max-width: 200px; max-height: 200px; border-radius: 8px; cursor: pointer;"
+                                             onclick="window.open('{{ asset('uploads/' ~ uploadFilename) }}', '_blank')">
+                                    </div>
                                 {% elseif msg.message_type == 'VIDEO' %}
-                                    🎥 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit; text-decoration: underline;">{{ msg.file_name ?: 'Video' }}</a>
+                                    🎥 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit; text-decoration: underline;">Play Video</a>
                                 {% elseif msg.message_type == 'AUDIO' %}
-                                    🎵 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit; text-decoration: underline;">{{ msg.file_name ?: 'Audio' }}</a>
+                                    🎵 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit; text-decoration: underline;">Play Audio</a>
                                 {% elseif msg.message_type == 'FILE' %}
-                                    📎 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit; text-decoration: underline;">{{ msg.file_name ?: 'File' }}</a>
+                                    📎 <a href="{{ path('serve_upload', {filename: msg.file_url|split('/')|last}) }}" target="_blank" style="color: inherit; text-decoration: underline;">{{ msg.file_name ?: 'Download File' }}</a>
                                 {% else %}
                                     {% set msgLines = msg.content|split('\n') %}
                                     {% set hasReplyMarker = msgLines[0] starts with '**Replying to' %}
@@ -312,6 +444,12 @@
                             <button class="msg-dropdown-item" onclick="openForwardModal({{ msg.id }}, '{{ msg.content|e('js') }}')">
                                 <span>↗️</span> Forward
                             </button>
+                            <button class="msg-dropdown-item" onclick="translateMessage({{ msg.id }})">
+                                <span>🌐</span> Translate
+                            </button>
+                            <button class="msg-dropdown-item" onclick="summarizeMessage({{ msg.id }})">
+                                <span>📋</span> Summarize
+                            </button>
                             {% if msg.sender_id == currentUserId %}
                                 <div class="msg-dropdown-divider"></div>
                                 <button class="msg-dropdown-item" onclick="editMessage({{ msg.id }}, '{{ msg.content|e('js') }}')">
@@ -331,19 +469,36 @@
         {% endfor %}
     {% endif %}
     </div>
+    {% if messages.getTotalItemCount() > 20 %}
+        <div style="padding: 10px 24px; border-top: 1px solid #e8e8e8; background: white;">
+            {{ knp_pagination_render(messages) }}
+        </div>
+    {% endif %}
     <!-- Input Area Wrapper -->
     <div style="padding: 16px 24px; border-top: 1px solid #e8e8e8; background: white;">
+        <div id="emojiSuggestionBar" class="emoji-suggestion-bar">
+            <span>💡 Suggestions:</span>
+            <button type="button" id="emoji1" class="emoji-suggestion-btn emoji-suggestion"></button>
+            <button type="button" id="emoji2" class="emoji-suggestion-btn emoji-suggestion"></button>
+            <button type="button" id="emoji3" class="emoji-suggestion-btn emoji-suggestion"></button>
+        </div>
+
         <!-- Message Input -->
-        <form method="POST" action="{{ path('messaging_message_send') }}" class="msg-input-group" style="margin-bottom: 12px;">
+        <form method="POST" action="{{ path('messaging_message_send') }}" id="sendMessageForm" class="msg-input-group" style="margin-bottom: 12px;" novalidate>
             <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
-            <input type="text" name="content" placeholder="💬 Type your message..." class="msg-input" required>
+            <input type="text" name="content" id="sendMessageContent" placeholder="💬 Type your message..." class="msg-input">
+            <button type="button" id="smartReplyBtn" class="msg-btn msg-btn-secondary">🤖 Smart Reply</button>
             <button type="submit" class="msg-btn msg-btn-primary" style="background: #2554d9; border-color: #2554d9;">Send</button>
         </form>
         
         <!-- File Upload -->
         <form method="POST" action="{{ path('messaging_message_upload') }}" enctype="multipart/form-data" class="msg-input-group chat-file-row">
             <input type="hidden" name="conversation_id" value="{{ conversation.id }}">
-            <input type="file" name="file" style="flex: 1; padding: 10px 12px; border: 1px solid var(--msg-border); border-radius: 10px; cursor: pointer; font-size: 13px;">
+            <input type="file" id="chatFileInput" name="file" style="display: none;">
+            <label for="chatFileInput" class="chat-file-picker" title="Choose file" aria-label="Choose file">
+                <span style="font-size: 22px; line-height: 1;">📎</span>
+            </label>
+            <span id="chatFileName" class="chat-file-name">No file chosen</span>
             <button type="submit" class="msg-btn msg-btn-secondary">📎 Upload</button>
         </form>
     </div>
@@ -429,12 +584,200 @@
     </div>
 </div>
 
+<div id="aiResultModal" class="msg-modal-backdrop" onclick="if(event.target === this) closeAiResultModal()">
+    <div class="msg-modal">
+        <div class="msg-modal-head">
+            <h3 id="aiResultTitle" class="msg-modal-title">📋 AI Result</h3>
+        </div>
+        <div class="msg-modal-body">
+            <pre id="aiResultBody" class="ai-result-pre"></pre>
+        </div>
+        <div class="msg-modal-actions">
+            <button type="button" onclick="closeAiResultModal()" class="msg-btn msg-btn-primary msg-btn-sm">Close</button>
+        </div>
+    </div>
+</div>
+
+<div id="translateLanguageModal" class="msg-modal-backdrop" onclick="if(event.target === this) closeTranslateLanguageModal()">
+    <div class="msg-modal">
+        <div class="msg-modal-head">
+            <h3 class="msg-modal-title">🌐 Translate Message</h3>
+        </div>
+        <div class="msg-modal-body">
+            <label for="translateLanguageSelect" style="display:block; font-weight:600; margin-bottom:8px; color:#0f172a;">Choose target language:</label>
+            <select id="translateLanguageSelect" class="translate-language-select">
+                <option value="English">English</option>
+                <option value="French">French</option>
+                <option value="Spanish">Spanish</option>
+                <option value="German">German</option>
+                <option value="Italian">Italian</option>
+                <option value="Arabic">Arabic</option>
+                <option value="Chinese">Chinese</option>
+                <option value="Japanese">Japanese</option>
+            </select>
+        </div>
+        <div class="msg-modal-actions">
+            <button type="button" onclick="closeTranslateLanguageModal()" class="msg-btn msg-btn-secondary msg-btn-sm">Cancel</button>
+            <button type="button" onclick="submitTranslateLanguage()" class="msg-btn msg-btn-primary msg-btn-sm">Translate</button>
+        </div>
+    </div>
+</div>
+
+<div id="emptyMessagePopup" class="msg-warning-popup" role="alert" aria-live="assertive" aria-hidden="true">
+    <span>⚠️</span>
+    <span>Please write something before sending.</span>
+</div>
+
 
 <script>
     let currentMessageId = null;
     let forwardMessageId = null;
     let replyToId = null;
     let activeMenuId = null;
+    let emptyPopupTimer = null;
+    let translateTargetMessageId = null;
+    let suggestionTimeout = null;
+
+    function escapeCountryText(value) {
+        return String(value ?? '').replace(/\s+/g, ' ').trim();
+    }
+
+    function showWarningPopup(messageText) {
+        const popup = document.getElementById('emptyMessagePopup');
+        if (!popup) {
+            return;
+        }
+
+        const textNode = popup.querySelector('span:last-child');
+        if (textNode) {
+            textNode.textContent = messageText;
+        }
+
+        popup.classList.add('is-visible');
+        popup.setAttribute('aria-hidden', 'false');
+
+        if (emptyPopupTimer !== null) {
+            clearTimeout(emptyPopupTimer);
+        }
+
+        emptyPopupTimer = window.setTimeout(function() {
+            popup.classList.remove('is-visible');
+            popup.setAttribute('aria-hidden', 'true');
+            emptyPopupTimer = null;
+        }, 2200);
+    }
+
+    function openAiResultModal(title, content) {
+        const modal = document.getElementById('aiResultModal');
+        const titleNode = document.getElementById('aiResultTitle');
+        const bodyNode = document.getElementById('aiResultBody');
+
+        if (!modal || !titleNode || !bodyNode) {
+            return;
+        }
+
+        titleNode.textContent = title;
+        bodyNode.textContent = content;
+        modal.classList.add('active');
+    }
+
+    function closeAiResultModal() {
+        const modal = document.getElementById('aiResultModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+    }
+
+    function closeTranslateLanguageModal() {
+        const modal = document.getElementById('translateLanguageModal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
+        translateTargetMessageId = null;
+    }
+
+    function submitTranslateLanguage() {
+        if (translateTargetMessageId === null) {
+            closeTranslateLanguageModal();
+            return;
+        }
+
+        const select = document.getElementById('translateLanguageSelect');
+        const language = select ? String(select.value || 'English') : 'English';
+
+        fetch('{{ path('messaging_message_translate', {id: 0}) }}'.replace('0', String(translateTargetMessageId)), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'language=' + encodeURIComponent(language),
+        })
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.translation) {
+                    openAiResultModal('🌐 Translation (' + language + ')', data.translation);
+                } else {
+                    showWarningPopup(data.error || 'Unable to translate this message.');
+                }
+            })
+            .catch(function() {
+                showWarningPopup('Unable to translate this message.');
+            })
+            .finally(function() {
+                closeTranslateLanguageModal();
+            });
+    }
+
+    function summarizeConversation() {
+        fetch('{{ path('messaging_conversation_summarize', {id: conversation.id}) }}')
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.summary) {
+                    openAiResultModal('📋 Conversation Summary', data.summary);
+                } else {
+                    showWarningPopup(data.error || 'Unable to summarize this conversation right now.');
+                }
+            })
+            .catch(function() {
+                showWarningPopup('Unable to summarize this conversation right now.');
+            });
+    }
+
+    function summarizeMessage(messageId) {
+        fetch('{{ path('messaging_message_summarize', {id: 0}) }}'.replace('0', String(messageId)))
+            .then(function(response) {
+                return response.json();
+            })
+            .then(function(data) {
+                if (data.summary) {
+                    openAiResultModal('📋 Message Summary', data.summary);
+                } else {
+                    showWarningPopup(data.error || 'Unable to summarize this message.');
+                }
+            })
+            .catch(function() {
+                showWarningPopup('Unable to summarize this message.');
+            });
+    }
+
+    function translateMessage(messageId) {
+        closeAllMenus();
+        translateTargetMessageId = messageId;
+
+        const select = document.getElementById('translateLanguageSelect');
+        if (select && !select.value) {
+            select.value = 'English';
+        }
+
+        const modal = document.getElementById('translateLanguageModal');
+        if (modal) {
+            modal.classList.add('active');
+        }
+    }
     
     // Filter conversations in forward modal
     function filterConversations() {
@@ -477,6 +820,207 @@
     document.addEventListener('DOMContentLoaded', function() {
         const searchInput = document.getElementById('forwardConversationSearch');
         const dropdown = document.getElementById('forwardConversationDropdown');
+        const sendForm = document.getElementById('sendMessageForm');
+        const sendContentInput = document.getElementById('sendMessageContent');
+        const sendButton = sendForm ? sendForm.querySelector('button[type="submit"]') : null;
+        const smartReplyBtn = document.getElementById('smartReplyBtn');
+        const chatFileInput = document.getElementById('chatFileInput');
+        const chatFileName = document.getElementById('chatFileName');
+        const emojiBar = document.getElementById('emojiSuggestionBar');
+        const emojiButtons = [
+            document.getElementById('emoji1'),
+            document.getElementById('emoji2'),
+            document.getElementById('emoji3'),
+        ];
+
+        if (chatFileInput && chatFileName) {
+            chatFileInput.addEventListener('change', function() {
+                if (chatFileInput.files && chatFileInput.files.length > 0) {
+                    chatFileName.textContent = chatFileInput.files[0].name;
+                } else {
+                    chatFileName.textContent = 'No file chosen';
+                }
+            });
+        }
+
+        function hideEmojiBar() {
+            if (emojiBar) {
+                emojiBar.style.display = 'none';
+            }
+            emojiButtons.forEach(function(btn) {
+                if (btn) {
+                    btn.textContent = '';
+                    btn.style.display = 'none';
+                }
+            });
+        }
+
+        if (sendContentInput) {
+            sendContentInput.addEventListener('input', function() {
+                const text = sendContentInput.value.trim();
+
+                if (suggestionTimeout !== null) {
+                    clearTimeout(suggestionTimeout);
+                }
+
+                if (text.length < 10) {
+                    hideEmojiBar();
+                    return;
+                }
+
+                suggestionTimeout = window.setTimeout(function() {
+                    fetch('{{ path('messaging_suggest_emojis') }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'text=' + encodeURIComponent(text),
+                    })
+                        .then(function(response) {
+                            return response.json();
+                        })
+                        .then(function(data) {
+                            const emojis = Array.isArray(data.emojis) ? data.emojis.slice(0, 3) : [];
+                            if (emojis.length === 0) {
+                                hideEmojiBar();
+                                return;
+                            }
+
+                            emojiButtons.forEach(function(btn, index) {
+                                if (!btn) {
+                                    return;
+                                }
+
+                                const emoji = emojis[index] || '';
+                                btn.textContent = emoji;
+                                btn.style.display = emoji !== '' ? 'inline-flex' : 'none';
+                            });
+
+                            if (emojiBar) {
+                                emojiBar.style.display = 'flex';
+                            }
+                        })
+                        .catch(function() {
+                            hideEmojiBar();
+                        });
+                }, 1000);
+            });
+        }
+
+        document.querySelectorAll('.emoji-suggestion').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const emoji = (btn.textContent || '').trim();
+                if (!emoji || !sendContentInput) {
+                    return;
+                }
+
+                const current = sendContentInput.value.trim();
+                sendContentInput.value = (current !== '' ? current + ' ' : '') + emoji + ' ';
+                sendContentInput.focus();
+                hideEmojiBar();
+            });
+        });
+
+        if (sendForm && sendContentInput) {
+            sendForm.addEventListener('submit', function(event) {
+                const normalized = sendContentInput.value.trim();
+                sendContentInput.value = normalized;
+
+                if (normalized === '') {
+                    event.preventDefault();
+                    showWarningPopup('Please write something before sending.');
+                    sendContentInput.focus();
+                    return;
+                }
+
+                const countryMatch = normalized.match(/^\/country\s+(.+)$/i);
+                if (countryMatch) {
+                    event.preventDefault();
+
+                    const requestedCountry = countryMatch[1].trim();
+                    if (requestedCountry === '') {
+                        showWarningPopup('Use /country followed by a country name.');
+                        sendContentInput.focus();
+                        return;
+                    }
+
+                    if (sendButton) {
+                        sendButton.disabled = true;
+                        sendButton.textContent = 'Loading...';
+                    }
+
+                    fetch(`/messaging/country/${encodeURIComponent(requestedCountry)}`)
+                        .then(function(response) {
+                            return response.json().then(function(data) {
+                                return { ok: response.ok, data: data };
+                            });
+                        })
+                        .then(function(result) {
+                            if (!result.ok || result.data.error) {
+                                const errorText = escapeCountryText(result.data.error || 'Country not found.');
+                                showWarningPopup(errorText);
+                                sendContentInput.focus();
+                                return;
+                            }
+
+                            const data = result.data;
+                            const countryTitle = `${escapeCountryText(data.flagEmoji || '🌍')} ${escapeCountryText(data.name || requestedCountry)}`;
+                            const formatted = [
+                                countryTitle,
+                                `🏛️ Capital: ${escapeCountryText(data.capital || 'N/A')}`,
+                                `👥 Population: ${escapeCountryText(data.population || 'N/A')}`,
+                                `💰 Currency: ${escapeCountryText(data.currency || 'N/A')} (${escapeCountryText(data.currencyCode || 'N/A')})`,
+                                `🗣️ Language: ${escapeCountryText(data.language || 'N/A')}`,
+                                `🌍 Region: ${escapeCountryText(data.region || 'N/A')}`,
+                            ];
+
+                            if (data.flagPng) {
+                                formatted.push(`🏳️ Flag: ${escapeCountryText(data.flagPng)}`);
+                            }
+
+                            sendContentInput.value = formatted.join('\n');
+                            sendForm.submit();
+                        })
+                        .catch(function() {
+                            showWarningPopup('Country service is unavailable right now.');
+                            sendContentInput.focus();
+                        })
+                        .finally(function() {
+                            if (sendButton) {
+                                sendButton.disabled = false;
+                                sendButton.textContent = 'Send';
+                            }
+                        });
+                }
+            });
+        }
+
+        if (smartReplyBtn && sendContentInput) {
+            smartReplyBtn.addEventListener('click', function() {
+                smartReplyBtn.disabled = true;
+                smartReplyBtn.textContent = '⏳ Thinking...';
+
+                fetch('{{ path('messaging_smart_reply', {id: conversation.id}) }}')
+                    .then(function(response) {
+                        return response.json();
+                    })
+                    .then(function(data) {
+                        if (data.suggestion) {
+                            sendContentInput.value = data.suggestion;
+                            sendContentInput.focus();
+                        } else {
+                            showWarningPopup(data.error || 'Could not generate a smart reply.');
+                        }
+                    })
+                    .catch(function() {
+                        showWarningPopup('Could not generate a smart reply.');
+                    })
+                    .finally(function() {
+                        smartReplyBtn.disabled = false;
+                        smartReplyBtn.textContent = '🤖 Smart Reply';
+                    });
+            });
+        }
         
         if (searchInput) {
             searchInput.addEventListener('focus', function() {
@@ -751,12 +1295,26 @@
         if (e.target === this) closeReplyModal();
     });
 
+    document.getElementById('aiResultModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeAiResultModal();
+        }
+    });
+
+    document.getElementById('translateLanguageModal')?.addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeTranslateLanguageModal();
+        }
+    });
+
     // Keyboard shortcuts
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeEditModal();
             closeForwardModal();
             closeReplyModal();
+            closeAiResultModal();
+            closeTranslateLanguageModal();
             closeAllMenus();
         }
     });

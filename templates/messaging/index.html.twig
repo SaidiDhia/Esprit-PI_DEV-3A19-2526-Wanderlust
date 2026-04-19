@@ -136,10 +136,10 @@
         </div>
 
         {% for message in app.flashes('success') %}
-            <div class="alert alert-success">{{ message }}</div>
+            <div class="alert alert-success">✅ {{ message }}</div>
         {% endfor %}
         {% for message in app.flashes('error') %}
-            <div class="alert alert-danger">{{ message }}</div>
+            <div class="alert alert-danger">⚠️ {{ message }}</div>
         {% endfor %}
 
         <h4 class="msg-section-title">Active</h4>
@@ -196,6 +196,10 @@
                             <form method="POST" action="{{ path('messaging_conversation_archive', {id: conv.id}) }}" style="display:inline;">
                                 <button type="submit" class="genric-btn success-border small">Unarchive</button>
                             </form>
+                            {% if conv.user_role == 'CREATOR' %}
+                                <form method="POST" id="deleteForm_{{ conv.id }}" action="{{ path('messaging_conversation_delete', {id: conv.id}) }}" style="display:none;"></form>
+                                <button type="button" class="genric-btn danger-border small" onclick="prepareDeleteConversation({{ conv.id }})">Delete</button>
+                            {% endif %}
                         </div>
                     </article>
                 {% endfor %}
