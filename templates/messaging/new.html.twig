@@ -125,7 +125,7 @@
 <div class="container new-conversation-page" style="margin-bottom:26px;">
     <div class="new-conversation-shell msg-fade-in">
         {% for message in app.flashes('error') %}
-            <div class="flash flash-error">{{ message }}</div>
+            <div class="flash flash-error">⚠️ {{ message }}</div>
         {% endfor %}
         
         <form method="POST" id="conversationForm">
