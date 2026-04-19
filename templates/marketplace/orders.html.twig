@@ -1,88 +1,169 @@
 {% extends 'base.html.twig' %}
-
-{% block title %}My Orders - WanderLust{% endblock %}
+{% block title %}My Orders — WanderLust{% endblock %}
 
 {% block stylesheets %}
-    {{ parent() }}
-    <style>
-        .module-hero {
-            background: linear-gradient(rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.48)), url('{{ asset('adventure/img/g3.jpg') }}') center center/cover no-repeat;
-            padding: 120px 0 80px;
-            color: #fff;
-            margin-bottom: 50px;
-        }
-
-        .order-card {
-            border: 1px solid #eee;
-            border-radius: 10px;
-            background: #fff;
-            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
-            padding: 18px;
-            margin-bottom: 12px;
-        }
-
-        .status-pill {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 999px;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .status-confirmed { background: #dcfce7; color: #166534; }
-        .status-pending { background: #fef3c7; color: #92400e; }
-        .status-cancelled { background: #fee2e2; color: #991b1b; }
-    </style>
+<style>
+:root{--blue-primary:#1D4ED8;--blue-light:#3B82F6;--blue-pale:#EFF6FF;--blue-dark:#1e3a8a;--gray-50:#F9FAFB;--gray-100:#F3F4F6;--gray-200:#E5E7EB;--gray-400:#9CA3AF;--gray-500:#6B7280;--gray-700:#374151;--gray-900:#111827;--shadow-sm:0 1px 3px rgba(0,0,0,0.06);--shadow-md:0 4px 16px rgba(0,0,0,0.10);--shadow-lg:0 8px 32px rgba(29,78,216,0.12);--font-display:'Playfair Display',serif;--font-body:'DM Sans',sans-serif;}
+.mp-topnav{background:#1565C0;position:sticky;top:0;z-index:90;box-shadow:0 2px 12px rgba(0,0,0,0.2);}
+.mp-topnav-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;gap:12px;}
+.mp-filter-bar{display:flex;align-items:center;padding:10px 24px;background:#0D47A1;gap:12px;flex-wrap:wrap;}
+.mp-nav-btn{background:rgba(255,255,255,0.15);color:white;text-decoration:none;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;font-family:var(--font-body);border:none;cursor:pointer;transition:background 0.2s;white-space:nowrap;display:inline-block;}
+.mp-nav-btn:hover{background:rgba(255,255,255,0.25);color:white;}
+.mp-nav-back{background:rgba(255,255,255,0.2);}.mp-cart-badge{background:rgba(255,255,255,0.2);font-weight:700;}
+.mp-input{padding:9px 16px;border-radius:20px;border:none;font-size:13px;font-family:var(--font-body);outline:none;flex:1;}
+.mp-select{padding:9px 14px;border-radius:20px;border:none;font-size:13px;font-family:var(--font-body);outline:none;background:white;cursor:pointer;}
+.mp-btn-primary{background:var(--blue-primary);color:white;padding:9px 20px;border-radius:20px;font-size:13px;font-weight:600;font-family:var(--font-body);border:none;cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s;white-space:nowrap;}
+.mp-btn-primary:hover{background:var(--blue-dark);transform:translateY(-1px);color:white;}
+.mp-btn-ghost{background:rgba(255,255,255,0.15);color:white;padding:9px 16px;border-radius:20px;font-size:13px;font-weight:500;font-family:var(--font-body);border:1px solid rgba(255,255,255,0.3);cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s;}
+.mp-btn-ghost:hover{background:rgba(255,255,255,0.25);color:white;}
+.mp-btn-outline{background:white;color:var(--blue-primary);padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;font-family:var(--font-body);border:1.5px solid var(--blue-primary);cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s;}
+.mp-btn-outline:hover{background:var(--blue-pale);}
+.mp-btn-danger{background:#EF4444;color:white;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;font-family:var(--font-body);border:none;cursor:pointer;transition:all 0.2s;}
+.mp-btn-danger:hover{background:#DC2626;}
+.mp-btn-disabled{background:#BDBDBD;color:white;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:not-allowed;}
+.mp-page-content{max-width:1200px;margin:0 auto;padding:32px 24px;}
+.mp-product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;}
+.mp-product-card{background:white;border-radius:16px;border:1px solid var(--gray-200);overflow:hidden;box-shadow:var(--shadow-sm);transition:all 0.3s;display:flex;flex-direction:column;}
+.mp-product-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg);border-color:rgba(29,78,216,0.2);}
+.mp-card-img{position:relative;height:160px;overflow:hidden;background:var(--gray-100);}
+.mp-card-img img{width:100%;height:100%;object-fit:cover;transition:transform 0.3s;}
+.mp-product-card:hover .mp-card-img img{transform:scale(1.04);}
+.mp-card-img-placeholder{display:flex;align-items:center;justify-content:center;height:100%;font-size:48px;background:linear-gradient(135deg,var(--gray-100),var(--gray-200));}
+.mp-type-badge{position:absolute;top:10px;left:10px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.mp-type-badge.sale{background:#E8F5E9;color:#2E7D32;}.mp-type-badge.rent{background:#E3F2FD;color:#1565C0;}
+.mp-card-body{padding:14px 16px;flex:1;}.mp-card-category{font-size:11px;color:var(--gray-400);margin-bottom:5px;}
+.mp-card-title{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--gray-900);margin-bottom:6px;line-height:1.3;}
+.mp-card-desc{font-size:12px;color:var(--gray-500);line-height:1.5;margin-bottom:8px;}
+.mp-card-price{font-family:var(--font-display);font-size:20px;font-weight:800;color:#2E7D32;}
+.mp-stock{font-size:11px;font-weight:600;margin-top:4px;}.mp-stock.in-stock{color:#10B981;}.mp-stock.out-stock{color:#EF4444;}
+.mp-card-footer{padding:12px 16px;border-top:1px solid var(--gray-100);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.mp-card-footer-actions{display:flex;gap:10px;padding:14px;}
+.mp-btn-action{flex:1;text-align:center;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;border:none;cursor:pointer;transition:all 0.25s;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.mp-btn-edit{background:linear-gradient(135deg,#3B82F6,#1D4ED8);color:white;box-shadow:0 4px 12px rgba(59,130,246,0.25);}
+.mp-btn-edit:hover{transform:translateY(-2px);}
+.mp-btn-delete{background:linear-gradient(135deg,#EF4444,#DC2626);color:white;box-shadow:0 4px 12px rgba(239,68,68,0.25);}
+.mp-btn-delete:hover{transform:translateY(-2px);}
+.mp-btn-action:active{transform:scale(0.97);}
+.mp-qty-input{width:60px;padding:7px 8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:var(--font-body);text-align:center;outline:none;}
+.mp-qty-input:focus{border-color:var(--blue-light);}
+.mp-empty{text-align:center;padding:80px 40px;color:var(--gray-400);}
+.mp-empty h3{font-family:var(--font-display);font-size:22px;color:var(--gray-700);margin-bottom:8px;}
+.mp-empty p{font-size:14px;margin:0;}
+.flash{padding:12px 20px;border-radius:10px;font-size:14px;font-weight:500;margin-bottom:12px;}
+.flash-success{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7;}
+.flash-error{background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;}
+.mp-status-badge{padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block;}
+.mp-status-badge.confirmed{background:#D1FAE5;color:#065F46;}
+.mp-status-badge.pending{background:#FEF3C7;color:#92400E;}
+.mp-status-badge.cancelled{background:#FEE2E2;color:#991B1B;}
+.mp-form-card{background:white;border-radius:16px;border:1px solid var(--gray-200);padding:36px;box-shadow:var(--shadow-sm);}
+.mp-form-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid var(--gray-100);}
+.mp-form-header h2{font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--gray-900);margin:0;}
+.mp-form-group{margin-bottom:18px;}
+.mp-form-label{display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:7px;}
+.mp-form-input{width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--gray-700);outline:none;transition:border-color 0.2s,box-shadow 0.2s;box-sizing:border-box;}
+.mp-form-input:focus{border-color:var(--blue-light);box-shadow:0 0 0 3px rgba(59,130,246,0.12);}
+.mp-payment-option{display:flex;gap:14px;align-items:center;padding:16px;border-radius:12px;border:2px solid var(--gray-200);cursor:pointer;transition:all 0.2s;}
+.mp-payment-option:hover{border-color:var(--blue-light);background:var(--blue-pale);}
+.mp-payment-option.selected{border-color:var(--blue-primary);background:var(--blue-pale);}
+.mp-payment-option input[type="radio"]{margin:0;}
+.mp-stat-card{background:linear-gradient(135deg,var(--blue-primary),var(--blue-dark));border-radius:16px;padding:28px 24px;color:white;text-align:center;box-shadow:var(--shadow-md);transition:transform 0.2s;}
+.mp-stat-card:hover{transform:translateY(-4px);}
+.mp-stat-icon{font-size:32px;margin-bottom:8px;}
+.mp-stat-value{font-family:var(--font-display);font-size:40px;font-weight:900;line-height:1;margin-bottom:6px;color:#93C5FD;}
+.mp-stat-label{font-size:13px;opacity:0.85;}
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:20px;}
+@media(max-width:1200px){.stats-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr);}.mp-product-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}.mp-page-content{padding:20px 16px;}.mp-topnav-inner{flex-wrap:wrap;}.mp-filter-bar{flex-direction:column;}.mp-form-card{padding:20px;}}
+</style>
 {% endblock %}
 
+{% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+<script>
+(function(){
+    emailjs.init("acj2ZNp2H8YaxnoXl");
+
+    {% if app.session.has('send_success_email') %}
+        {% set emailData = app.session.get('send_success_email') %}
+        
+        // Convert PHP array to JS Object safely
+        const data = {{ emailData|json_encode|raw }};
+        
+        if (data.email) {
+            const templateParams = {
+                to_name: data.name || "Customer",
+                to_email: data.email,
+                message: "✅ Your payment was successful! Your order is confirmed and will arrive soon."
+            };
+
+            emailjs.send("service_9xd7f5q", "template_k3dmmg4", templateParams)
+                .then(() => console.log("Success Email Sent! ✅"))
+                .catch((err) => console.error("Email failed ❌", err));
+        }
+
+        {# CRITICAL: 'do' prevents the 500 error #}
+        {% do app.session.remove('send_success_email') %}
+    {% endif %}
+})();
+</script>
+{% endblock %}
+
+
 {% block content %}
-<section class="module-hero">
-    <div class="container">
-        <div class="d-flex flex-wrap" style="gap:10px; margin-bottom:14px;">
-            <a href="{{ path('app_marketplace_buyer') }}" class="genric-btn default-border">Back To Shop</a>
+
+<div class="mp-topnav">
+    <div class="mp-topnav-inner">
+        <a href="{{ path('app_marketplace_buyer') }}" class="mp-nav-btn mp-nav-back">← Back to Shop</a>
+        <span style="font-size:16px; font-weight:700; color:white;">🧾 My Invoices</span>
+        <span></span>
+    </div>
+</div>
+
+<div class="mp-page-content" style="max-width:900px;">
+    {% for msg in app.flashes('success') %}
+        <div class="flash flash-success">{{ msg }}</div>
+    {% endfor %}
+
+    {% if factures is empty %}
+        <div class="mp-empty">
+            <div style="font-size:64px; margin-bottom:16px;">🧾</div>
+            <h3>No orders yet</h3>
+            <p>Your purchase history will appear here.</p>
+            <a href="{{ path('app_marketplace_buyer') }}" class="mp-btn-primary" style="margin-top:16px; display:inline-block;">🛍️ Start Shopping</a>
         </div>
-        <h1 class="mb-10">My Orders</h1>
-        <p class="mb-0">Track all your marketplace purchases in one place.</p>
-    </div>
-</section>
-
-<section class="section-gap pt-0">
-    <div class="container">
-        {% for msg in app.flashes('success') %}
-            <div class="alert alert-success">{{ msg }}</div>
-        {% endfor %}
-
-        {% if factures is empty %}
-            <div class="text-center p-5 border rounded bg-white">
-                <h4>No orders yet</h4>
-                <p class="text-muted mb-3">Your purchase history will appear here.</p>
-                <a href="{{ path('app_marketplace_buyer') }}" class="primary-btn text-uppercase">Start Shopping</a>
-            </div>
-        {% else %}
+    {% else %}
+        <div style="display:flex; flex-direction:column; gap:16px;">
             {% for f in factures %}
-                <article class="order-card">
-                    <div class="d-flex flex-wrap justify-content-between" style="gap:12px;">
+                <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:24px; box-shadow:var(--shadow-sm);">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px;">
                         <div>
-                            <small class="text-muted d-block">Order #{{ f.id_facture }}</small>
-                            <h4 class="mb-1">{{ f.total_price|number_format(2) }} TND</h4>
-                            <small class="text-muted">{{ f.date_facture|date('d M Y, H:i') }}</small>
+                            <div style="font-size:12px; color:var(--gray-400); margin-bottom:4px;">Order #{{ f.id_facture }}</div>
+                            <div style="font-family:var(--font-display); font-size:20px; font-weight:700; color:var(--gray-900);">
+                                {{ f.total_price|number_format(2) }} TND
+                            </div>
+                            <div style="font-size:13px; color:var(--gray-500); margin-top:4px;">
+                                📅 {{ f.date_facture|date('d M Y, H:i') }}
+                            </div>
                         </div>
-                        <div class="text-right">
-                            <span class="status-pill status-{{ f.delivery_status }}">
-                                {% if f.delivery_status == 'confirmed' %}Confirmed
-                                {% elseif f.delivery_status == 'cancelled' %}Cancelled
-                                {% else %}Pending{% endif %}
+                        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+                            <span class="mp-status-badge {{ f.delivery_status }}">
+                                {% if f.delivery_status == 'confirmed' %}✅ Confirmed
+                                {% elseif f.delivery_status == 'cancelled' %}❌ Cancelled
+                                {% else %}⏳ Pending{% endif %}
                             </span>
-                            <div class="mt-2"><span class="badge badge-light">{{ f.payment_method == 'online' ? 'Online' : 'Cash' }}</span></div>
+                            <span style="font-size:12px; background:var(--gray-100); padding:3px 10px; border-radius:20px; color:var(--gray-500);">
+                                {{ f.payment_method == 'online' ? '💳 Online' : '💵 Cash' }}
+                            </span>
                         </div>
                     </div>
-                    <div class="mt-3 pt-3" style="border-top:1px solid #eee;">
-                        <a href="{{ path('app_marketplace_order_detail', {id: f.id_facture}) }}" class="genric-btn info-border small">View Details</a>
+                    <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--gray-100);">
+                        <a href="{{ path('app_marketplace_order_detail', {id: f.id_facture}) }}" class="mp-btn-outline">🔍 View Details</a>
                     </div>
-                </article>
+                </div>
             {% endfor %}
-        {% endif %}
-    </div>
-</section>
+        </div>
+    {% endif %}
+</div>
+
 {% endblock %}

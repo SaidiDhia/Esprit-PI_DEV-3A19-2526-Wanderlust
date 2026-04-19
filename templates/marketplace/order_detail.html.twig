@@ -1,59 +1,146 @@
 {% extends 'base.html.twig' %}
 {% block title %}Order #{{ facture.id_facture }} — WanderLust{% endblock %}
-{% block content %}
-<section class="min-h-[calc(100vh-64px)] bg-gradient-to-b from-slate-50 via-white to-emerald-50/30 px-4 py-8">
-<div class="mx-auto max-w-5xl space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-        <a href="{{ path('app_marketplace_orders') }}" class="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">Back to Orders</a>
-        <h1 class="text-xl font-heading font-bold text-slate-900">Invoice #{{ facture.id_facture }}</h1>
-    </div>
 
-    <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <h3 class="mb-3 text-base font-heading font-bold text-slate-900">Order Info</h3>
-            <div class="space-y-2 text-sm text-slate-700">
-                <p><span class="text-slate-500">Order #:</span> <strong>{{ facture.id_facture }}</strong></p>
-                <p><span class="text-slate-500">Date:</span> <strong>{{ facture.date_facture|date('d M Y, H:i') }}</strong></p>
-                <p><span class="text-slate-500">Payment:</span> <strong>{{ facture.payment_method == 'online' ? 'Online' : 'Cash on Delivery' }}</strong></p>
-                <p><span class="text-slate-500">Status:</span> <span class="mp-status-badge {{ facture.delivery_status }}">{% if facture.delivery_status == 'confirmed' %}✅ Confirmed{% elseif facture.delivery_status == 'cancelled' %}❌ Cancelled{% else %}⏳ Pending{% endif %}</span></p>
-            </div>
-        </div>
-        {% if address %}
-            <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <h3 class="mb-3 text-base font-heading font-bold text-slate-900">Delivery Address</h3>
-                <div class="space-y-1 text-sm text-slate-700">
-                    <p><strong>{{ address.full_name }}</strong></p>
-                    <p>{{ address.phone }}</p>
-                    <p>{{ address.address }}, {{ address.city }} {{ address.postal_code }}</p>
-                    {% if address.notes %}<p class="text-slate-500">{{ address.notes }}</p>{% endif %}
+{% block stylesheets %}
+<style>
+:root{--blue-primary:#1D4ED8;--blue-light:#3B82F6;--blue-pale:#EFF6FF;--blue-dark:#1e3a8a;--gray-50:#F9FAFB;--gray-100:#F3F4F6;--gray-200:#E5E7EB;--gray-400:#9CA3AF;--gray-500:#6B7280;--gray-700:#374151;--gray-900:#111827;--shadow-sm:0 1px 3px rgba(0,0,0,0.06);--shadow-md:0 4px 16px rgba(0,0,0,0.10);--shadow-lg:0 8px 32px rgba(29,78,216,0.12);--font-display:'Playfair Display',serif;--font-body:'DM Sans',sans-serif;}
+.mp-topnav{background:#1565C0;position:sticky;top:0;z-index:90;box-shadow:0 2px 12px rgba(0,0,0,0.2);}
+.mp-topnav-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;gap:12px;}
+.mp-nav-btn{background:rgba(255,255,255,0.15);color:white;text-decoration:none;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;font-family:var(--font-body);border:none;cursor:pointer;transition:background 0.2s;white-space:nowrap;display:inline-block;}
+.mp-nav-btn:hover{background:rgba(255,255,255,0.25);color:white;}
+.mp-nav-back{background:rgba(255,255,255,0.2);}
+.mp-page-content{max-width:1200px;margin:0 auto;padding:32px 24px;}
+.mp-status-badge{padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block;}
+.mp-status-badge.confirmed{background:#D1FAE5;color:#065F46;}
+.mp-status-badge.pending{background:#FEF3C7;color:#92400E;}
+.mp-status-badge.cancelled{background:#FEE2E2;color:#991B1B;}
+.mp-btn-outline{background:white;color:var(--blue-primary);padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;font-family:var(--font-body);border:1.5px solid var(--blue-primary);cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s;}
+.mp-btn-outline:hover{background:var(--blue-pale);}
+
+/* ── PDF Download Button ─────────────────────────────────── */
+.btn-pdf {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #DC2626, #EF4444);
+    color: white;
+    padding: 10px 22px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    font-family: var(--font-body);
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s;
+    box-shadow: 0 4px 14px rgba(220,38,38,0.3);
+}
+.btn-pdf:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(220,38,38,0.4);
+    color: white;
+}
+.btn-pdf svg {
+    width: 16px; height: 16px; flex-shrink: 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mp-topnav">
+    <div class="mp-topnav-inner">
+        <a href="{{ path('app_marketplace_orders') }}" class="mp-nav-btn mp-nav-back">← My Orders</a>
+        <span style="font-size:16px; font-weight:700; color:white;">🧾 Invoice #{{ facture.id_facture }}</span>
+
+        <!-- ✅ PDF DOWNLOAD BUTTON -->
+        <a href="{{ path('app_marketplace_order_pdf', {id: facture.id_facture}) }}"
+           target="_blank"
+           class="btn-pdf">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <polyline points="9 15 12 18 15 15"/>
+            </svg>
+            Download PDF
+        </a>
+    </div>
+</div>
+
+<div class="mp-page-content" style="max-width:800px;">
+
+    <!-- Order Info + Address -->
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:24px;">
+        <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:24px; box-shadow:var(--shadow-sm);">
+            <h3 style="font-family:var(--font-display); font-size:18px; font-weight:700; margin-bottom:16px;">📋 Order Info</h3>
+            <div style="display:flex; flex-direction:column; gap:8px; font-size:14px;">
+                <div><span style="color:var(--gray-400);">Order #:</span> <strong>{{ facture.id_facture }}</strong></div>
+                <div><span style="color:var(--gray-400);">Date:</span> <strong>{{ facture.date_facture|date('d M Y, H:i') }}</strong></div>
+                <div><span style="color:var(--gray-400);">Payment:</span> <strong>{{ facture.payment_method == 'online' ? '💳 Online' : '💵 Cash on Delivery' }}</strong></div>
+                <div><span style="color:var(--gray-400);">Status:</span>
+                    <span class="mp-status-badge {{ facture.delivery_status }}" style="margin-left:4px;">
+                        {% if facture.delivery_status == 'confirmed' %}✅ Confirmed{% elseif facture.delivery_status == 'cancelled' %}❌ Cancelled{% else %}⏳ Pending{% endif %}
+                    </span>
                 </div>
             </div>
+        </div>
+
+        {% if address %}
+        <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:24px; box-shadow:var(--shadow-sm);">
+            <h3 style="font-family:var(--font-display); font-size:18px; font-weight:700; margin-bottom:16px;">📦 Delivery Address</h3>
+            <div style="font-size:14px; color:var(--gray-700); line-height:1.8;">
+                <div><strong>{{ address.full_name }}</strong></div>
+                <div>📞 {{ address.phone }}</div>
+                <div>📍 {{ address.address }}, {{ address.city }} {{ address.postal_code }}</div>
+                {% if address.notes %}<div style="color:var(--gray-400);">📝 {{ address.notes }}</div>{% endif %}
+            </div>
+        </div>
         {% endif %}
     </div>
 
-    <div class="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <h3 class="mb-4 text-base font-heading font-bold text-slate-900">Items Ordered</h3>
-        <div class="space-y-3">
-            {% for item in items %}
-                <div class="flex items-center gap-3 border-b border-slate-100 pb-3">
-                    <div class="h-14 w-14 overflow-hidden rounded-lg bg-slate-100">
-                        {% if item.product_image %}
-                            <img src="{{ item.product_image }}" alt="{{ item.product_title }}" class="h-full w-full object-cover" onerror="this.parentNode.innerHTML='No image'">
-                        {% endif %}
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-sm font-semibold text-slate-900">{{ item.product_title }}</p>
-                        <p class="text-xs text-slate-500">x {{ item.quantity }} · {{ item.price|number_format(2) }} TND each</p>
-                    </div>
-                    <p class="text-sm font-bold text-sky-700">{{ (item.price * item.quantity)|number_format(2) }} TND</p>
-                </div>
-            {% endfor %}
+    <!-- Items -->
+    <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:24px; box-shadow:var(--shadow-sm);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--gray-100);">
+            <h3 style="font-family:var(--font-display); font-size:18px; font-weight:700;">🛍️ Items Ordered</h3>
+            <!-- PDF button also at bottom of items for convenience -->
+            <a href="{{ path('app_marketplace_order_pdf', {id: facture.id_facture}) }}"
+               target="_blank"
+               class="btn-pdf" style="font-size:12px; padding:8px 16px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="12" y1="18" x2="12" y2="12"/>
+                    <polyline points="9 15 12 18 15 15"/>
+                </svg>
+                PDF Invoice
+            </a>
         </div>
-        <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-            <span class="text-sm font-semibold text-slate-700">Total</span>
-            <span class="text-2xl font-heading font-bold text-slate-900">{{ facture.total_price|number_format(2) }} TND</span>
+
+        {% for item in items %}
+        <div style="display:flex; gap:16px; align-items:center; padding:12px 0; border-bottom:1px solid var(--gray-100);">
+            <div style="width:60px; height:60px; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--gray-100);">
+                {% if item.product_image %}
+                    <img src="{{ item.product_image }}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentNode.innerHTML='📦'">
+                {% else %}<div style="display:flex; align-items:center; justify-content:center; height:100%; font-size:24px;">📦</div>{% endif %}
+            </div>
+            <div style="flex:1;">
+                <div style="font-weight:600; color:var(--gray-900); margin-bottom:4px;">{{ item.product_title }}</div>
+                <div style="font-size:12px; color:var(--gray-400);">× {{ item.quantity }} · {{ item.price|number_format(2) }} TND each</div>
+            </div>
+            <div style="font-weight:700; color:var(--blue-primary); white-space:nowrap;">
+                {{ (item.price * item.quantity)|number_format(2) }} TND
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- Total -->
+        <div style="display:flex; justify-content:space-between; align-items:center; padding-top:20px; margin-top:8px;">
+            <span style="font-size:16px; font-weight:600;">Total:</span>
+            <span style="font-family:var(--font-display); font-size:28px; font-weight:900; color:#2E7D32;">
+                {{ facture.total_price|number_format(2) }} TND
+            </span>
         </div>
     </div>
+
 </div>
-</section>
 {% endblock %}
