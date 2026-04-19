@@ -105,10 +105,17 @@
 
         @layer utilities {
             .glass-strong {
-                background: hsl(0 0% 100% / 0.85);
+                background: hsl(0 0% 0% / 0.95);
                 backdrop-filter: blur(24px);
                 -webkit-backdrop-filter: blur(24px);
-                border: 1px solid hsl(0 0% 100% / 0.4);
+                border: 1px solid hsl(0 0% 100% / 0.12);
+            }
+
+            .module-page-title {
+                color: #fff;
+                font-size: clamp(2.3rem, 5vw, 4rem);
+                line-height: 1.08;
+                text-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
             }
         }
     </style>
@@ -120,39 +127,39 @@
 <nav class="fixed top-0 left-0 right-0 z-50 glass-strong">
     <div class="container mx-auto px-4 h-16 flex items-center justify-between">
         <a href="{{ path('app_home') }}" class="flex items-center gap-2">
-            <svg class="w-7 h-7 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg class="w-7 h-7 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="12" cy="12" r="10"></circle>
                 <line x1="2" y1="12" x2="22" y2="12"></line>
                 <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
             </svg>
-            <span class="text-xl font-heading font-bold text-foreground">Wanderlust</span>
+            <span class="text-xl font-heading font-bold text-white">Wanderlust</span>
         </a>
 
         <div class="hidden md:flex items-center gap-8">
-            <a href="{{ path('app_home') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Home</a>
-            <a href="{{ path('app_booking') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Stays</a>
-            <a href="{{ path('app_activities_index') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Activities</a>
-            <a href="{{ path('app_events_index') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Events</a>
-            <a href="{{ path('app_messaging') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Chat</a>
-            <a href="{{ path('app_blog') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Stories</a>
-            <a href="{{ path('app_marketplace') }}" class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Marketplace</a>
+            <a href="{{ path('app_home') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Home</a>
+            <a href="{{ path('app_booking') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Stays</a>
+            <a href="{{ path('app_activities_index') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Activities</a>
+            <a href="{{ path('app_events_index') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Events</a>
+            <a href="{{ path('app_messaging') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Chat</a>
+            <a href="{{ path('app_blog') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Stories</a>
+            <a href="{{ path('app_marketplace') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Marketplace</a>
             {% if app.user and app.user.isAdmin %}
-                <a href="{{ path('app_admin_dashboard') }}" class="text-sm font-semibold text-primary hover:text-primary/80 transition-colors">Admin Dashboard</a>
+                <a href="{{ path('app_admin_dashboard') }}" class="text-sm font-semibold text-white hover:text-white/80 transition-colors">Admin Dashboard</a>
             {% endif %}
         </div>
 
         <div class="flex items-center gap-3">
             {% if app.user %}
-                <a href="{{ path('app_messaging') }}" class="p-2 text-muted-foreground hover:text-foreground transition-colors">
+                <a href="{{ path('app_messaging') }}" class="p-2 text-white/80 hover:text-white transition-colors">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                 </a>
                 <div class="relative" id="profile-menu-root">
-                    <button id="profile-menu-toggle" type="button" class="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-secondary/50 transition-all border border-transparent hover:border-border">
+                    <button id="profile-menu-toggle" type="button" class="flex items-center gap-3 px-3 py-1.5 rounded-xl hover:bg-white/10 transition-all border border-transparent hover:border-white/20">
                         <div class="text-right hidden sm:block">
-                            <p class="text-xs font-bold text-foreground leading-none">{{ app.user.fullName }}</p>
-                            <p class="text-[10px] text-muted-foreground mt-0.5 leading-none">Account Settings</p>
+                            <p class="text-xs font-bold text-white leading-none">{{ app.user.fullName }}</p>
+                            <p class="text-[10px] text-white/70 mt-0.5 leading-none">Account Settings</p>
                         </div>
-                        <div class="w-9 h-9 rounded-full border-2 border-primary/20 overflow-hidden ring-2 ring-transparent group-hover:ring-primary/10 transition-all">
+                        <div class="w-9 h-9 rounded-full border-2 border-white/25 overflow-hidden ring-2 ring-transparent transition-all">
                             {% if app.user.profilePicture %}
                                 <img src="{{ asset('uploads/profiles/' ~ app.user.profilePicture) }}" alt="User Avatar" class="w-full h-full object-cover">
                             {% else %}
@@ -197,8 +204,8 @@
                     </div>
                 </div>
             {% else %}
-                <a href="{{ path('app_login') }}" class="text-sm font-bold text-muted-foreground hover:text-primary transition-colors">Login</a>
-                <a href="{{ path('app_signup') }}" class="bg-primary hover:bg-primary/90 text-white text-sm font-bold px-5 py-2 rounded-xl transition-all shadow-sm">Sign up</a>
+                <a href="{{ path('app_login') }}" class="text-sm font-bold text-white/80 hover:text-white transition-colors">Login</a>
+                <a href="{{ path('app_signup') }}" class="bg-white hover:bg-white/90 text-black text-sm font-bold px-5 py-2 rounded-xl transition-all shadow-sm">Sign up</a>
             {% endif %}
         </div>
     </div>
@@ -208,31 +215,31 @@
     {% block content %}{% endblock %}
 </main>
 
-<footer class="bg-secondary/30 border-t border-border py-12 px-4 mt-20">
+<footer class="bg-black border-t border-white/10 py-12 px-4 mt-20 text-white">
     <div class="container mx-auto">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
             <div class="col-span-1 md:col-span-2">
-                <span class="text-2xl font-heading font-bold text-primary">Wanderlust</span>
-                <p class="mt-4 text-muted-foreground max-w-sm">Discover unique stays, vibrant experiences, and a global community of travelers. Your next adventure starts here.</p>
+                <span class="text-2xl font-heading font-bold text-white">Wanderlust</span>
+                <p class="mt-4 text-white/75 max-w-sm">Discover unique stays, vibrant experiences, and a global community of travelers. Your next adventure starts here.</p>
             </div>
             <div>
                 <h4 class="font-bold mb-4">Support</h4>
-                <ul class="space-y-2 text-sm text-muted-foreground">
-                    <li><a href="#" class="hover:text-primary transition-colors">Help Center</a></li>
-                    <li><a href="#" class="hover:text-primary transition-colors">Safety information</a></li>
-                    <li><a href="#" class="hover:text-primary transition-colors">Cancellation options</a></li>
+                <ul class="space-y-2 text-sm text-white/75">
+                    <li><a href="#" class="hover:text-white transition-colors">Help Center</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Safety information</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Cancellation options</a></li>
                 </ul>
             </div>
             <div>
                 <h4 class="font-bold mb-4">Community</h4>
-                <ul class="space-y-2 text-sm text-muted-foreground">
-                    <li><a href="{{ path('app_blog') }}" class="hover:text-primary transition-colors">Wanderlust Blog</a></li>
-                    <li><a href="#" class="hover:text-primary transition-colors">Newsletter</a></li>
-                    <li><a href="#" class="hover:text-primary transition-colors">Forum</a></li>
+                <ul class="space-y-2 text-sm text-white/75">
+                    <li><a href="{{ path('app_blog') }}" class="hover:text-white transition-colors">Wanderlust Blog</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Newsletter</a></li>
+                    <li><a href="#" class="hover:text-white transition-colors">Forum</a></li>
                 </ul>
             </div>
         </div>
-        <div class="border-t border-border pt-8 text-center text-sm text-muted-foreground">
+        <div class="border-t border-white/10 pt-8 text-center text-sm text-white/70">
             <p>&copy; 2026 Wanderlust Inc. All rights reserved.</p>
         </div>
     </div>
