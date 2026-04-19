@@ -53,6 +53,54 @@ class EmailService
         return $this->sendMail($user->getEmail(), $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
     }
 
+    public function sendContentModerationWarning(User $user, string $sourceLabel, string $excerpt): bool
+    {
+        $subject = 'Content moderation warning on your Wanderlust account';
+        $body = sprintf(
+            "Hello %s,\n\n"
+            . "One of your %s entries was automatically removed from public display because it was detected as high-risk content.\n"
+            . "Your original text is still stored for admin review and compliance checks.\n\n"
+            . "Excerpt:\n%s\n\n"
+            . "Please avoid threatening or harmful language. Repeated violations can lead to restrictions.\n\n"
+            . "Regards,\n%s",
+            $user->getFullName(),
+            $sourceLabel,
+            mb_substr($excerpt, 0, 280),
+            $this->fromName,
+        );
+
+        return $this->sendMail($user->getEmail(), $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
+    public function sendNewDeviceLoginAlert(User $user, string $deviceMac, string $deviceFingerprint, string $ipAddress, string $location, ?string $firebaseDeviceId = null): bool
+    {
+        $subject = 'Security alert: new device sign-in detected';
+        $firebaseLine = $firebaseDeviceId !== null && trim($firebaseDeviceId) !== ''
+            ? sprintf("Firebase device ID: %s\n", trim($firebaseDeviceId))
+            : '';
+        $body = sprintf(
+            "Hello %s,\n\n"
+            . "We detected a sign-in attempt on your Wanderlust account from a device we have not seen before.\n\n"
+            . "IP address: %s\n"
+            . "Location: %s\n"
+            . "Device MAC address: %s\n"
+            . "Device fingerprint: %s\n\n"
+            . "%s"
+            . "If this was you, no action is required.\n"
+            . "If this was not you, change your password immediately and review your account security settings.\n\n"
+            . "Regards,\n%s",
+            $user->getFullName() ?: $user->getEmail(),
+            $ipAddress,
+            $location,
+            $deviceMac,
+            $deviceFingerprint,
+            $firebaseLine,
+            $this->fromName,
+        );
+
+        return $this->sendMail($user->getEmail(), $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
     private function sendMail(string $to, string $subject, string $htmlBody): bool
     {
         $smtpResult = false;

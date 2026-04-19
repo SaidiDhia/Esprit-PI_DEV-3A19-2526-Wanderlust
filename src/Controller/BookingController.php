@@ -2,15 +2,23 @@
 
 namespace App\Controller;
 
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use App\Entity\Booking;
 use App\Entity\Place;
 use App\Entity\PlaceImage;
 use App\Entity\Review;
 use App\Entity\User;
 use App\Enum\RoleEnum;
+use App\Service\AiReviewService;
+use App\Service\ActivityLogger;
+use App\Service\ContentModerationService;
+use App\Service\EmailService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -20,6 +28,17 @@ class BookingController extends AbstractController
 {
     private const DEFAULT_LATITUDE = '36.80650000';
     private const DEFAULT_LONGITUDE = '10.18150000';
+    private const TUNISIA_SOUTH = 30.1;
+    private const TUNISIA_NORTH = 37.6;
+    private const TUNISIA_WEST = 7.4;
+    private const TUNISIA_EAST = 11.8;
+
+    public function __construct(
+        private readonly ContentModerationService $contentModerationService,
+        private readonly string $locationApiUrl = ''
+    )
+    {
+    }
 
     #[Route('', name: 'app_booking')]
     public function index(Request $request, EntityManagerInterface $em): Response
@@ -27,6 +46,21 @@ class BookingController extends AbstractController
         $search = trim((string) $request->query->get('q', ''));
         $city = trim((string) $request->query->get('city', ''));
         $category = trim((string) $request->query->get('category', ''));
+        $distanceInput = trim((string) $request->query->get('distance', ''));
+        $userLatInput = trim((string) $request->query->get('user_lat', ''));
+        $userLngInput = trim((string) $request->query->get('user_lng', ''));
+
+        $distanceKm = null;
+        if ($distanceInput !== '' && is_numeric($distanceInput)) {
+            $distanceKm = (float) $distanceInput;
+            if ($distanceKm <= 0) {
+                $distanceKm = null;
+            }
+        }
+
+        $hasUserCoordinates = is_numeric($userLatInput) && is_numeric($userLngInput);
+        $userLatitude = $hasUserCoordinates ? (float) $userLatInput : null;
+        $userLongitude = $hasUserCoordinates ? (float) $userLngInput : null;
 
         $qb = $em->createQueryBuilder()
             ->select('p')
@@ -36,7 +70,7 @@ class BookingController extends AbstractController
             ->orderBy('p.createdAt', 'DESC');
 
         if ($search !== '') {
-            $qb->andWhere('LOWER(p.title) LIKE :search OR LOWER(p.description) LIKE :search')
+            $qb->andWhere('LOWER(p.title) LIKE :search OR LOWER(p.description) LIKE :search OR LOWER(COALESCE(p.category, \'\')) LIKE :search')
                 ->setParameter('search', '%' . mb_strtolower($search) . '%');
         }
 
@@ -46,12 +80,87 @@ class BookingController extends AbstractController
         }
 
         if ($category !== '') {
-            $qb->andWhere('LOWER(p.category) = :category')
-                ->setParameter('category', mb_strtolower($category));
+            $qb->andWhere('LOWER(COALESCE(p.category, \'\')) LIKE :category')
+                ->setParameter('category', '%' . mb_strtolower($category) . '%');
         }
 
         $places = $qb->getQuery()->getResult();
+        $distanceByPlaceIdMeters = [];
+        if ($distanceKm !== null && $hasUserCoordinates && $userLatitude !== null && $userLongitude !== null) {
+            $distanceByPlaceIdMeters = $this->fetchOsrmDistancesFromOrigin($userLatitude, $userLongitude, $places);
+            $maxDistanceMeters = $distanceKm * 1000;
+
+            $places = array_values(array_filter($places, function ($place) use ($distanceByPlaceIdMeters, $maxDistanceMeters): bool {
+                if (!$place instanceof Place || $place->getId() === null) {
+                    return false;
+                }
+
+                $distanceMeters = $distanceByPlaceIdMeters[$place->getId()] ?? null;
+                return is_numeric($distanceMeters) && (float) $distanceMeters <= $maxDistanceMeters;
+            }));
+
+            $visiblePlaceIds = [];
+            foreach ($places as $place) {
+                if ($place instanceof Place && $place->getId() !== null) {
+                    $visiblePlaceIds[(int) $place->getId()] = true;
+                }
+            }
+
+            $distanceByPlaceIdMeters = array_filter(
+                $distanceByPlaceIdMeters,
+                static fn (string|int $placeId): bool => isset($visiblePlaceIds[(int) $placeId]),
+                ARRAY_FILTER_USE_KEY
+            );
+        }
+
         $placePreviewImages = $this->buildPlacePreviewImagesMap($em, $places);
+
+        $mapPlaces = [];
+        $distanceByPlaceIdKm = [];
+        foreach ($places as $place) {
+            if (!$place instanceof Place) {
+                continue;
+            }
+
+            $latitude = $place->getLatitude();
+            $longitude = $place->getLongitude();
+            if ($latitude === null || $longitude === null || !is_numeric($latitude) || !is_numeric($longitude)) {
+                continue;
+            }
+
+            $placeId = $place->getId();
+            if ($placeId === null) {
+                continue;
+            }
+
+            $distanceMeters = $distanceByPlaceIdMeters[$placeId] ?? null;
+            if (is_numeric($distanceMeters)) {
+                $distanceByPlaceIdKm[$placeId] = round(((float) $distanceMeters) / 1000, 2);
+            }
+
+            $previewImage = $placePreviewImages[$placeId] ?? $place->getImageUrl();
+            $imageUrl = null;
+            if (is_string($previewImage) && $previewImage !== '') {
+                $imageUrl = str_starts_with($previewImage, 'http')
+                    ? $previewImage
+                    : $request->getBasePath() . '/uploads/places/' . ltrim($previewImage, '/');
+            }
+
+            $mapPlaces[] = [
+                'id' => $placeId,
+                'title' => $place->getTitle(),
+                'city' => $place->getCity(),
+                'category' => $place->getCategory(),
+                'pricePerDay' => (float) $place->getPricePerDay(),
+                'avgRating' => $place->getAvgRating() !== null ? (float) $place->getAvgRating() : null,
+                'reviewsCount' => $place->getReviewsCount(),
+                'imageUrl' => $imageUrl,
+                'latitude' => (float) $latitude,
+                'longitude' => (float) $longitude,
+                'distanceKm' => $distanceByPlaceIdKm[$placeId] ?? null,
+                'url' => $this->generateUrl('app_booking_place', ['id' => $placeId]),
+            ];
+        }
 
         $myPendingPlaces = [];
         $currentUser = $this->getUser();
@@ -60,9 +169,9 @@ class BookingController extends AbstractController
                 ->select('p')
                 ->from(Place::class, 'p')
                 ->where('p.host = :user')
-                ->andWhere('p.status IN (:statuses)')
+                ->andWhere('p.status = :status')
                 ->setParameter('user', $currentUser)
-                ->setParameter('statuses', [Place::STATUS_PENDING, Place::STATUS_DENIED])
+                ->setParameter('status', Place::STATUS_PENDING)
                 ->orderBy('p.createdAt', 'DESC')
                 ->setMaxResults(5)
                 ->getQuery()
@@ -80,12 +189,18 @@ class BookingController extends AbstractController
             'places' => $places,
             'placePreviewImages' => $placePreviewImages,
             'myPendingPlaces' => $myPendingPlaces,
+            'mapPlaces' => $mapPlaces,
             'stats' => $stats,
             'filters' => [
                 'q' => $search,
                 'city' => $city,
                 'category' => $category,
+                'distance' => $distanceInput,
+                'user_lat' => $userLatInput,
+                'user_lng' => $userLngInput,
             ],
+            'distanceByPlaceIdKm' => $distanceByPlaceIdKm,
+            'distanceFilterActive' => $distanceKm !== null,
         ]);
     }
 
@@ -101,7 +216,7 @@ class BookingController extends AbstractController
     }
 
     #[Route('/place/{id}/book', name: 'app_booking_book', methods: ['POST'])]
-    public function book(int $id, Request $request, EntityManagerInterface $em): Response
+    public function book(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $user = $this->requireUser();
         $place = $em->find(Place::class, $id);
@@ -183,12 +298,33 @@ class BookingController extends AbstractController
         $em->persist($booking);
         $em->flush();
 
+        $activityLogger->logAction($user, 'booking', 'booking_request_created', [
+            'targetType' => 'booking',
+            'targetId' => $booking->getId(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'destination' => sprintf('Place #%d', (int) $place->getId()),
+            'metadata' => [
+                'start_date' => $start?->format('Y-m-d'),
+                'end_date' => $end?->format('Y-m-d'),
+                'guests' => $guests,
+                'total_price' => $booking->getTotalPrice(),
+            ],
+        ]);
+
         $this->addFlash('success', 'Booking request sent. Waiting for confirmation.');
         return $this->redirectToRoute('app_booking_my_bookings');
     }
 
     #[Route('/place/{id}/review', name: 'app_booking_review', methods: ['POST'])]
-    public function submitReview(int $id, Request $request, EntityManagerInterface $em): Response
+    public function submitReview(
+        int $id,
+        Request $request,
+        EntityManagerInterface $em,
+        AiReviewService $aiReviewService,
+        ActivityLogger $activityLogger,
+        EmailService $emailService
+    ): Response
     {
         $user = $this->requireUser();
         $place = $em->find(Place::class, $id);
@@ -220,16 +356,29 @@ class BookingController extends AbstractController
             ], new Response('', Response::HTTP_UNPROCESSABLE_ENTITY));
         }
 
-        $existingReview = $em->createQueryBuilder()
+        $existingReviews = $em->createQueryBuilder()
             ->select('r')
             ->from(Review::class, 'r')
             ->where('r.place = :place')
             ->andWhere('r.user = :user')
             ->setParameter('place', $place)
             ->setParameter('user', $user)
-            ->setMaxResults(1)
+            ->orderBy('r.createdAt', 'DESC')
             ->getQuery()
-            ->getOneOrNullResult();
+            ->getResult();
+
+        $existingReview = $existingReviews[0] ?? null;
+        if (!$existingReview instanceof Review) {
+            $existingReview = null;
+        }
+
+        if (count($existingReviews) > 1) {
+            foreach (array_slice($existingReviews, 1) as $duplicateReview) {
+                if ($duplicateReview instanceof Review) {
+                    $em->remove($duplicateReview);
+                }
+            }
+        }
 
         $review = $existingReview instanceof Review ? $existingReview : new Review();
         if (!$existingReview instanceof Review) {
@@ -241,8 +390,58 @@ class BookingController extends AbstractController
         $review->setRating($rating);
         $review->setComment($reviewFormData['comment'] !== '' ? $reviewFormData['comment'] : null);
 
+        $moderation = [
+            'severity' => 'none',
+            'reason' => 'No moderation needed',
+            'should_hide' => false,
+            'display_text' => $review->getComment() ?? '',
+        ];
+        if (($review->getComment() ?? '') !== '') {
+            $moderation = $this->contentModerationService->moderateForDisplay((string) $review->getComment());
+        }
+
+        $aiResult = $aiReviewService->analyzeReview($review->getComment(), $rating);
+        if ($aiResult->getSummary() !== '') {
+            $review->setSentiment($aiResult->getSentiment());
+            $review->setAiSummary($aiResult->getSummary());
+            $review->setLanguageQuality($aiResult->getLanguageQuality());
+        }
+
         $this->recalculatePlaceRatingStats($em, $place);
         $em->flush();
+
+        $activityLogger->logAction($user, 'booking', $existingReview instanceof Review ? 'review_updated' : 'review_created', [
+            'targetType' => 'place_review',
+            'targetId' => $review->getId(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'content' => $review->getComment() ?: sprintf('Rated %s with %d/5 stars.', $place->getTitle(), $rating),
+            'metadata' => [
+                'rating' => $rating,
+                'sentiment' => $review->getSentiment(),
+                'moderation_severity' => (string) ($moderation['severity'] ?? 'none'),
+            ],
+        ]);
+
+        if (($moderation['severity'] ?? 'none') === 'severe' && ($review->getComment() ?? '') !== '') {
+            $activityLogger->logAction($user, 'moderation', 'high_risk_content_hidden', [
+                'targetType' => 'place_review',
+                'targetId' => $review->getId(),
+                'targetName' => $place->getTitle(),
+                'targetImage' => $place->getImageUrl(),
+                'content' => $review->getComment(),
+                'destination' => '/admin/dashboard?section=activity_logs',
+                'metadata' => [
+                    'source' => 'booking_review',
+                    'moderation_severity' => 'severe',
+                    'moderation_reason' => (string) ($moderation['reason'] ?? 'High-risk content'),
+                ],
+            ]);
+
+            $emailService->sendContentModerationWarning($user, 'review comment', (string) $review->getComment());
+            $this->addFlash('error', 'Your review comment was saved but removed from public display due to policy violation. A warning email was sent and admins were informed.');
+            return $this->redirectToRoute('app_booking_place', ['id' => $place->getId()]);
+        }
 
         $this->addFlash('success', $existingReview instanceof Review ? 'Review updated successfully.' : 'Review submitted successfully.');
         return $this->redirectToRoute('app_booking_place', ['id' => $place->getId()]);
@@ -285,8 +484,192 @@ class BookingController extends AbstractController
         ]);
     }
 
+    #[Route('/my-bookings/{id}/route-data', name: 'app_booking_my_booking_route_data', methods: ['POST'])]
+    public function myBookingRouteData(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $user = $this->requireUser();
+
+        $booking = $em->createQueryBuilder()
+            ->select('b', 'p')
+            ->from(Booking::class, 'b')
+            ->join('b.place', 'p')
+            ->where('b.id = :id')
+            ->andWhere('b.guest = :user')
+            ->setParameter('id', $id)
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$booking instanceof Booking || !$booking->getPlace() instanceof Place) {
+            return new JsonResponse(['error' => 'Booking not found.'], Response::HTTP_NOT_FOUND);
+        }
+
+        $placeLat = $booking->getPlace()->getLatitude();
+        $placeLng = $booking->getPlace()->getLongitude();
+        if ($placeLat === null || $placeLng === null || !is_numeric($placeLat) || !is_numeric($placeLng)) {
+            return new JsonResponse(['error' => 'Place coordinates are not available.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $payload = json_decode((string) $request->getContent(), true);
+        if (!is_array($payload)) {
+            return new JsonResponse(['error' => 'Invalid request payload.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $userLat = $payload['userLat'] ?? null;
+        $userLng = $payload['userLng'] ?? null;
+        if (!is_numeric($userLat) || !is_numeric($userLng)) {
+            return new JsonResponse(['error' => 'Your coordinates are invalid.'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $userLat = (float) $userLat;
+        $userLng = (float) $userLng;
+        $placeLatValue = (float) $placeLat;
+        $placeLngValue = (float) $placeLng;
+
+        // Tunisia bounds to keep route logic aligned with Tunisia-only mapping setup.
+        if (
+            $userLat < 30.1 || $userLat > 37.6 || $userLng < 7.4 || $userLng > 11.8
+            || $placeLatValue < 30.1 || $placeLatValue > 37.6 || $placeLngValue < 7.4 || $placeLngValue > 11.8
+        ) {
+            return new JsonResponse([
+                'error' => 'Route is available only when both points are in Tunisia.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $osrmUrl = sprintf(
+            'http://127.0.0.1:5001/route/v1/driving/%s,%s;%s,%s?overview=full&geometries=geojson&steps=true',
+            rawurlencode((string) $userLng),
+            rawurlencode((string) $userLat),
+            rawurlencode((string) $placeLngValue),
+            rawurlencode((string) $placeLatValue)
+        );
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 12,
+                'header' => "Accept: application/json\r\n",
+            ],
+        ]);
+
+        $response = @file_get_contents($osrmUrl, false, $context);
+        if (!is_string($response) || $response === '') {
+            return new JsonResponse(['error' => 'Unable to reach OSRM service.'], Response::HTTP_BAD_GATEWAY);
+        }
+
+        $decoded = json_decode($response, true);
+        if (!is_array($decoded) || ($decoded['code'] ?? '') !== 'Ok' || !isset($decoded['routes'][0])) {
+            return new JsonResponse(['error' => 'No route found.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $route = $decoded['routes'][0];
+
+        return new JsonResponse([
+            'route' => [
+                'distance' => (float) ($route['distance'] ?? 0),
+                'duration' => (float) ($route['duration'] ?? 0),
+                'geometry' => $route['geometry'] ?? null,
+            ],
+            'place' => [
+                'latitude' => $placeLatValue,
+                'longitude' => $placeLngValue,
+                'title' => $booking->getPlace()->getTitle(),
+            ],
+        ]);
+    }
+
+    #[Route('/my-bookings/{id}/invoice', name: 'app_booking_my_booking_invoice_pdf', methods: ['GET'])]
+    public function exportMyBookingInvoicePdf(int $id, EntityManagerInterface $em): Response
+    {
+        $user = $this->requireUser();
+        $booking = $em->createQueryBuilder()
+            ->select('b', 'p', 'g')
+            ->from(Booking::class, 'b')
+            ->join('b.place', 'p')
+            ->join('b.guest', 'g')
+            ->where('b.id = :id')
+            ->andWhere('b.guest = :user')
+            ->setParameter('id', $id)
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$booking instanceof Booking) {
+            throw $this->createNotFoundException('Booking not found.');
+        }
+
+        if ($booking->getStatus() !== Booking::STATUS_CONFIRMED) {
+            $this->addFlash('error', 'Invoice export is available only for confirmed bookings.');
+            return $this->redirectToRoute('app_booking_my_bookings');
+        }
+
+        $issuedAt = new \DateTimeImmutable();
+        $nights = max(1, (int) $booking->getStartDate()->diff($booking->getEndDate())->days);
+        $invoiceNumber = sprintf('RES-%s-%04d', $issuedAt->format('Ymd'), (int) $booking->getId());
+
+        $response = $this->withSuppressedIconvNotice(function () use ($booking, $issuedAt, $invoiceNumber, $nights): Response {
+            $html = $this->renderView('booking/invoice_pdf.html.twig', [
+                'booking' => $booking,
+                'issuedAt' => $issuedAt,
+                'invoiceNumber' => $invoiceNumber,
+                'nights' => $nights,
+            ]);
+
+            // Some legacy DB rows may contain invalid byte sequences; Dompdf uses iconv internally.
+            // Scrub the rendered HTML to valid UTF-8 before Dompdf processing.
+            $html = $this->scrubUtf8($html);
+
+            $options = new Options();
+            $options->set('isRemoteEnabled', true);
+            $options->setDefaultFont('DejaVu Sans');
+
+            $dompdf = new Dompdf($options);
+            $dompdf->loadHtml($html, 'UTF-8');
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            return new Response($dompdf->output());
+        });
+
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->headers->set(
+            'Content-Disposition',
+            sprintf('attachment; filename="reservation-invoice-%d.pdf"', (int) $booking->getId())
+        );
+
+        return $response;
+    }
+
+    #[Route('/my-bookings/{id}/calendar', name: 'app_booking_my_booking_google_calendar', methods: ['GET'])]
+    public function addMyBookingToGoogleCalendar(int $id, EntityManagerInterface $em): Response
+    {
+        $user = $this->requireUser();
+        $booking = $em->createQueryBuilder()
+            ->select('b', 'p')
+            ->from(Booking::class, 'b')
+            ->join('b.place', 'p')
+            ->where('b.id = :id')
+            ->andWhere('b.guest = :user')
+            ->setParameter('id', $id)
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$booking instanceof Booking) {
+            throw $this->createNotFoundException('Booking not found.');
+        }
+
+        if ($booking->getStatus() !== Booking::STATUS_CONFIRMED) {
+            $this->addFlash('error', 'Google Calendar planning is available only for confirmed bookings.');
+            return $this->redirectToRoute('app_booking_my_bookings');
+        }
+
+        $calendarUrl = $this->buildGoogleCalendarUrl($booking);
+        return new RedirectResponse($calendarUrl);
+    }
+
     #[Route('/my-bookings/{id}/edit', name: 'app_booking_my_booking_edit', methods: ['POST'])]
-    public function editMyBooking(int $id, Request $request, EntityManagerInterface $em): Response
+    public function editMyBooking(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $user = $this->requireUser();
         $booking = $em->createQueryBuilder()
@@ -364,7 +747,94 @@ class BookingController extends AbstractController
         $booking->setTotalPrice((string) ((float) $place->getPricePerDay() * $nights));
         $em->flush();
 
+        $activityLogger->logAction($user, 'booking', 'booking_request_updated', [
+            'targetType' => 'booking',
+            'targetId' => $booking->getId(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'metadata' => [
+                'start_date' => $booking->getStartDate()->format('Y-m-d'),
+                'end_date' => $booking->getEndDate()->format('Y-m-d'),
+                'total_price' => $booking->getTotalPrice(),
+            ],
+        ]);
+
         $this->addFlash('success', 'Booking dates updated successfully.');
+        return $this->redirectToRoute('app_booking_my_bookings');
+    }
+
+    #[Route('/my-bookings/{id}/cancel', name: 'app_booking_my_booking_cancel', methods: ['POST'])]
+    public function cancelMyBooking(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
+    {
+        $user = $this->requireUser();
+        $booking = $em->createQueryBuilder()
+            ->select('b', 'p')
+            ->from(Booking::class, 'b')
+            ->join('b.place', 'p')
+            ->where('b.id = :id')
+            ->andWhere('b.guest = :user')
+            ->setParameter('id', $id)
+            ->setParameter('user', $user)
+            ->getQuery()
+            ->getOneOrNullResult();
+
+        if (!$booking instanceof Booking) {
+            throw $this->createNotFoundException('Booking not found.');
+        }
+
+        if (!$this->isCsrfTokenValid('booking_cancel_' . $booking->getId(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid booking token. Please try again.');
+            return $this->redirectToRoute('app_booking_my_bookings');
+        }
+
+        $currentStatus = $booking->getStatus();
+        if (!in_array($currentStatus, [Booking::STATUS_PENDING, Booking::STATUS_CONFIRMED], true)) {
+            $this->addFlash('error', 'Only pending or confirmed bookings can be cancelled.');
+            return $this->redirectToRoute('app_booking_my_bookings');
+        }
+
+        $refundPolicy = $this->calculateCancellationRefundPolicy($booking, new \DateTimeImmutable());
+
+        $booking->setStatus(Booking::STATUS_CANCELLED);
+        $booking->setCancelledAt(new \DateTimeImmutable());
+        $booking->setCancelledBy('GUEST');
+        $booking->setCancelReason('Cancelled by guest');
+        $booking->setRefundAmount((string) $refundPolicy['amount']);
+        $em->flush();
+
+        $activityLogger->logAction($user, 'booking', 'booking_cancelled_by_guest', [
+            'targetType' => 'booking',
+            'targetId' => $booking->getId(),
+            'targetName' => $booking->getPlace()?->getTitle(),
+            'targetImage' => $booking->getPlace()?->getImageUrl(),
+            'destination' => sprintf('Place #%d', (int) ($booking->getPlace()?->getId() ?? 0)),
+            'content' => sprintf(
+                'Cancelled booking #%d for %s (%s to %s).',
+                (int) $booking->getId(),
+                (string) ($booking->getPlace()?->getTitle() ?? 'Unknown place'),
+                $booking->getStartDate()->format('Y-m-d'),
+                $booking->getEndDate()->format('Y-m-d')
+            ),
+            'metadata' => [
+                'place_id' => $booking->getPlace()?->getId(),
+                'place_title' => $booking->getPlace()?->getTitle(),
+                'cancelled_at' => $booking->getCancelledAt()?->format('Y-m-d H:i:s'),
+                'previous_status' => $currentStatus,
+                'refund_percent' => $refundPolicy['percent'],
+                'refund_amount' => $refundPolicy['amount'],
+            ],
+        ]);
+
+        if ($currentStatus === Booking::STATUS_CONFIRMED) {
+            $this->addFlash('success', sprintf(
+                'Booking cancelled. Refund: %.2f%% (%.2f).',
+                (float) $refundPolicy['percent'],
+                (float) $refundPolicy['amount']
+            ));
+        } else {
+            $this->addFlash('success', 'Booking cancelled. No refund is applied to non-confirmed bookings.');
+        }
+
         return $this->redirectToRoute('app_booking_my_bookings');
     }
 
@@ -373,6 +843,174 @@ class BookingController extends AbstractController
     {
         $user = $this->requireUser();
         return $this->renderHostDashboard($em, $user, $user);
+    }
+
+    #[Route('/location/search', name: 'app_booking_location_search', methods: ['GET'])]
+    public function searchLocations(Request $request): JsonResponse
+    {
+        $this->requireUser();
+
+        $query = trim((string) $request->query->get('q', ''));
+        if ($query === '' || mb_strlen($query) < 2) {
+            return new JsonResponse(['items' => []]);
+        }
+
+        $items = [];
+        $dedupe = [];
+
+        $coordinates = $this->extractCoordinatesFromQuery($query);
+        if ($coordinates !== null) {
+            $lat = $coordinates['lat'];
+            $lng = $coordinates['lng'];
+            if ($this->isCoordinateInTunisia($lat, $lng)) {
+                $snapped = $this->snapCoordinateToOsrmRoad($lat, $lng);
+                $resultLat = $snapped['lat'] ?? $lat;
+                $resultLng = $snapped['lng'] ?? $lng;
+                $key = number_format($resultLat, 6, '.', '') . ':' . number_format($resultLng, 6, '.', '');
+                $dedupe[$key] = true;
+
+                $items[] = [
+                    'name' => sprintf('Dropped pin (%s, %s)', number_format($resultLat, 5, '.', ''), number_format($resultLng, 5, '.', '')),
+                    'latitude' => number_format($resultLat, 8, '.', ''),
+                    'longitude' => number_format($resultLng, 8, '.', ''),
+                ];
+            }
+        }
+
+        $localSuggestions = $this->fetchTunisiaLocationSuggestionsFromApi($query);
+        foreach ($localSuggestions as $item) {
+            $key = number_format((float) $item['latitude'], 6, '.', '') . ':' . number_format((float) $item['longitude'], 6, '.', '');
+            if (isset($dedupe[$key])) {
+                continue;
+            }
+
+            $items[] = $item;
+            $dedupe[$key] = true;
+
+            if (count($items) >= 8) {
+                break;
+            }
+        }
+
+        return new JsonResponse(['items' => array_slice($items, 0, 8)]);
+    }
+
+    private function extractCoordinatesFromQuery(string $query): ?array
+    {
+        if (preg_match('/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/u', $query, $matches) !== 1) {
+            return null;
+        }
+
+        $latitude = (float) $matches[1];
+        $longitude = (float) $matches[2];
+
+        if ($latitude < -90 || $latitude > 90 || $longitude < -180 || $longitude > 180) {
+            return null;
+        }
+
+        return ['lat' => $latitude, 'lng' => $longitude];
+    }
+
+    private function fetchTunisiaLocationSuggestionsFromApi(string $query): array
+    {
+        $term = trim($query);
+        if ($term === '') {
+            return [];
+        }
+
+        $decoded = null;
+        foreach ($this->getLocationApiBaseUrls() as $baseUrl) {
+            $url = sprintf(
+                '%s/locations/search?q=%s&limit=8&country=tn',
+                rtrim($baseUrl, '/'),
+                rawurlencode($term)
+            );
+
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'timeout' => 4,
+                    'header' => "Accept: application/json\r\n",
+                ],
+            ]);
+
+            $response = @file_get_contents($url, false, $context);
+            if (!is_string($response) || $response === '') {
+                continue;
+            }
+
+            $candidate = json_decode($response, true);
+            if (!is_array($candidate) || !isset($candidate['items']) || !is_array($candidate['items'])) {
+                continue;
+            }
+
+            $decoded = $candidate;
+            break;
+        }
+
+        if (!is_array($decoded) || !isset($decoded['items']) || !is_array($decoded['items'])) {
+            return [];
+        }
+
+        $items = [];
+        foreach ($decoded['items'] as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+
+            $name = trim((string) ($item['name'] ?? ''));
+            $latitude = (string) ($item['latitude'] ?? '');
+            $longitude = (string) ($item['longitude'] ?? '');
+            if ($name === '' || !is_numeric($latitude) || !is_numeric($longitude)) {
+                continue;
+            }
+
+            $lat = (float) $latitude;
+            $lng = (float) $longitude;
+            if (!$this->isCoordinateInTunisia($lat, $lng)) {
+                continue;
+            }
+
+            $items[] = [
+                'name' => $name,
+                'latitude' => number_format($lat, 8, '.', ''),
+                'longitude' => number_format($lng, 8, '.', ''),
+            ];
+
+            if (count($items) >= 8) {
+                break;
+            }
+        }
+
+        return $items;
+    }
+
+    private function getLocationApiBaseUrls(): array
+    {
+        $candidates = [
+            $this->locationApiUrl,
+            (string) ($_ENV['LOCATION_API_URL'] ?? ''),
+            (string) getenv('LOCATION_API_URL'),
+            'http://127.0.0.1:8104',
+            'http://location_api:8000',
+        ];
+
+        $urls = [];
+        foreach ($candidates as $candidate) {
+            $candidate = trim((string) $candidate);
+            if ($candidate === '') {
+                continue;
+            }
+
+            $normalized = rtrim($candidate, '/');
+            if (in_array($normalized, $urls, true)) {
+                continue;
+            }
+
+            $urls[] = $normalized;
+        }
+
+        return $urls;
     }
 
     #[Route('/host/{id}', name: 'app_booking_host_view', methods: ['GET'])]
@@ -392,7 +1030,7 @@ class BookingController extends AbstractController
     }
 
     #[Route('/host/request', name: 'app_booking_host_request', methods: ['POST'])]
-    public function submitPlaceRequest(Request $request, EntityManagerInterface $em): Response
+    public function submitPlaceRequest(Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $user = $this->requireUser();
 
@@ -435,10 +1073,6 @@ class BookingController extends AbstractController
             $formErrors['max_guests'] = 'Max guests must be at least 1.';
         }
 
-        if (!isset($formErrors['capacity']) && !isset($formErrors['max_guests']) && $maxGuests > $capacity) {
-            $formErrors['max_guests'] = 'Max guests cannot exceed capacity.';
-        }
-
         $uploadedImages = $request->files->get('images', []);
         if (!is_array($uploadedImages) || count(array_filter($uploadedImages)) === 0) {
             $formErrors['images'] = 'Please upload at least one image.';
@@ -468,15 +1102,16 @@ class BookingController extends AbstractController
         }
 
         if (!empty($formErrors)) {
-            $hostPlaces = $this->fetchHostPlaces($em, $user);
-            return $this->render('booking/host_dashboard.html.twig', [
-                'places' => $hostPlaces,
-                'placePreviewImages' => $this->buildPlacePreviewImagesMap($em, $hostPlaces),
-                'placeGalleryImages' => $this->buildPlaceGalleryImagesMap($em, $hostPlaces),
-                'pendingRequests' => $this->countHostPendingRequests($em, $user),
-                'formErrors' => $formErrors,
-                'formData' => $formData,
-            ], new Response('', Response::HTTP_UNPROCESSABLE_ENTITY));
+            return $this->renderHostDashboard(
+                $em,
+                $user,
+                $user,
+                [
+                    'formErrors' => $formErrors,
+                    'formData' => $formData,
+                ],
+                Response::HTTP_UNPROCESSABLE_ENTITY
+            );
         }
 
         $place = new Place();
@@ -499,12 +1134,25 @@ class BookingController extends AbstractController
         $this->persistHostPlaceImages($em, $place, $uploadedImages);
         $em->flush();
 
+        $activityLogger->logAction($user, 'booking', 'place_request_created', [
+            'targetType' => 'place',
+            'targetId' => $place->getId(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'metadata' => [
+                'city' => $place->getCity(),
+                'category' => $place->getCategory(),
+                'status' => $place->getStatus(),
+                'price_per_day' => $place->getPricePerDay(),
+            ],
+        ]);
+
         $this->addFlash('success', 'Your place request was submitted for admin review.');
         return $this->redirectToRoute('app_booking_host');
     }
 
     #[Route('/host/places/{id}/update', name: 'app_booking_host_place_update', methods: ['POST'])]
-    public function updateHostPlace(Place $place, Request $request, EntityManagerInterface $em): Response
+    public function updateHostPlace(Place $place, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $viewer = $this->requireUser();
         $host = $place->getHost();
@@ -556,10 +1204,6 @@ class BookingController extends AbstractController
             $errors[] = 'Max guests must be at least 1.';
         }
 
-        if (empty($errors) && $maxGuests > $capacity) {
-            $errors[] = 'Max guests cannot exceed capacity.';
-        }
-
         $uploadedImages = $request->files->get('images', []);
         if (!is_array($uploadedImages)) {
             $uploadedImages = [$uploadedImages];
@@ -604,12 +1248,24 @@ class BookingController extends AbstractController
         $this->persistHostPlaceImages($em, $place, $uploadedImages);
         $em->flush();
 
+        $activityLogger->logAction($viewer, 'booking', 'place_updated', [
+            'targetType' => 'place',
+            'targetId' => $place->getId(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'metadata' => [
+                'city' => $place->getCity(),
+                'category' => $place->getCategory(),
+                'price_per_day' => $place->getPricePerDay(),
+            ],
+        ]);
+
         $this->addFlash('success', 'Place updated successfully.');
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $host->getId()]);
     }
 
     #[Route('/host/places/{id}/delete', name: 'app_booking_host_place_delete', methods: ['POST'])]
-    public function deleteHostPlace(Place $place, Request $request, EntityManagerInterface $em): Response
+    public function deleteHostPlace(Place $place, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $viewer = $this->requireUser();
         $host = $place->getHost();
@@ -622,8 +1278,19 @@ class BookingController extends AbstractController
             return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $host->getId()]);
         }
 
+        $placeId = $place->getId();
+        $placeTitle = $place->getTitle();
+        $placeImage = $place->getImageUrl();
+
         $em->remove($place);
         $em->flush();
+
+        $activityLogger->logAction($viewer, 'booking', 'place_deleted', [
+            'targetType' => 'place',
+            'targetId' => $placeId,
+            'targetName' => $placeTitle,
+            'targetImage' => $placeImage,
+        ]);
 
         $this->addFlash('success', 'Place deleted successfully.');
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $host->getId()]);
@@ -655,7 +1322,7 @@ class BookingController extends AbstractController
             ->getResult();
     }
 
-    private function renderHostDashboard(EntityManagerInterface $em, User $hostUser, ?User $viewer = null): Response
+    private function renderHostDashboard(EntityManagerInterface $em, User $hostUser, ?User $viewer = null, array $additionalContext = [], int $statusCode = Response::HTTP_OK): Response
     {
         $places = $this->fetchHostPlaces($em, $hostUser);
         $placePreviewImages = $this->buildPlacePreviewImagesMap($em, $places);
@@ -710,7 +1377,7 @@ class BookingController extends AbstractController
             'earningsTotal' => number_format($earningsTotal, 2, '.', ''),
         ];
 
-        return $this->render('booking/host_dashboard.html.twig', [
+        return $this->render('booking/host_dashboard.html.twig', array_merge([
             'hostUser' => $hostUser,
             'viewerIsAdmin' => $viewer instanceof User ? $viewer->isAdmin() : false,
             'places' => $places,
@@ -732,11 +1399,11 @@ class BookingController extends AbstractController
             ],
             'formErrors' => [],
             'formData' => $this->defaultHostFormData(),
-        ]);
+        ], $additionalContext), new Response('', $statusCode));
     }
 
     #[Route('/host/bookings/{id}/confirm', name: 'app_booking_host_booking_confirm', methods: ['POST'])]
-    public function confirmHostBooking(int $id, Request $request, EntityManagerInterface $em): Response
+    public function confirmHostBooking(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $viewer = $this->requireUser();
         $booking = $em->find(Booking::class, $id);
@@ -757,12 +1424,31 @@ class BookingController extends AbstractController
         $booking->setStatus(Booking::STATUS_CONFIRMED);
         $em->flush();
 
+        $activityLogger->logAction($viewer, 'booking', 'booking_confirmed_by_host', [
+            'targetType' => 'booking',
+            'targetId' => $booking->getId(),
+            'targetName' => $booking->getPlace()?->getTitle(),
+            'targetImage' => $booking->getPlace()?->getImageUrl(),
+            'destination' => $booking->getGuest()?->getFullName(),
+            'content' => sprintf(
+                'Approved booking request for %s from %s to %s.',
+                $booking->getPlace()?->getTitle() ?? 'booking',
+                $booking->getStartDate()?->format('Y-m-d') ?? 'unknown date',
+                $booking->getEndDate()?->format('Y-m-d') ?? 'unknown date'
+            ),
+            'metadata' => [
+                'status' => Booking::STATUS_CONFIRMED,
+                'guest' => $booking->getGuest()?->getFullName(),
+                'reason' => null,
+            ],
+        ]);
+
         $this->addFlash('success', 'Booking request approved.');
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
     }
 
     #[Route('/host/bookings/{id}/reject', name: 'app_booking_host_booking_reject', methods: ['POST'])]
-    public function rejectHostBooking(int $id, Request $request, EntityManagerInterface $em): Response
+    public function rejectHostBooking(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $viewer = $this->requireUser();
         $booking = $em->find(Booking::class, $id);
@@ -780,8 +1466,26 @@ class BookingController extends AbstractController
             return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
         }
 
+        $reason = trim((string) $request->request->get('reason', ''));
+
         $booking->setStatus(Booking::STATUS_REJECTED);
         $em->flush();
+
+        $activityLogger->logAction($viewer, 'booking', 'booking_rejected_by_host', [
+            'targetType' => 'booking',
+            'targetId' => $booking->getId(),
+            'targetName' => $booking->getPlace()?->getTitle(),
+            'targetImage' => $booking->getPlace()?->getImageUrl(),
+            'destination' => $booking->getGuest()?->getFullName(),
+            'content' => $reason !== ''
+                ? $reason
+                : sprintf('Rejected booking request for %s.', $booking->getPlace()?->getTitle() ?? 'booking'),
+            'metadata' => [
+                'status' => Booking::STATUS_REJECTED,
+                'guest' => $booking->getGuest()?->getFullName(),
+                'reason' => $reason !== '' ? $reason : null,
+            ],
+        ]);
 
         $this->addFlash('success', 'Booking request rejected.');
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
@@ -799,6 +1503,80 @@ class BookingController extends AbstractController
             ->setParameter('status', Booking::STATUS_PENDING)
             ->getQuery()
             ->getSingleScalarResult();
+    }
+
+    private function scrubUtf8(string $value): string
+    {
+        if (preg_match('//u', $value) === 1) {
+            return $value;
+        }
+
+        set_error_handler(static function (): bool {
+            // Prevent iconv warnings from being converted into exceptions by Symfony.
+            return true;
+        });
+
+        try {
+            $clean = iconv('UTF-8', 'UTF-8//IGNORE', $value);
+        } finally {
+            restore_error_handler();
+        }
+
+        if ($clean === false) {
+            return '';
+        }
+
+        return $clean;
+    }
+
+    private function withSuppressedIconvNotice(callable $callback): mixed
+    {
+        set_error_handler(static function (int $severity, string $message): bool {
+            if (str_contains($message, 'iconv(): Detected an incomplete multibyte character')) {
+                return true;
+            }
+
+            return false;
+        });
+
+        try {
+            return $callback();
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    private function buildGoogleCalendarUrl(Booking $booking): string
+    {
+        $place = $booking->getPlace();
+        $title = sprintf('Wanderlust Stay - %s', $place instanceof Place ? $place->getTitle() : 'Reservation');
+        $location = '';
+        if ($place instanceof Place) {
+            $location = trim(($place->getAddress() ?? '') . ' ' . ($place->getCity() ?? ''));
+        }
+
+        $details = sprintf(
+            "Reservation #%d\nGuests: %d\nTotal: %s\nGenerated from Wanderlust.",
+            (int) $booking->getId(),
+            (int) $booking->getGuestsCount(),
+            $booking->getTotalPrice()
+        );
+
+        $dates = sprintf(
+            '%s/%s',
+            $booking->getStartDate()->format('Ymd'),
+            $booking->getEndDate()->format('Ymd')
+        );
+
+        $query = http_build_query([
+            'action' => 'TEMPLATE',
+            'text' => $title,
+            'dates' => $dates,
+            'details' => $details,
+            'location' => $location,
+        ], '', '&', PHP_QUERY_RFC3986);
+
+        return 'https://calendar.google.com/calendar/render?' . $query;
     }
 
     private function defaultHostFormData(): array
@@ -920,6 +1698,30 @@ class BookingController extends AbstractController
             ->getQuery()
             ->getResult();
 
+        $reviewCards = [];
+        foreach ($reviews as $review) {
+            if (!$review instanceof Review) {
+                continue;
+            }
+
+            $comment = $review->getComment() ?? '';
+            $moderation = $comment !== ''
+                ? $this->contentModerationService->moderateForDisplay($comment)
+                : [
+                    'severity' => 'none',
+                    'should_hide' => false,
+                    'display_text' => '',
+                    'reason' => 'Empty text',
+                ];
+
+            $reviewCards[] = [
+                'review' => $review,
+                'displayComment' => (string) ($moderation['display_text'] ?? ''),
+                'hiddenByModeration' => (bool) ($moderation['should_hide'] ?? false),
+                'moderationSeverity' => (string) ($moderation['severity'] ?? 'none'),
+            ];
+        }
+
         $bookings = $em->createQueryBuilder()
             ->select('b')
             ->from(Booking::class, 'b')
@@ -962,6 +1764,7 @@ class BookingController extends AbstractController
             'images' => $images,
             'mainImageUrl' => $images !== [] ? $images[0]->getUrl() : $place->getImageUrl(),
             'reviews' => $reviews,
+            'reviewCards' => $reviewCards,
             'bookings' => $bookings,
             'bookedRanges' => array_map(static fn (Booking $booking): array => [
                 'start' => $booking->getStartDate()->format('Y-m-d'),
@@ -1095,6 +1898,132 @@ class BookingController extends AbstractController
         return $previewMap;
     }
 
+    private function fetchOsrmDistancesFromOrigin(float $originLat, float $originLng, array $places): array
+    {
+        $destinations = [];
+        foreach ($places as $place) {
+            if (!$place instanceof Place || $place->getId() === null) {
+                continue;
+            }
+
+            $latitude = $place->getLatitude();
+            $longitude = $place->getLongitude();
+            if ($latitude === null || $longitude === null || !is_numeric($latitude) || !is_numeric($longitude)) {
+                continue;
+            }
+
+            $latValue = (float) $latitude;
+            $lngValue = (float) $longitude;
+
+            $destinations[] = [
+                'id' => (int) $place->getId(),
+                'lat' => $latValue,
+                'lng' => $lngValue,
+            ];
+        }
+
+        if ($destinations === []) {
+            return [];
+        }
+
+        $distanceByPlaceId = [];
+        foreach (array_chunk($destinations, 60) as $chunk) {
+            $coordinates = [
+                sprintf('%.8F,%.8F', $originLng, $originLat),
+            ];
+
+            foreach ($chunk as $destination) {
+                $coordinates[] = sprintf('%.8F,%.8F', $destination['lng'], $destination['lat']);
+            }
+
+            $destinationsParam = implode(',', range(1, count($chunk)));
+            $osrmUrl = sprintf(
+                'http://127.0.0.1:5001/table/v1/driving/%s?sources=0&destinations=%s&annotations=distance',
+                implode(';', $coordinates),
+                $destinationsParam
+            );
+
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'timeout' => 12,
+                    'header' => "Accept: application/json\r\n",
+                ],
+            ]);
+
+            $response = @file_get_contents($osrmUrl, false, $context);
+
+            $fallbackDistances = [];
+            foreach ($chunk as $destination) {
+                $fallbackDistances[$destination['id']] = $this->calculateHaversineDistanceMeters(
+                    $originLat,
+                    $originLng,
+                    (float) $destination['lat'],
+                    (float) $destination['lng']
+                );
+            }
+
+            if (!is_string($response) || $response === '') {
+                foreach ($fallbackDistances as $destinationId => $fallbackDistance) {
+                    $distanceByPlaceId[$destinationId] = $fallbackDistance;
+                }
+                continue;
+            }
+
+            $decoded = json_decode($response, true);
+            if (!is_array($decoded) || ($decoded['code'] ?? '') !== 'Ok') {
+                foreach ($fallbackDistances as $destinationId => $fallbackDistance) {
+                    $distanceByPlaceId[$destinationId] = $fallbackDistance;
+                }
+                continue;
+            }
+
+            $distances = $decoded['distances'][0] ?? null;
+            if (!is_array($distances)) {
+                foreach ($fallbackDistances as $destinationId => $fallbackDistance) {
+                    $distanceByPlaceId[$destinationId] = $fallbackDistance;
+                }
+                continue;
+            }
+
+            foreach ($chunk as $index => $destination) {
+                $distanceValue = $distances[$index] ?? null;
+                if (is_numeric($distanceValue)) {
+                    $distanceByPlaceId[$destination['id']] = (float) $distanceValue;
+                    continue;
+                }
+
+                $distanceByPlaceId[$destination['id']] = $fallbackDistances[$destination['id']];
+            }
+        }
+
+        return $distanceByPlaceId;
+    }
+
+    private function calculateHaversineDistanceMeters(float $fromLat, float $fromLng, float $toLat, float $toLng): float
+    {
+        $earthRadiusMeters = 6371000.0;
+
+        $latFromRad = deg2rad($fromLat);
+        $latToRad = deg2rad($toLat);
+        $deltaLat = deg2rad($toLat - $fromLat);
+        $deltaLng = deg2rad($toLng - $fromLng);
+
+        $a = sin($deltaLat / 2) * sin($deltaLat / 2)
+            + cos($latFromRad) * cos($latToRad) * sin($deltaLng / 2) * sin($deltaLng / 2);
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadiusMeters * $c;
+    }
+
+    private function isCoordinateInTunisia(float $latitude, float $longitude): bool
+    {
+        return $latitude >= self::TUNISIA_SOUTH
+            && $latitude <= self::TUNISIA_NORTH
+            && $longitude >= self::TUNISIA_WEST
+            && $longitude <= self::TUNISIA_EAST;
+    }
+
     private function buildPlaceGalleryImagesMap(EntityManagerInterface $em, array $places): array
     {
         $placeIds = [];
@@ -1143,7 +2072,7 @@ class BookingController extends AbstractController
     }
 
     #[Route('/admin/place/{id}/approve', name: 'app_booking_admin_place_approve', methods: ['POST'])]
-    public function approvePlace(int $id, EntityManagerInterface $em): Response
+    public function approvePlace(int $id, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
@@ -1158,6 +2087,13 @@ class BookingController extends AbstractController
             }
 
             $em->flush();
+            $activityLogger->logAction($this->getUser() instanceof User ? $this->getUser() : null, 'booking', 'place_approved_by_admin', [
+                'targetType' => 'place',
+                'targetId' => $place->getId(),
+                'targetName' => $place->getTitle(),
+                'targetImage' => $place->getImageUrl(),
+                'destination' => $place->getHost()?->getFullName(),
+            ]);
             $this->addFlash('success', 'Place approved.');
         }
 
@@ -1165,7 +2101,7 @@ class BookingController extends AbstractController
     }
 
     #[Route('/admin/place/{id}/deny', name: 'app_booking_admin_place_deny', methods: ['POST'])]
-    public function denyPlace(int $id, Request $request, EntityManagerInterface $em): Response
+    public function denyPlace(int $id, Request $request, EntityManagerInterface $em, ActivityLogger $activityLogger): Response
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
@@ -1175,6 +2111,14 @@ class BookingController extends AbstractController
             $place->setStatus(Place::STATUS_DENIED);
             $place->setDenialReason($reason !== '' ? $reason : null);
             $em->flush();
+            $activityLogger->logAction($this->getUser() instanceof User ? $this->getUser() : null, 'booking', 'place_denied_by_admin', [
+                'targetType' => 'place',
+                'targetId' => $place->getId(),
+                'targetName' => $place->getTitle(),
+                'targetImage' => $place->getImageUrl(),
+                'destination' => $place->getHost()?->getFullName(),
+                'content' => $reason !== '' ? $reason : null,
+            ]);
             $this->addFlash('success', 'Place denied.');
         }
 
@@ -1194,6 +2138,30 @@ class BookingController extends AbstractController
     private function normalizeDecimalString(string $value): string
     {
         return rtrim(rtrim(number_format((float) $value, 8, '.', ''), '0'), '.') ?: '0';
+    }
+
+    private function calculateCancellationRefundPolicy(Booking $booking, \DateTimeImmutable $cancelledAt): array
+    {
+        if ($booking->getStatus() !== Booking::STATUS_CONFIRMED) {
+            return ['percent' => 0.0, 'amount' => '0.00'];
+        }
+
+        $secondsUntilStart = $booking->getStartDate()->setTime(0, 0)->getTimestamp() - $cancelledAt->getTimestamp();
+        $daysUntilStart = (int) floor($secondsUntilStart / 86400);
+
+        $refundPercent = 0.0;
+        if ($daysUntilStart >= 7) {
+            $refundPercent = 100.0;
+        } elseif ($daysUntilStart >= 3) {
+            $refundPercent = 50.0;
+        }
+
+        $refundAmount = ((float) $booking->getTotalPrice() * $refundPercent) / 100;
+
+        return [
+            'percent' => $refundPercent,
+            'amount' => number_format($refundAmount, 2, '.', ''),
+        ];
     }
 
     private function isPlaceAvailable(EntityManagerInterface $em, Place $place, \DateTimeImmutable $start, \DateTimeImmutable $end, ?int $ignoreBookingId = null): bool

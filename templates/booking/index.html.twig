@@ -1,182 +1,400 @@
-{% extends 'base.html.twig' %}
+﻿{% extends 'base.html.twig' %}
 
-{% block title %}Stays - Wanderlust{% endblock %}
+{% block title %}Stay Explorer - Wanderlust{% endblock %}
 
 {% block stylesheets %}
     {{ parent() }}
     <style>
-        .module-hero {
-            background: linear-gradient(rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.46)), url('{{ asset('adventure/img/slider3.jpg') }}') center center/cover no-repeat;
-            padding: 120px 0 80px;
-            color: #fff;
-            margin-bottom: 50px;
-        }
-
-        .stay-filter {
-            border: 1px solid #eee;
-            border-radius: 12px;
-            background: #fff;
-            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.06);
-            padding: 18px;
-            margin-bottom: 30px;
-        }
-
-        .stay-filter .form-control {
-            border-radius: 10px;
-            border-color: #e5e7eb;
-            min-height: 44px;
-        }
-
-        .stay-card {
-            border: 1px solid #eee;
-            border-radius: 10px;
+        .booking-shell { background: linear-gradient(180deg, #f7fbff 0%, #f8fafc 52%, #ffffff 100%); }
+        .booking-hero {
+            position: relative;
             overflow: hidden;
-            background: #fff;
-            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
-            margin-bottom: 30px;
-            height: 100%;
-            display: flex;
-            flex-direction: column;
+            color: #fff;
+            padding: 72px 0 96px;
+            background: linear-gradient(125deg, rgba(8, 17, 38, .86), rgba(8, 17, 38, .58)), url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1920&q=80') center/cover no-repeat;
         }
-
-        .stay-card .thumb {
-            width: 100%;
-            height: 220px;
-            object-fit: cover;
-            background: #f7f7f7;
-        }
-
-        .stay-body {
-            padding: 18px;
-            flex: 1;
-        }
-
-        .stay-actions {
-            border-top: 1px solid #f0f0f0;
-            padding: 14px 18px;
-            display: flex;
-            justify-content: space-between;
+        .booking-hero .module-page-title { margin: 14px 0 18px; }
+        .booking-hero p { max-width: 720px; color: rgba(226, 232, 240, .95); font-size: 1.05rem; }
+        .badge-soft {
+            display: inline-flex;
             align-items: center;
             gap: 8px;
-            flex-wrap: wrap;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, .22);
+            background: rgba(255, 255, 255, .1);
+            padding: 8px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .18em;
+            text-transform: uppercase;
+            color: #dbeafe;
         }
-
-        .stay-meta {
-            font-size: 13px;
-            color: #777;
-            margin-bottom: 6px;
-        }
-
-        .pending-box {
-            border: 1px solid #fde68a;
-            background: #fffbeb;
+        .hero-actions { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 12px; }
+        .hero-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
             border-radius: 12px;
-            padding: 16px;
-            margin-bottom: 28px;
+            padding: 12px 18px;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            border: 1px solid transparent;
+            transition: .2s ease;
+        }
+        .hero-btn-primary { background: #38bdf8; color: #082f49; }
+        .hero-btn-primary:hover { background: #7dd3fc; color: #082f49; }
+        .hero-btn-ghost { background: rgba(255, 255, 255, .08); color: #fff; border-color: rgba(255, 255, 255, .2); }
+        .hero-btn-ghost:hover { background: rgba(255, 255, 255, .16); }
+
+        .booking-main { margin-top: -42px; padding-bottom: 70px; }
+        .panel {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 22px;
+            box-shadow: 0 18px 35px rgba(15, 23, 42, .08);
         }
 
-        .pending-item {
-            border: 1px solid #fcd34d;
-            border-radius: 8px;
+        .pending-wrap { border-color: #fcd34d; background: #fffbeb; }
+        .pending-title { color: #78350f; font-size: 1.2rem; font-weight: 700; }
+        .pending-subtitle { color: #b45309; margin-top: 4px; margin-bottom: 0; }
+        .pending-grid { margin-top: 18px; display: grid; gap: 12px; grid-template-columns: repeat(1, minmax(0, 1fr)); }
+        .pending-item { background: #fff; border: 1px solid #fde68a; border-radius: 16px; padding: 12px 14px; }
+        .pending-item strong { color: #0f172a; display: block; }
+        .pending-item span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #92400e; font-weight: 700; }
+
+        .filters { padding: 20px; margin-top: 22px; }
+        .filters-grid { display: grid; gap: 12px; grid-template-columns: 1fr; }
+        .field label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .16em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
+        .field input {
+            width: 100%;
+            border-radius: 14px;
+            border: 1px solid #cbd5e1;
             background: #fff;
+            padding: 11px 13px;
+            font-size: 14px;
+            color: #0f172a;
+        }
+        .field input:focus { outline: none; border-color: #0ea5e9; }
+        .gps-status {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #475569;
+            font-weight: 600;
+        }
+        .distance-summary {
+            margin-top: 12px;
+            border-radius: 14px;
+            border: 1px solid #bfdbfe;
+            background: #eff6ff;
+            color: #1e3a8a;
+            font-size: 13px;
+            font-weight: 700;
             padding: 10px 12px;
-            margin-bottom: 8px;
+        }
+        .btn-solid, .btn-outline {
+            width: 100%;
+            height: 44px;
+            border-radius: 14px;
+            font-size: 13px;
+            font-weight: 700;
+            border: 1px solid transparent;
+            transition: .2s ease;
+        }
+        .btn-solid { background: #0f172a; color: #fff; }
+        .btn-solid:hover { background: #1e293b; }
+        .btn-outline { background: #fff; color: #0f172a; border-color: #cbd5e1; }
+        .btn-outline:hover { background: #f1f5f9; }
+
+        .results { margin-top: 28px; }
+        .stays-grid { display: grid; gap: 22px; grid-template-columns: repeat(1, minmax(0, 1fr)); }
+        .stay-card {
+            overflow: hidden;
+            border-radius: 24px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, .06);
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .stay-card:hover { transform: translateY(-4px); box-shadow: 0 20px 34px rgba(15, 23, 42, .14); }
+        .stay-media { position: relative; aspect-ratio: 4/3; background: #f1f5f9; overflow: hidden; }
+        .stay-media img { width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+        .stay-card:hover .stay-media img { transform: scale(1.05); }
+        .stay-fallback { width: 100%; height: 100%; display: grid; place-items: center; background: linear-gradient(135deg, #bae6fd, #fff, #fde68a); font-size: 42px; }
+        .chip {
+            position: absolute;
+            top: 14px;
+            left: 14px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, .92);
+            box-shadow: 0 6px 14px rgba(0, 0, 0, .12);
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: #0f172a;
+        }
+        .stay-body { padding: 16px 16px 18px; }
+        .stay-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+        .stay-title { margin: 0; font-size: 1.35rem; font-weight: 700; color: #020617; }
+        .stay-city { margin-top: 4px; margin-bottom: 0; color: #64748b; font-size: 14px; }
+        .stay-distance { margin-top: 6px; margin-bottom: 0; color: #0369a1; font-size: 12px; font-weight: 700; }
+        .rating-box { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; font-weight: 700; color: #0f172a; }
+        .rating-box svg { width: 15px; height: 15px; fill: #f59e0b; }
+        .reviews-count { color: #64748b; font-size: 11px; font-weight: 600; }
+        .stay-foot { margin-top: 15px; padding-top: 13px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+        .price-tag { margin: 0; font-size: 1.4rem; font-weight: 700; color: #020617; }
+        .price-tag small { font-size: 13px; font-weight: 500; color: #64748b; }
+        .view-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: #0f172a;
+            color: #fff;
+            padding: 9px 15px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .view-link:hover { background: #1e293b; color: #fff; }
+
+        .empty-state { border-style: dashed; padding: 40px 20px; text-align: center; }
+        .empty-state h3 { font-size: 1.2rem; margin-bottom: 8px; color: #0f172a; }
+        .empty-state p { margin-bottom: 0; color: #64748b; }
+
+        #stays-map-view { display: none; }
+        #stays-map-view.visible { display: block; }
+        .map-note {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            border-radius: 14px;
+            padding: 10px 12px;
+            color: #475569;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        #stays-map { height: 520px; border-radius: 22px; border: 1px solid #cbd5e1; overflow: hidden; }
+
+        @media (min-width: 768px) {
+            .pending-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .filters-grid { grid-template-columns: 2fr 1fr 1fr 1fr auto auto; align-items: end; }
+            .stays-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .booking-hero { padding: 90px 0 112px; }
+        }
+
+        @media (min-width: 1200px) {
+            .stays-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
     </style>
 {% endblock %}
 
 {% block content %}
-<section class="module-hero">
-    <div class="container">
-        <h1 class="mb-10">Stays</h1>
-        <p class="mb-20">Discover approved places, book quickly, and manage hosting flows from one module.</p>
-        <div class="d-flex flex-wrap" style="gap:10px;">
-            <a href="#explore" class="primary-btn text-uppercase">Explore Stays</a>
-            <a href="{{ path('app_booking_host') }}" class="primary-btn text-uppercase">Create Stay</a>
-            <a href="{{ path('app_booking_host') }}" class="genric-btn info-border">Host Dashboard</a>
+<div class="booking-shell">
+    <section class="booking-hero">
+        <div class="container">
+            <span class="badge-soft">Curated stays</span>
+            <h1 class="module-page-title">Stays</h1>
+            <p>Browse approved places, send booking requests, and switch into host or admin review flows from the same booking module.</p>
+            <div class="hero-actions">
+                <a href="#explore" class="hero-btn hero-btn-primary">Explore stays</a>
+                <a href="{{ path('app_booking_host') }}" class="hero-btn hero-btn-ghost">Become a host</a>
+            </div>
         </div>
-    </div>
-</section>
+    </section>
 
-<section id="explore" class="section-gap pt-0">
-    <div class="container">
-        {% if myPendingPlaces is not empty %}
-            <div class="pending-box">
-                <h5 class="mb-2">Your places waiting review</h5>
-                <p class="text-muted mb-3">These are not bookable until admin approval.</p>
-                <div class="row">
-                    {% for place in myPendingPlaces %}
-                        <div class="col-md-6">
+    <section id="explore" class="booking-main">
+        <div class="container">
+            {% if myPendingPlaces is not empty %}
+                <div class="panel pending-wrap p-4 p-md-5">
+                    <h2 class="pending-title">Your places waiting review</h2>
+                    <p class="pending-subtitle">These are not bookable yet. Admin approval is required first.</p>
+                    <div class="pending-grid">
+                        {% for place in myPendingPlaces %}
                             <div class="pending-item">
                                 <strong>{{ place.title }}</strong>
-                                <div class="small text-warning text-uppercase">{{ place.status }}</div>
+                                <span>{{ place.status }}</span>
                             </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <form method="get" class="panel filters" id="stays-filter-form">
+                <div class="filters-grid">
+                    <div class="field">
+                        <label>Search</label>
+                        <input name="q" value="{{ filters.q ?? '' }}" type="text" placeholder="Hotel, riad, camp, villa...">
+                    </div>
+                    <div class="field">
+                        <label>City</label>
+                        <input name="city" value="{{ filters.city ?? '' }}" type="text" placeholder="Tunis">
+                    </div>
+                    <div class="field">
+                        <label>Category</label>
+                        <input name="category" value="{{ filters.category ?? '' }}" type="text" placeholder="Resort">
+                    </div>
+                    <div class="field">
+                        <label>Distance (km)</label>
+                        <input id="distance-input" name="distance" value="{{ filters.distance ?? '' }}" type="number" min="0.5" step="0.5" placeholder="25">
+                    </div>
+                    <div><button class="btn-solid" type="submit">Search</button></div>
+                    <div class="d-flex gap-2">
+                        <button type="button" id="use-gps-location" class="btn-outline">Use my GPS</button>
+                        <button type="button" id="map-view-toggle" class="btn-outline">Map view</button>
+                    </div>
+                </div>
+                <input type="hidden" id="user-lat-input" name="user_lat" value="{{ filters.user_lat ?? '' }}">
+                <input type="hidden" id="user-lng-input" name="user_lng" value="{{ filters.user_lng ?? '' }}">
+                <p id="gps-status" class="gps-status">Add a distance and use GPS to filter by road distance.</p>
+                {% if distanceFilterActive and (filters.user_lat ?? '') != '' and (filters.user_lng ?? '') != '' %}
+                    <div class="distance-summary">
+                        Showing {{ places|length }} place{{ places|length == 1 ? '' : 's' }} within {{ filters.distance }} km from your GPS location.
+                    </div>
+                {% endif %}
+            </form>
+
+            <div
+                id="stays-results"
+                class="results"
+                data-map-places="{{ mapPlaces|json_encode|e('html_attr') }}"
+                data-user-lat="{{ filters.user_lat ?? '' }}"
+                data-user-lng="{{ filters.user_lng ?? '' }}"
+                data-radius-km="{{ filters.distance ?? '' }}"
+            >
+                <div id="stays-grid-view" class="stays-grid">
+                    {% for place in places %}
+                        <article class="stay-card">
+                            <div class="stay-media">
+                                {% set previewImage = placePreviewImages[place.id]|default(place.imageUrl) %}
+                                {% if previewImage %}
+                                    <img src="{{ previewImage starts with('http') ? previewImage : asset('uploads/places/' ~ previewImage) }}" alt="{{ place.title }}">
+                                {% else %}
+                                    <div class="stay-fallback">*</div>
+                                {% endif %}
+                                <span class="chip">{{ place.category ?? 'Stay' }}</span>
+                            </div>
+                            <div class="stay-body">
+                                <div class="stay-head">
+                                    <div>
+                                        <h2 class="stay-title">{{ place.title }}</h2>
+                                        <p class="stay-city">{{ place.city }}</p>
+                                        {% if distanceByPlaceIdKm[place.id] is defined %}
+                                            <p class="stay-distance">{{ distanceByPlaceIdKm[place.id]|number_format(2, '.', '') }} km from your GPS</p>
+                                        {% endif %}
+                                    </div>
+                                    {% if place.avgRating %}
+                                        <div class="rating-box">
+                                            <svg viewBox="0 0 24 24" aria-hidden="true"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+                                            <span>{{ place.avgRating }}</span>
+                                            <span class="reviews-count">({{ place.reviewsCount }} review{{ place.reviewsCount == 1 ? '' : 's' }})</span>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="stay-foot">
+                                    <p class="price-tag">${{ place.pricePerDay }} <small>/ night</small></p>
+                                    <a href="{{ path('app_booking_place', { id: place.id }) }}" class="view-link">View</a>
+                                </div>
+                            </div>
+                        </article>
+                    {% else %}
+                        <div class="panel empty-state">
+                            <h3>No approved places yet</h3>
+                            <p>Use the host flow to submit a place, then approve it from the admin dashboard.</p>
                         </div>
                     {% endfor %}
                 </div>
-            </div>
-        {% endif %}
 
-        <form method="get" class="stay-filter">
-            <div class="row">
-                <div class="col-md-5 mb-3">
-                    <label class="small text-uppercase">Search</label>
-                    <input name="q" value="{{ filters.q ?? '' }}" type="text" placeholder="Hotel, camp, villa..." class="form-control">
-                </div>
-                <div class="col-md-3 mb-3">
-                    <label class="small text-uppercase">City</label>
-                    <input name="city" value="{{ filters.city ?? '' }}" type="text" placeholder="Tunis" class="form-control">
-                </div>
-                <div class="col-md-2 mb-3">
-                    <label class="small text-uppercase">Category</label>
-                    <input name="category" value="{{ filters.category ?? '' }}" type="text" placeholder="Resort" class="form-control">
-                </div>
-                <div class="col-md-2 mb-3 d-flex align-items-end">
-                    <button class="primary-btn text-uppercase w-100" style="border:none;">Search</button>
-                </div>
-            </div>
-        </form>
-
-        {% if places is empty %}
-            <div class="text-center p-5 border rounded bg-white">
-                <h4>No approved stays yet</h4>
-                <p class="text-muted mb-3">Use host dashboard to submit a place, then admin can approve it.</p>
-                <div class="d-flex justify-content-center flex-wrap" style="gap:10px;">
-                    <a href="{{ path('app_booking_host') }}" class="primary-btn text-uppercase">Create Stay</a>
-                    <a href="{{ path('app_booking_host') }}" class="genric-btn info-border text-uppercase">Host Dashboard</a>
-                </div>
-            </div>
-        {% else %}
-            <div class="row">
-                {% for place in places %}
-                    {% set previewImage = placePreviewImages[place.id]|default(place.imageUrl) %}
-                    <div class="col-md-6 col-lg-4 d-flex">
-                        <article class="stay-card w-100">
-                            {% if previewImage %}
-                                <img class="thumb" src="{{ previewImage starts with('http') ? previewImage : asset('uploads/places/' ~ previewImage) }}" alt="{{ place.title }}">
-                            {% else %}
-                                <img class="thumb" src="{{ asset('adventure/img/g6.jpg') }}" alt="Stay placeholder">
-                            {% endif %}
-
-                            <div class="stay-body">
-                                <h5 class="mb-2">{{ place.title }}</h5>
-                                <div class="stay-meta"><i class="fa fa-map-marker"></i> {{ place.city }}</div>
-                                <div class="stay-meta"><i class="fa fa-users"></i> Up to {{ place.maxGuests }} guests</div>
-                                {% if place.avgRating %}
-                                    <div class="stay-meta"><i class="fa fa-star" style="color:#f59e0b;"></i> {{ place.avgRating }}/5</div>
-                                {% endif %}
-                                <p class="mb-0 mt-2"><strong>${{ place.pricePerDay }}</strong> / night</p>
-                            </div>
-
-                            <div class="stay-actions">
-                                <span class="small text-muted">{{ place.category ?? 'Stay' }}</span>
-                                <a href="{{ path('app_booking_place', { id: place.id }) }}" class="genric-btn info-border small">View</a>
-                            </div>
-                        </article>
+                <div id="stays-map-view">
+                    <div class="map-note">
+                        <p>Map pins are generated from each place latitude and longitude.</p>
+                        <p id="stays-map-count"></p>
                     </div>
-                {% endfor %}
+                    <div id="stays-map"></div>
+                </div>
             </div>
-        {% endif %}
-    </div>
-</section>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block importmap %}
+    {{ importmap(['app', 'booking_map']) }}
+    <script>
+        (function () {
+            const form = document.getElementById('stays-filter-form');
+            const gpsButton = document.getElementById('use-gps-location');
+            const gpsStatus = document.getElementById('gps-status');
+            const userLatInput = document.getElementById('user-lat-input');
+            const userLngInput = document.getElementById('user-lng-input');
+            const distanceInput = document.getElementById('distance-input');
+
+            if (!form || !gpsButton || !gpsStatus || !userLatInput || !userLngInput || !distanceInput) {
+                return;
+            }
+
+            const setStatus = (message) => {
+                gpsStatus.textContent = message;
+            };
+
+            const hasCoordinates = () => userLatInput.value !== '' && userLngInput.value !== '';
+
+            const requestGps = (autoSubmit) => {
+                if (!navigator.geolocation) {
+                    setStatus('Geolocation is not supported in this browser.');
+                    return;
+                }
+
+                setStatus('Getting your current location...');
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        userLatInput.value = position.coords.latitude.toFixed(8);
+                        userLngInput.value = position.coords.longitude.toFixed(8);
+                        setStatus('GPS location saved. Search now uses OSRM road distance.');
+
+                        if (autoSubmit) {
+                            form.submit();
+                        }
+                    },
+                    () => {
+                        setStatus('Unable to get GPS location. Please allow location permission.');
+                    },
+                    { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+                );
+            };
+
+            if (hasCoordinates()) {
+                setStatus('Using saved GPS location for distance filtering.');
+            }
+
+            gpsButton.addEventListener('click', () => requestGps(false));
+
+            form.addEventListener('submit', (event) => {
+                const radius = Number.parseFloat(distanceInput.value || '');
+                if (!Number.isFinite(radius) || radius <= 0) {
+                    return;
+                }
+
+                if (hasCoordinates()) {
+                    return;
+                }
+
+                event.preventDefault();
+                requestGps(true);
+            });
+        })();
+    </script>
 {% endblock %}

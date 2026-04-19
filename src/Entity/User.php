@@ -7,13 +7,14 @@ use App\Enum\TFAMethod;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
+use Scheb\TwoFactorBundle\Model\Google\TwoFactorInterface as GoogleTwoFactorInterface;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity]
 #[ORM\Table(name: "users")]
 #[ORM\UniqueConstraint(name: 'uniq_user_email', columns: ['email'])]
-class User implements UserInterface, PasswordAuthenticatedUserInterface
+class User implements UserInterface, PasswordAuthenticatedUserInterface, GoogleTwoFactorInterface
 {
     #[ORM\Id]
     #[ORM\Column(type: 'string', length: 36, options: ['fixed' => true])]
@@ -39,6 +40,12 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column(name: 'tfa_method', type: 'string', enumType: TFAMethod::class, options: ['default' => 'NONE'])]
     private TFAMethod $tfaMethod = TFAMethod::NONE;
+
+    #[ORM\Column(name: 'tfa_secret', type: 'string', length: 64, nullable: true)]
+    private ?string $tfaSecret = null;
+
+    #[ORM\Column(name: 'face_reference_image', type: 'string', length: 255, nullable: true)]
+    private ?string $faceReferenceImage = null;
 
     #[ORM\Column(name: 'is_active', type: 'boolean', options: ['default' => true])]
     private bool $isActive = true;
@@ -222,6 +229,45 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getTfaLabel(): string
     {
         return $this->tfaMethod->getLabel();
+    }
+
+    public function getTfaSecret(): ?string
+    {
+        return $this->tfaSecret;
+    }
+
+    public function setTfaSecret(?string $tfaSecret): self
+    {
+        $this->tfaSecret = $tfaSecret;
+
+        return $this;
+    }
+
+    public function isGoogleAuthenticatorEnabled(): bool
+    {
+        return $this->tfaMethod === TFAMethod::APP && !empty($this->tfaSecret);
+    }
+
+    public function getGoogleAuthenticatorUsername(): string
+    {
+        return (string) $this->email;
+    }
+
+    public function getGoogleAuthenticatorSecret(): ?string
+    {
+        return $this->tfaSecret;
+    }
+
+    public function getFaceReferenceImage(): ?string
+    {
+        return $this->faceReferenceImage;
+    }
+
+    public function setFaceReferenceImage(?string $faceReferenceImage): self
+    {
+        $this->faceReferenceImage = $faceReferenceImage;
+
+        return $this;
     }
 
     public function isIsActive(): bool

@@ -33,6 +33,9 @@ class Review
     #[ORM\Column(name: 'ai_summary', type: 'string', length: 255, nullable: true)]
     private ?string $aiSummary = null;
 
+    #[ORM\Column(name: 'language_quality', type: 'string', length: 10, nullable: true)]
+    private ?string $languageQuality = null;
+
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
@@ -114,6 +117,18 @@ class Review
     public function setAiSummary(?string $aiSummary): self
     {
         $this->aiSummary = $aiSummary;
+
+        return $this;
+    }
+
+    public function getLanguageQuality(): ?string
+    {
+        return $this->languageQuality;
+    }
+
+    public function setLanguageQuality(?string $languageQuality): self
+    {
+        $this->languageQuality = $languageQuality;
 
         return $this;
     }

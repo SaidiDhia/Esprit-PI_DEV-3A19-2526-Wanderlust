@@ -5,7 +5,9 @@ namespace App\Controller;
 use App\Entity\Conversation;
 use App\Entity\ConversationUser;
 use App\Entity\Message;
+use App\Service\GeminiService;
 use Doctrine\ORM\EntityManagerInterface;
+use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -20,15 +22,29 @@ use Symfony\Component\HttpFoundation\File\Exception\FileException;
 class MessagingController extends AbstractController
 {
     private string $uploadDir;
+    private GeminiService $gemini;
 
-    public function __construct()
+    /**
+
+     * Initializes controller dependencies and ensures the upload directory exists.
+
+     */
+
+    public function __construct(GeminiService $gemini)
     {
+        $this->gemini = $gemini;
         $this->uploadDir = __DIR__ . '/../../public/uploads/';
 
         if (!is_dir($this->uploadDir)) {
             mkdir($this->uploadDir, 0777, true);
         }
     }
+
+    /**
+
+     * Resolves the currently authenticated user ID used by messaging operations.
+
+     */
 
     private function getCurrentUserId(): string
     {
@@ -53,6 +69,12 @@ class MessagingController extends AbstractController
 
         throw $this->createAccessDeniedException('Authenticated user ID is unavailable.');
     }
+
+    /**
+
+     * Safely reads and normalizes a string value from POST payload data.
+
+     */
 
     private function getPostString(Request $request, string $key, string $default = ''): string
     {
@@ -91,6 +113,12 @@ class MessagingController extends AbstractController
         return $items;
     }
 
+    /**
+
+     * Converts an ini size value (K/M/G) into bytes.
+
+     */
+
     private function parseIniSizeToBytes(string $value): int
     {
         $value = trim($value);
@@ -109,6 +137,12 @@ class MessagingController extends AbstractController
         };
     }
 
+    /**
+
+     * Formats a byte count into a human-readable size string.
+
+     */
+
     private function formatBytes(int $bytes): string
     {
         if ($bytes <= 0) {
@@ -122,6 +156,12 @@ class MessagingController extends AbstractController
 
         return sprintf('%.1f %s', $value, $units[$power]);
     }
+
+    /**
+
+     * Maps PHP upload error codes to user-friendly messages.
+
+     */
 
     private function uploadErrorMessage(int $errorCode): string
     {
@@ -137,6 +177,12 @@ class MessagingController extends AbstractController
             default => 'Upload failed with code: ' . $errorCode,
         };
     }
+
+    /**
+
+     * Infers MIME type from a file extension for uploaded files.
+
+     */
 
     private function getMimeTypeFromExtension(string $filename): string
     {
@@ -169,6 +215,9 @@ class MessagingController extends AbstractController
     }
 
 #[Route('/', name: 'app_messaging')]
+/**
+ * Displays the messaging inbox with active and archived conversations.
+ */
 public function index(Request $request, EntityManagerInterface $em): Response
 {
     $currentUserId = $this->getCurrentUserId();
@@ -223,7 +272,10 @@ public function index(Request $request, EntityManagerInterface $em): Response
 }
 
     #[Route('/conversation/{id}', name: 'messaging_conversation_show', requirements: ['id' => '\d+'])]
-    public function showConversation(int $id, EntityManagerInterface $em): Response
+    /**
+     * Loads a conversation thread with messages and related conversation metadata.
+     */
+    public function showConversation(int $id, EntityManagerInterface $em, PaginatorInterface $paginator, Request $request): Response
     {
         $currentUserId = $this->getCurrentUserId();
 
@@ -240,7 +292,7 @@ public function index(Request $request, EntityManagerInterface $em): Response
             throw $this->createNotFoundException('Conversation not found');
         }
 
-        // Get messages
+        // Get messages query result (array), then paginate
         $sql = "
             SELECT m.*, u.full_name as sender_name
             FROM message m
@@ -251,7 +303,21 @@ public function index(Request $request, EntityManagerInterface $em): Response
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('conversationId', $id);
         $result = $stmt->executeQuery();
-        $messages = $result->fetchAllAssociative();
+        $allMessages = $result->fetchAllAssociative();
+
+        $itemsPerPage = 20;
+        $totalMessages = count($allMessages);
+        $lastPage = max(1, (int) ceil($totalMessages / $itemsPerPage));
+
+        // If no page is requested, open the last page so the newest message is visible.
+        $requestedPage = $request->query->get('page');
+        $page = $requestedPage === null ? $lastPage : max(1, $request->query->getInt('page', 1));
+
+        $messages = $paginator->paginate(
+            $allMessages,
+            $page,
+            $itemsPerPage
+        );
 
         // Get all conversations for forward modal
         $sqlConv = "
@@ -267,15 +333,26 @@ public function index(Request $request, EntityManagerInterface $em): Response
         $resultConv = $stmtConv->executeQuery();
         $conversations = $resultConv->fetchAllAssociative();
 
+        $sqlRole = "SELECT role FROM conversation_user WHERE conversation_id = :conversationId AND user_id = :userId AND is_active = 1";
+        $stmtRole = $conn->prepare($sqlRole);
+        $stmtRole->bindValue('conversationId', $id);
+        $stmtRole->bindValue('userId', $currentUserId);
+        $resultRole = $stmtRole->executeQuery();
+        $currentUserRole = $resultRole->fetchOne();
+
         return $this->render('messaging/show.html.twig', [
             'conversation' => $conversation,
             'messages' => $messages,
             'conversations' => $conversations,
             'currentUserId' => $currentUserId,
+            'currentUserRole' => $currentUserRole,
         ]);
     }
 
     #[Route('/conversation/{id}/search', name: 'messaging_search', requirements: ['id' => '\d+'])]
+    /**
+     * Searches messages within a conversation by content and sender fields.
+     */
     public function searchMessages(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $query = trim($request->query->get('q', ''));
@@ -322,6 +399,9 @@ public function index(Request $request, EntityManagerInterface $em): Response
     }
 
     #[Route('/conversation/new', name: 'messaging_conversation_new', methods: ['GET', 'POST'])]
+    /**
+     * Creates a new personal or group conversation and adds participants.
+     */
     public function newConversation(Request $request, EntityManagerInterface $em): Response
     {
         if ($request->isMethod('POST')) {
@@ -335,20 +415,20 @@ public function index(Request $request, EntityManagerInterface $em): Response
             
             // Validate: name cannot be empty
             if (empty($name)) {
-                $this->addFlash('error', 'Conversation name cannot be empty!');
-                return $this->redirectToRoute('app_messaging');
+                $this->addFlash('error', '⚠️ Conversation name cannot be empty.');
+                return $this->redirectToRoute('messaging_conversation_new');
             }
             
             // For GROUP conversations, need at least 2 participants (excluding current user)
             if ($type === 'GROUP' && count($participantEmails) < 2) {
-                $this->addFlash('error', 'Group conversation needs at least 2 participants!');
-                return $this->redirectToRoute('app_messaging');
+                $this->addFlash('error', '⚠️ Group conversation needs at least 2 participants.');
+                return $this->redirectToRoute('messaging_conversation_new');
             }
             
             // For PERSONAL, need exactly 1 participant
             if ($type === 'PERSONAL' && count($participantEmails) != 1) {
-                $this->addFlash('error', 'Personal conversation needs exactly 1 participant!');
-                return $this->redirectToRoute('app_messaging');
+                $this->addFlash('error', '⚠️ Personal conversation needs exactly 1 participant.');
+                return $this->redirectToRoute('messaging_conversation_new');
             }
             
             // Find all participants
@@ -367,13 +447,16 @@ public function index(Request $request, EntityManagerInterface $em): Response
                 $participant = $result->fetchAssociative();
                 
                 if (!$participant) {
-                    $this->addFlash('error', 'User not found with email: ' . $email);
-                    return $this->redirectToRoute('app_messaging');
+                    $this->addFlash('error', '⚠️ User not found with email: ' . $email);
+                    return $this->redirectToRoute('messaging_conversation_new');
                 }
 
                 $participantId = (string) $participant['id'];
-                // Don't skip current user - they will be added as CREATOR
-                // Just add all participants found
+                if ($participantId === $currentUserId) {
+                    $this->addFlash('error', '⚠️ You cannot add yourself as a participant.');
+                    return $this->redirectToRoute('messaging_conversation_new');
+                }
+
                 if (!isset($participantIdMap[$participantId])) {
                     $participantIdMap[$participantId] = true;
                     $participantIds[] = $participantId;
@@ -381,13 +464,13 @@ public function index(Request $request, EntityManagerInterface $em): Response
             }
 
             if ($type === 'GROUP' && count($participantIds) < 2) {
-                $this->addFlash('error', 'Group conversation needs at least 2 other participants.');
-                return $this->redirectToRoute('app_messaging');
+                $this->addFlash('error', '⚠️ Group conversation needs at least 2 other participants.');
+                return $this->redirectToRoute('messaging_conversation_new');
             }
 
             if ($type === 'PERSONAL' && count($participantIds) !== 1) {
-                $this->addFlash('error', 'Personal conversation needs exactly 1 other participant.');
-                return $this->redirectToRoute('app_messaging');
+                $this->addFlash('error', '⚠️ Personal conversation needs exactly 1 other participant.');
+                return $this->redirectToRoute('messaging_conversation_new');
             }
             
             // Create conversation
@@ -425,6 +508,9 @@ public function index(Request $request, EntityManagerInterface $em): Response
     }
 
     #[Route('/conversation/{id}/rename', name: 'messaging_conversation_rename', methods: ['POST'])]
+    /**
+     * Renames an existing conversation after validating the new name.
+     */
     public function renameConversation(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $newName = $this->getPostString($request, 'name');
@@ -447,6 +533,9 @@ public function index(Request $request, EntityManagerInterface $em): Response
     }
 
     #[Route('/conversation/{id}/delete', name: 'messaging_conversation_delete', methods: ['POST'])]
+    /**
+     * Deletes a conversation and its related messages/participants for creators.
+     */
     public function deleteConversation(int $id, EntityManagerInterface $em): Response
     {
         // Check if user is creator
@@ -483,15 +572,73 @@ public function index(Request $request, EntityManagerInterface $em): Response
         return $this->redirectToRoute('app_messaging');
     }
 
+    #[Route('/country/{name}', name: 'api_country', methods: ['GET'])]
+    /**
+     * Fetches country details from REST Countries API for chat commands.
+     */
+    public function getCountryInfo(string $name): JsonResponse
+    {
+        $countryName = trim($name);
+        if ($countryName === '') {
+            return $this->json(['error' => 'Country name is required.'], 400);
+        }
+
+        $url = 'https://restcountries.com/v3.1/name/' . urlencode($countryName);
+
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+
+        $response = curl_exec($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        if (!is_string($response) || $response === '' || $httpCode >= 400) {
+            return $this->json(['error' => 'Country not found'], 404);
+        }
+
+        $data = json_decode($response, true);
+        if (!is_array($data) || !isset($data[0]) || !is_array($data[0])) {
+            return $this->json(['error' => 'Country not found'], 404);
+        }
+
+        $country = $data[0];
+        $currencies = $country['currencies'] ?? [];
+        $currencyData = is_array($currencies) ? array_values($currencies)[0] ?? null : null;
+        $languages = $country['languages'] ?? [];
+
+        return $this->json([
+            'name' => $country['name']['common'] ?? ucfirst($countryName),
+            'capital' => $country['capital'][0] ?? 'N/A',
+            'population' => isset($country['population']) ? number_format((int) $country['population']) : 'N/A',
+            'currency' => is_array($currencyData) ? ($currencyData['name'] ?? 'N/A') : 'N/A',
+            'currencyCode' => is_array($currencies) && count($currencies) > 0 ? array_keys($currencies)[0] : 'N/A',
+            'language' => is_array($languages) && count($languages) > 0 ? implode(', ', array_values($languages)) : 'N/A',
+            'flagPng' => $country['flags']['png'] ?? null,
+            'flagEmoji' => $country['flag'] ?? null,
+            'region' => $country['region'] ?? 'N/A',
+        ]);
+    }
+
     #[Route('/message/send', name: 'messaging_message_send', methods: ['POST'])]
+    /**
+     * Sends a text message to a conversation after validating input.
+     */
     public function sendMessage(Request $request, EntityManagerInterface $em): Response
     {
         $conversationId = (int) $this->getPostString($request, 'conversation_id', '0');
         $content = $this->getPostString($request, 'content');
 
-        if ($conversationId <= 0 || $content === '') {
-            $this->addFlash('error', 'Conversation and message content are required.');
+        if ($conversationId <= 0) {
+            $this->addFlash('error', '⚠️ Conversation is required.');
             return $this->redirectToRoute('app_messaging');
+        }
+
+        if ($content === '') {
+            $this->addFlash('error', '⚠️ Please write a message before sending.');
+            return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
         }
         
         $message = new Message();
@@ -514,7 +661,136 @@ public function index(Request $request, EntityManagerInterface $em): Response
         return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
     }
 
+    #[Route('/message/{id}/translate', name: 'messaging_message_translate', methods: ['POST'])]
+    /**
+     * Translates a message into a selected language using Gemini.
+     */
+    public function translateMessage(int $id, Request $request, EntityManagerInterface $em): JsonResponse
+    {
+        $targetLanguage = $this->getPostString($request, 'language', 'English');
+        if ($targetLanguage === '') {
+            $targetLanguage = 'English';
+        }
+
+        $conn = $em->getConnection();
+        $sql = 'SELECT content FROM message WHERE id = :id';
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('id', $id);
+        $result = $stmt->executeQuery();
+        $message = $result->fetchAssociative();
+
+        if (!$message) {
+            return $this->json(['error' => 'Message not found'], 404);
+        }
+
+        $translation = $this->gemini->translate((string) ($message['content'] ?? ''), $targetLanguage);
+
+        return $this->json(['translation' => $translation]);
+    }
+
+    #[Route('/conversation/{id}/smart-reply', name: 'messaging_smart_reply', methods: ['GET'])]
+    /**
+     * Generates a smart reply suggestion from recent conversation context.
+     */
+    public function smartReply(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $currentUserId = $this->getCurrentUserId();
+        $conn = $em->getConnection();
+
+        $sql = '
+            SELECT m.*, u.full_name as sender_name
+            FROM message m
+            LEFT JOIN users u ON m.sender_id = u.id
+            WHERE m.conversation_id = :id
+            ORDER BY m.created_at DESC
+            LIMIT 5
+        ';
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('id', $id);
+        $result = $stmt->executeQuery();
+        $messages = array_reverse($result->fetchAllAssociative());
+
+        if (count($messages) === 0) {
+            return $this->json(['error' => 'No messages to generate reply from'], 400);
+        }
+
+        $suggestion = $this->gemini->smartReply($messages, $currentUserId);
+
+        return $this->json(['suggestion' => $suggestion]);
+    }
+
+    #[Route('/message/{id}/summarize', name: 'messaging_message_summarize', methods: ['GET'])]
+    /**
+     * Generates a concise AI summary for a specific message.
+     */
+    public function summarizeMessage(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $conn = $em->getConnection();
+        $sql = 'SELECT content FROM message WHERE id = :id';
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('id', $id);
+        $result = $stmt->executeQuery();
+        $message = $result->fetchAssociative();
+
+        if (!$message) {
+            return $this->json(['error' => 'Message not found'], 404);
+        }
+
+        $summary = $this->gemini->summarize((string) ($message['content'] ?? ''));
+
+        return $this->json(['summary' => $summary]);
+    }
+
+    #[Route('/conversation/{id}/summarize', name: 'messaging_conversation_summarize', methods: ['GET'])]
+    /**
+     * Generates an AI summary for the full conversation history.
+     */
+    public function summarizeConversationWithAi(int $id, EntityManagerInterface $em): JsonResponse
+    {
+        $conn = $em->getConnection();
+
+        $sql = '
+            SELECT m.*, u.full_name as sender_name
+            FROM message m
+            LEFT JOIN users u ON m.sender_id = u.id
+            WHERE m.conversation_id = :id
+            ORDER BY m.created_at ASC
+        ';
+        $stmt = $conn->prepare($sql);
+        $stmt->bindValue('id', $id);
+        $result = $stmt->executeQuery();
+        $messages = $result->fetchAllAssociative();
+
+        if (count($messages) === 0) {
+            return $this->json(['error' => 'No messages to summarize'], 400);
+        }
+
+        $summary = $this->gemini->summarizeConversation($messages);
+
+        return $this->json(['summary' => $summary]);
+    }
+
+    #[Route('/suggest-emojis', name: 'messaging_suggest_emojis', methods: ['POST'])]
+    /**
+     * Suggests relevant emojis for current draft text using Gemini.
+     */
+    public function suggestEmojis(Request $request): JsonResponse
+    {
+        $text = $this->getPostString($request, 'text');
+
+        if (mb_strlen($text) < 10) {
+            return $this->json(['emojis' => []]);
+        }
+
+        $emojis = $this->gemini->suggestEmojis($text);
+
+        return $this->json(['emojis' => $emojis]);
+    }
+
     #[Route('/message/{id}/edit', name: 'messaging_message_edit', methods: ['POST'])]
+/**
+ * Updates an existing message content for its original sender.
+ */
 public function editMessage(int $id, Request $request, EntityManagerInterface $em): Response
 {
     $newContent = $this->getPostString($request, 'content');
@@ -554,6 +830,9 @@ public function editMessage(int $id, Request $request, EntityManagerInterface $e
 }
 
     #[Route('/message/{id}/delete', name: 'messaging_message_delete', methods: ['POST'])]
+    /**
+     * Deletes a message owned by the current user.
+     */
     public function deleteMessage(int $id, EntityManagerInterface $em): Response
     {
         $conn = $em->getConnection();
@@ -581,6 +860,9 @@ public function editMessage(int $id, Request $request, EntityManagerInterface $e
     }
 
 #[Route('/message/upload', name: 'messaging_message_upload', methods: ['POST'])]
+/**
+ * Uploads a file and posts it as a media message in the conversation.
+ */
 public function uploadFile(Request $request, EntityManagerInterface $em): Response
 {
     $conversationId = (int) $this->getPostString($request, 'conversation_id', '0');
@@ -653,6 +935,9 @@ public function uploadFile(Request $request, EntityManagerInterface $em): Respon
     return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
 }
 #[Route('/uploads/{filename}', name: 'serve_upload', methods: ['GET'])]
+/**
+ * Serves uploaded files with the proper MIME type for preview/download.
+ */
 public function serveUpload(string $filename): Response
 {
     // Get the correct file path
@@ -668,14 +953,21 @@ public function serveUpload(string $filename): Response
         }
     }
     
-    // Avoid MIME guesser dependency (php_fileinfo) by setting Content-Type from extension.
+    $mimeType = $this->getMimeTypeFromExtension($filename);
+    $disposition = str_starts_with($mimeType, 'image/')
+        ? ResponseHeaderBag::DISPOSITION_INLINE
+        : ResponseHeaderBag::DISPOSITION_ATTACHMENT;
+
     $response = new BinaryFileResponse($filePath);
-    $response->headers->set('Content-Type', $this->getMimeTypeFromExtension($filename));
-    $response->setContentDisposition(ResponseHeaderBag::DISPOSITION_INLINE, $filename);
+    $response->headers->set('Content-Type', $mimeType);
+    $response->setContentDisposition($disposition, $filename);
 
     return $response;
 }
 #[Route('/conversation/{id}/pin', name: 'messaging_conversation_pin', methods: ['POST'])]
+/**
+ * Toggles pinned status for a conversation.
+ */
 public function pinConversation(int $id, EntityManagerInterface $em): Response
 {
     $conn = $em->getConnection();
@@ -689,6 +981,9 @@ public function pinConversation(int $id, EntityManagerInterface $em): Response
 }
 
 #[Route('/conversation/{id}/archive', name: 'messaging_conversation_archive', methods: ['POST'])]
+/**
+ * Toggles archived status for a conversation.
+ */
 public function archiveConversation(int $id, EntityManagerInterface $em): Response
 {
     $conn = $em->getConnection();
@@ -702,6 +997,9 @@ public function archiveConversation(int $id, EntityManagerInterface $em): Respon
 }
 
 #[Route('/conversation/{id}/participants', name: 'messaging_conversation_participants', methods: ['GET'])]
+/**
+ * Lists conversation participants with their roles and membership metadata.
+ */
 public function getParticipants(int $id, EntityManagerInterface $em): Response
 {
     $currentUserId = $this->getCurrentUserId();
@@ -745,6 +1043,9 @@ public function getParticipants(int $id, EntityManagerInterface $em): Response
 }
 
 #[Route('/conversation/{id}/participant/add', name: 'messaging_conversation_add_participant', methods: ['POST'])]
+/**
+ * Adds or reactivates a participant in a conversation with role checks.
+ */
 public function addParticipant(int $id, Request $request, EntityManagerInterface $em): Response
 {
     $email = $this->getPostString($request, 'email');
@@ -828,6 +1129,9 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
     }
 
     #[Route('/conversation/{id}/participant/{userId}/remove', name: 'messaging_conversation_remove_participant', methods: ['POST'])]
+    /**
+     * Removes a participant from a conversation (soft delete membership).
+     */
     public function removeParticipant(int $id, string $userId, EntityManagerInterface $em): Response
     {
         $conn = $em->getConnection();
@@ -879,6 +1183,9 @@ public function addParticipant(int $id, Request $request, EntityManagerInterface
 }
 
 #[Route('/conversation/{id}/leave', name: 'messaging_conversation_leave', methods: ['POST'])]
+/**
+ * Allows a non-creator member to leave a conversation.
+ */
 public function leaveConversation(int $id, EntityManagerInterface $em): Response
 {
     $conn = $em->getConnection();
@@ -908,6 +1215,9 @@ public function leaveConversation(int $id, EntityManagerInterface $em): Response
 }
 
 #[Route('/conversation/{id}/promote/{userId}', name: 'messaging_conversation_promote', methods: ['POST'])]
+/**
+ * Promotes a conversation member to ADMIN role (creator only).
+ */
 public function promoteToAdmin(int $id, string $userId, EntityManagerInterface $em): Response
 {
     $conn = $em->getConnection();
@@ -937,6 +1247,9 @@ public function promoteToAdmin(int $id, string $userId, EntityManagerInterface $
 }
 
 #[Route('/conversation/{id}/demote/{userId}', name: 'messaging_conversation_demote', methods: ['POST'])]
+/**
+ * Demotes an ADMIN back to MEMBER role.
+ */
 public function demoteToMember(int $id, string $userId, EntityManagerInterface $em): Response
 {
     $conn = $em->getConnection();
@@ -966,6 +1279,9 @@ public function demoteToMember(int $id, string $userId, EntityManagerInterface $
 }
 
 #[Route('/admin', name: 'messaging_admin_menu')]
+/**
+ * Displays messaging administration statistics and shortcuts.
+ */
 public function adminMenu(EntityManagerInterface $em): Response
 {
     $conn = $em->getConnection();
@@ -983,6 +1299,9 @@ public function adminMenu(EntityManagerInterface $em): Response
 }
 
 #[Route('/message/forward', name: 'messaging_message_forward', methods: ['POST'])]
+/**
+ * Forwards a selected message to another conversation.
+ */
 public function forwardMessage(Request $request, EntityManagerInterface $em): Response
 {
     $messageId = (int) $request->request->get('message_id');
@@ -1030,6 +1349,9 @@ public function forwardMessage(Request $request, EntityManagerInterface $em): Re
 }
 
 #[Route('/message/reply', name: 'messaging_message_reply', methods: ['POST'])]
+/**
+ * Creates a structured reply message referencing an earlier message.
+ */
 public function replyMessage(Request $request, EntityManagerInterface $em): Response
 {
     $conversationId = (int) $request->request->get('conversation_id');
@@ -1100,6 +1422,9 @@ public function replyMessage(Request $request, EntityManagerInterface $em): Resp
 }
 
 #[Route('/conversation/{id}/export', name: 'messaging_export')]
+/**
+ * Exports conversation messages for download/sharing.
+ */
 public function exportConversation(int $id, EntityManagerInterface $em): Response
 {
     $currentUserId = $this->getCurrentUserId();
@@ -1175,6 +1500,9 @@ public function exportConversation(int $id, EntityManagerInterface $em): Respons
 }
 
     #[Route('/message/{id}/react', name: 'messaging_message_react', methods: ['POST'])]
+    /**
+     * Adds or toggles an emoji reaction on a message.
+     */
     public function addReaction(int $id, Request $request, EntityManagerInterface $em): Response
     {
         $reaction = $request->request->get('reaction');
@@ -1219,6 +1547,9 @@ public function exportConversation(int $id, EntityManagerInterface $em): Respons
     }
 
     #[Route('/message/{id}/reactions', name: 'messaging_get_reactions', methods: ['GET'])]
+    /**
+     * Returns aggregated reaction counts for a message.
+     */
     public function getReactions(int $id, EntityManagerInterface $em): JsonResponse
     {
         $conn = $em->getConnection();

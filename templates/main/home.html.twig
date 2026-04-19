@@ -97,6 +97,134 @@
             margin-bottom: 8px;
             color: #f6214b;
         }
+
+        .testimonials-section {
+            background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+        }
+
+        .testimonial-track {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            scroll-snap-type: x mandatory;
+            padding-bottom: 8px;
+            scroll-behavior: smooth;
+        }
+
+        .testimonial-track::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .testimonial-track::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 999px;
+        }
+
+        .testimonial-card {
+            min-width: min(360px, 90vw);
+            scroll-snap-align: start;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            background: #fff;
+            padding: 18px;
+            box-shadow: 0 8px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .testimonial-avatar {
+            width: 46px;
+            height: 46px;
+            border-radius: 999px;
+            object-fit: cover;
+            border: 2px solid #e2e8f0;
+        }
+
+        .testimonial-form {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            background: #fff;
+            padding: 22px;
+            margin-top: 20px;
+        }
+
+        .testimonial-nav button {
+            border: 1px solid #d1d5db;
+            background: #fff;
+            width: 42px;
+            height: 42px;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+
+        .testimonial-nav button:hover {
+            background: #f8fafc;
+        }
+
+        /* Carousel Styles */
+        .carousel-container {
+            position: relative;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .carousel-wrapper {
+            overflow: hidden;
+            border-radius: 16px;
+        }
+
+        .testimonial-slider-track {
+            display: flex;
+            position: relative;
+            width: 100%;
+            transform: translateX(0);
+            transition: transform 0.65s cubic-bezier(0.22, 0.61, 0.36, 1);
+            will-change: transform;
+        }
+
+        .testimonial-slide {
+            min-width: 100%;
+            flex: 0 0 100%;
+            opacity: 1;
+        }
+
+        .testimonial-card {
+            min-width: 100%;
+        }
+
+        .carousel-indicators {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 20px;
+            padding: 0;
+        }
+
+        .carousel-indicators button {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            border: none;
+            background: #cbd5e1;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.3s ease;
+        }
+
+        .carousel-indicators button.active {
+            background: #1D4ED8;
+            transform: scale(1.2);
+        }
+
+        .carousel-indicators button:hover {
+            background: #94a3b8;
+        }
+
+        .no-testimonials {
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            background: #fff;
+            padding: 40px;
+            text-align: center;
+            color: #475569;
+        }
     </style>
 {% endblock %}
 
@@ -112,6 +240,17 @@
         <a href="{{ path('app_activities_index') }}" class="primary-btn text-uppercase">Explore Activities</a>
     </div>
 </section>
+
+{% for message in app.flashes('success') %}
+    <div class="container mt-4">
+        <div class="alert alert-success mb-0">{{ message }}</div>
+    </div>
+{% endfor %}
+{% for message in app.flashes('error') %}
+    <div class="container mt-4">
+        <div class="alert alert-danger mb-0">{{ message }}</div>
+    </div>
+{% endfor %}
 
 <section class="section-gap">
     <div class="container">
@@ -169,6 +308,102 @@
     </div>
 </section>
 
+<section class="section-gap testimonials-section pt-0">
+    <div class="container">
+        <div class="row d-flex justify-content-center mb-40">
+            <div class="menu-content pb-20 col-lg-8">
+                <div class="title text-center">
+                    <h1 class="mb-10">Traveler Testimonials</h1>
+                    <p>Real testimonials published by your community, with newest entries first.</p>
+                </div>
+            </div>
+        </div>
+
+        {% if testimonialFeed|default([]) is not empty %}
+            <div class="carousel-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div style="flex: 1;"></div>
+                    <div class="testimonial-nav d-flex" style="gap: 8px;">
+                        <button type="button" id="carousel-prev" aria-label="Previous testimonial">&#8592;</button>
+                        <button type="button" id="carousel-next" aria-label="Next testimonial">&#8594;</button>
+                    </div>
+                </div>
+
+                <div class="carousel-wrapper">
+                    <div class="testimonial-slider-track" id="testimonial-slider-track">
+                        {% for item in testimonialFeed|default([]) %}
+                            {% set testimonialUser = item.user %}
+                            {% set testimonialName = testimonialUser ? (testimonialUser.fullName ?: testimonialUser.email) : 'Unknown traveler' %}
+                            {% set avatar = (testimonialUser and testimonialUser.profilePicture) ? asset('uploads/profiles/' ~ testimonialUser.profilePicture) : ('https://api.dicebear.com/7.x/avataaars/svg?seed=' ~ testimonialName|url_encode) %}
+                            <article class="testimonial-slide{% if loop.first %} active{% endif %}" data-testimonial-id="{{ item.id }}">
+                                <div class="testimonial-card">
+                                    <div class="d-flex align-items-center mb-3" style="gap: 12px;">
+                                        <img class="testimonial-avatar" src="{{ avatar }}" alt="{{ testimonialName }}">
+                                        <div style="flex: 1;">
+                                            <p class="mb-0" style="font-weight: 700; color: #0f172a;">{{ testimonialName }}</p>
+                                            <p class="mb-0" style="font-size: 12px; color: #64748b;">
+                                                {% if item.updatedAt %}
+                                                    Updated {{ item.updatedAt|date('Y-m-d H:i') }}
+                                                {% else %}
+                                                    {{ item.createdAt|date('Y-m-d H:i') }}
+                                                {% endif %}
+                                            </p>
+                                            {% if item.moderationSeverity == 'mild' %}
+                                                <span style="display: inline-flex; margin-top: 4px; border-radius: 999px; background: #fff7ed; color: #c2410c; border: 1px solid #fdba74; padding: 2px 8px; font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;">Filtered</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if item.hiddenByModeration %}
+                                        <p class="mb-0" style="font-size: 15px; color: #be123c; line-height: 1.55; font-weight: 600;">This testimonial was removed from public view due to policy violation.</p>
+                                    {% else %}
+                                        <p class="mb-0" style="font-size: 15px; color: #0f172a; line-height: 1.55;">{{ item.displayContent|slice(0, 300) }}</p>
+                                    {% endif %}
+                                </div>
+                            </article>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {% if testimonialFeed|length > 1 %}
+                    <div class="carousel-indicators" id="carousel-indicators">
+                        {% for item in testimonialFeed %}
+                            <button type="button" class="{% if loop.first %}active{% endif %}" aria-label="Go to testimonial {{ loop.index }}" data-slide-index="{{ loop.index0 }}"></button>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        {% else %}
+            <div class="no-testimonials">
+                <p class="mb-0">No testimonials yet. Be the first to share your experience.</p>
+            </div>
+        {% endif %}
+
+        <div class="testimonial-form">
+            {% if app.user and userTestimonial %}
+                <h4 class="mb-3">Update your testimonial</h4>
+                <p class="mb-3" style="color: #64748b;">Edit your existing testimonial to keep it fresh and up-to-date.</p>
+            {% else %}
+                <h4 class="mb-3">Share your testimonial</h4>
+                <p class="mb-3" style="color: #64748b;">Your profile picture, name, timestamp, and message will appear in the testimonial carousel.</p>
+            {% endif %}
+            <form method="post" action="{{ path('app_home') }}">
+                <input type="hidden" name="action" value="submit_testimonial">
+                <input type="hidden" name="_token" value="{{ csrf_token('submit_home_testimonial') }}">
+                <div class="form-group mb-3">
+                    <textarea name="testimonialContent" rows="4" class="form-control" maxlength="1200" placeholder="Tell us about your stay, activities, or experience..." required>{% if userTestimonial %}{{ userTestimonial.content }}{% endif %}</textarea>
+                </div>
+                {% if app.user %}
+                    <button type="submit" class="primary-btn text-uppercase">
+                        {% if userTestimonial %}Update Testimonial{% else %}Publish Testimonial{% endif %}
+                    </button>
+                {% else %}
+                    <a href="{{ path('app_login') }}" class="primary-btn text-uppercase">Login To Publish</a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+</section>
+
 <section class="section-gap pt-0">
     <div class="container">
         <div class="row">
@@ -193,5 +428,97 @@
         </div>
     </div>
 </section>
+
+<script>
+    (function () {
+        const sliderTrack = document.getElementById('testimonial-slider-track');
+        const items = sliderTrack ? Array.from(sliderTrack.querySelectorAll('.testimonial-slide')) : [];
+        const prevBtn = document.getElementById('carousel-prev');
+        const nextBtn = document.getElementById('carousel-next');
+        const indicators = document.querySelectorAll('.carousel-indicators button');
+        
+        if (items.length === 0) return;
+
+        let currentIndex = 0;
+        let autoPlayTimer = null;
+        const AUTO_PLAY_INTERVAL = 5000; // 5 seconds
+
+        function updateIndicators() {
+            indicators.forEach((indicator, i) => {
+                indicator.classList.toggle('active', i === currentIndex);
+            });
+        }
+
+        function showSlide(index) {
+            currentIndex = (index + items.length) % items.length;
+            items.forEach((item, i) => {
+                item.classList.toggle('active', i === currentIndex);
+            });
+            sliderTrack.style.transform = `translateX(-${currentIndex * 100}%)`;
+            updateIndicators();
+        }
+
+        function nextSlide() {
+            showSlide(currentIndex + 1);
+            resetAutoPlay();
+        }
+
+        function prevSlide() {
+            showSlide(currentIndex - 1);
+            resetAutoPlay();
+        }
+
+        function goToSlide(index) {
+            showSlide(index);
+            resetAutoPlay();
+        }
+
+        function startAutoPlay() {
+            if (items.length < 2) {
+                return;
+            }
+            autoPlayTimer = setInterval(() => {
+                nextSlide();
+            }, AUTO_PLAY_INTERVAL);
+        }
+
+        function resetAutoPlay() {
+            if (autoPlayTimer) {
+                clearInterval(autoPlayTimer);
+            }
+            startAutoPlay();
+        }
+
+        if (prevBtn) {
+            prevBtn.addEventListener('click', prevSlide);
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', nextSlide);
+        }
+
+        indicators.forEach((indicator) => {
+            indicator.addEventListener('click', function () {
+                const slideIndex = parseInt(this.dataset.slideIndex, 10);
+                goToSlide(slideIndex);
+            });
+        });
+
+        showSlide(0);
+        startAutoPlay();
+
+        const carouselWrapper = document.querySelector('.carousel-wrapper');
+        if (carouselWrapper) {
+            carouselWrapper.addEventListener('mouseenter', () => {
+                if (autoPlayTimer) {
+                    clearInterval(autoPlayTimer);
+                }
+            });
+
+            carouselWrapper.addEventListener('mouseleave', () => {
+                startAutoPlay();
+            });
+        }
+    })();
+</script>
 
 {% endblock %}

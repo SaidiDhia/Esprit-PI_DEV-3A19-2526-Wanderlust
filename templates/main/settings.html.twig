@@ -1,6 +1,6 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Account Settings — Wanderlust{% endblock %}
+{% block title %}Account Settings - Wanderlust{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto px-4 py-12">
@@ -8,47 +8,35 @@
     <p class="text-muted-foreground mb-10">Manage your account preferences and security settings.</p>
 
     {% for message in app.flashes('success') %}
-        <div class="bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-3 mb-8 animate-in fade-in slide-in-from-top-4">
-            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+        <div class="bg-primary/10 border border-primary/20 text-primary px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-3 mb-8">
             {{ message }}
         </div>
     {% endfor %}
 
     {% for message in app.flashes('error') %}
-        <div class="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-3 mb-8 animate-in fade-in slide-in-from-top-4">
-            <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <div class="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-xl text-sm font-medium flex items-center gap-3 mb-8">
             {{ message }}
         </div>
     {% endfor %}
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-        <!-- Sidebar Navigation -->
         <div class="md:col-span-1 space-y-1">
-            <button onclick="switchTab('profile')" class="tab-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all bg-primary text-white" id="tab-profile-btn">
-                Profile Information
-            </button>
-            <button onclick="switchTab('security')" class="tab-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all text-muted-foreground hover:bg-secondary/50 hover:text-foreground" id="tab-security-btn">
-                Security & 2FA
-            </button>
+            <button type="button" onclick="switchTab('profile')" class="tab-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all bg-primary text-white" id="tab-profile-btn">Profile Information</button>
+            <button type="button" onclick="switchTab('security')" class="tab-btn w-full text-left px-4 py-2.5 rounded-lg text-sm font-bold transition-all text-muted-foreground hover:bg-secondary/50 hover:text-foreground" id="tab-security-btn">Security and 2FA</button>
         </div>
 
-        <!-- Forms Content -->
         <div class="md:col-span-2">
-            <!-- Profile Form -->
             <div id="tab-profile" class="tab-content">
                 <form method="post" enctype="multipart/form-data" class="space-y-8">
                     <input type="hidden" name="action" value="update_profile">
-                    
+
                     <div class="flex items-center gap-6 pb-8 border-b border-border">
-                        <div id="avatar-preview" class="w-24 h-24 rounded-full bg-secondary/30 border-2 border-border flex items-center justify-center overflow-hidden relative group">
+                        <div class="w-24 h-24 rounded-full bg-secondary/30 border-2 border-border flex items-center justify-center overflow-hidden relative group">
                             {% if user.profilePicture %}
                                 <img src="{{ asset('uploads/profiles/' ~ user.profilePicture) }}" id="preview-img" class="absolute inset-0 w-full h-full object-cover">
                             {% else %}
                                 <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ user.fullName }}" id="preview-img" class="absolute inset-0 w-full h-full object-cover">
                             {% endif %}
-                            <div class="absolute inset-0 bg-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer">
-                                <svg class="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
-                            </div>
                             <input type="file" name="profilePicture" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(event)">
                         </div>
                         <div>
@@ -66,74 +54,132 @@
                             <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Email Address</label>
                             <input type="email" name="email" value="{{ user.email }}" class="w-full bg-secondary/30 border border-border rounded-xl px-4 py-2.5 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required>
                         </div>
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Phone Number</label>
-                            <input type="tel" name="phoneNumber" value="{{ user.phoneNumber }}" class="w-full bg-secondary/30 border border-border rounded-xl px-4 py-2.5 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">2FA Method</label>
-                            <select name="tfaMethod" class="w-full bg-secondary/30 border border-border rounded-xl px-4 py-2.5 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
-                                {% for method in tfaMethods %}
-                                    <option value="{{ method.value }}" {{ user.tfaMethod == method ? 'selected' : '' }}>
-                                        {{ method.getLabel() }}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
                     </div>
 
                     <div class="pt-4">
-                        <button type="submit" class="bg-primary hover:bg-primary/90 text-white font-bold px-8 py-2.5 rounded-xl transition-all shadow-sm">
-                            Save Changes
-                        </button>
+                        <button type="submit" class="bg-primary hover:bg-primary/90 text-white font-bold px-8 py-2.5 rounded-xl transition-all shadow-sm">Save Changes</button>
                     </div>
                 </form>
             </div>
 
-            <!-- Security Form -->
             <div id="tab-security" class="tab-content hidden">
-                <form method="post" class="space-y-6">
-                    <input type="hidden" name="action" value="change_password">
-                    
-                    <div class="space-y-2">
-                        <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Current Password</label>
-                        <div class="relative group">
-                            <input type="password" name="currentPassword" id="currentPassword" class="w-full bg-secondary/30 border border-border rounded-xl px-4 pr-12 py-2.5 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required>
-                            <button type="button" onclick="togglePassword('currentPassword', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors focus:outline-none">
-                                <svg class="w-4 h-4 eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                <svg class="w-4 h-4 eye-off-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                            </button>
-                        </div>
-                    </div>
+                <div class="mb-6 inline-flex rounded-xl border border-border bg-secondary/20 p-1">
+                    <button type="button" onclick="switchSecurityPanel('tfa')" id="security-panel-tfa-btn" class="security-panel-btn rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider bg-primary text-white">2FA Methods</button>
+                    <button type="button" onclick="switchSecurityPanel('password')" id="security-panel-password-btn" class="security-panel-btn rounded-lg px-4 py-2 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-secondary/50">Change Password</button>
+                </div>
 
-                    <div class="space-y-2">
-                        <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">New Password</label>
-                        <div class="relative group">
-                            <input type="password" name="newPassword" id="newPassword" class="w-full bg-secondary/30 border border-border rounded-xl px-4 pr-12 py-2.5 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required minlength="6">
-                            <button type="button" onclick="togglePassword('newPassword', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors focus:outline-none">
-                                <svg class="w-4 h-4 eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                <svg class="w-4 h-4 eye-off-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                            </button>
-                        </div>
-                    </div>
+                <div id="security-panel-tfa" class="security-panel-content">
+                    <form method="post" enctype="multipart/form-data" class="space-y-6">
+                        <input type="hidden" name="action" value="update_tfa_settings">
+                        <input type="hidden" name="faceReferenceImageData" id="faceReferenceImageData">
 
-                    <div class="space-y-2">
-                        <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Confirm New Password</label>
-                        <div class="relative group">
-                            <input type="password" name="confirmPassword" id="confirmPassword" class="w-full bg-secondary/30 border border-border rounded-xl px-4 pr-12 py-2.5 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required>
-                            <button type="button" onclick="togglePassword('confirmPassword', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors focus:outline-none">
-                                <svg class="w-4 h-4 eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                                <svg class="w-4 h-4 eye-off-icon hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                            </button>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Phone Number</label>
+                                <input type="tel" name="phoneNumber" value="{{ user.phoneNumber }}" class="w-full bg-secondary/30 border border-border rounded-xl px-4 py-2.5 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" placeholder="+216XXXXXXXX">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">2FA Method</label>
+                                <select name="tfaMethod" class="w-full bg-secondary/30 border border-border rounded-xl px-4 py-2.5 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all">
+                                    {% for method in tfaMethods %}
+                                        <option value="{{ method.value }}" {{ user.tfaMethod == method ? 'selected' : '' }}>{{ method.getLabel() }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="pt-4">
-                        <button type="submit" class="bg-primary hover:bg-primary/90 text-white font-bold px-8 py-2.5 rounded-xl transition-all shadow-sm">
-                            Update Password
-                        </button>
-                    </div>
-                </form>
+                        <div class="rounded-xl border border-border bg-secondary/10 p-4 space-y-3">
+                            <h3 class="text-sm font-bold text-foreground">Authenticator App</h3>
+                            {% if user.tfaSecret and otpQrCodeUrl %}
+                                <div class="flex flex-col items-center gap-3 rounded-lg border border-border bg-background p-4">
+                                    <img src="{{ otpQrCodeUrl }}" alt="Authenticator QR code" class="h-52 w-52 rounded-xl border border-border bg-white p-2">
+                                    <p class="text-xs font-semibold text-muted-foreground text-center">Scan this QR code with your authenticator app.</p>
+                                </div>
+                            {% endif %}
+                            {% if user.tfaSecret %}
+                                <div class="rounded-lg border border-border bg-background px-3 py-2">
+                                    <p class="text-xs text-muted-foreground">Manual secret</p>
+                                    <p class="mt-1 break-all font-mono text-xs text-foreground">{{ user.tfaSecret }}</p>
+                                </div>
+                            {% else %}
+                                <p class="text-xs text-muted-foreground">No authenticator secret generated yet.</p>
+                            {% endif %}
+                            <button type="submit" name="generateAppSecret" value="1" class="rounded-lg border border-border bg-background px-4 py-2 text-xs font-bold text-foreground hover:bg-secondary/40">Generate new app secret</button>
+                        </div>
+
+                        <div class="rounded-xl border border-border bg-secondary/10 p-4 space-y-4">
+                            <div>
+                                <h3 class="text-sm font-bold text-foreground">Face ID Enrollment</h3>
+                                <p class="text-xs text-muted-foreground mt-1">Upload a reference image or capture your face from camera.</p>
+                            </div>
+
+                            {% if user.faceReferenceImage %}
+                                <img src="{{ asset('uploads/profiles/' ~ user.faceReferenceImage) }}" id="face-reference-preview" alt="Face reference" class="h-28 w-28 rounded-lg object-cover border border-border">
+                            {% else %}
+                                <img src="" id="face-reference-preview" alt="Face reference" class="hidden h-28 w-28 rounded-lg object-cover border border-border">
+                            {% endif %}
+
+                            <input type="file" name="faceReferenceImage" accept="image/*" class="w-full text-sm text-muted-foreground file:mr-3 file:rounded-lg file:border-0 file:bg-primary file:px-4 file:py-2 file:text-xs file:font-bold file:text-white">
+
+                            <div class="rounded-xl border border-border overflow-hidden">
+                                <video id="face-enroll-video" class="h-56 w-full bg-slate-100 object-cover" autoplay playsinline muted></video>
+                                <canvas id="face-enroll-canvas" class="hidden"></canvas>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-3">
+                                <button type="button" id="start-face-enroll-camera" class="rounded-xl border border-border bg-background py-2 text-sm font-semibold text-foreground">Start Camera</button>
+                                <button type="button" id="capture-face-enroll" class="rounded-xl border border-primary bg-primary py-2 text-sm font-semibold text-white">Capture Face</button>
+                            </div>
+                        </div>
+
+                        <div class="pt-2">
+                            <button type="submit" class="bg-primary hover:bg-primary/90 text-white font-bold px-8 py-2.5 rounded-xl transition-all shadow-sm">Save 2FA Settings</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="security-panel-password" class="security-panel-content hidden">
+                    <form method="post" class="space-y-6">
+                        <input type="hidden" name="action" value="change_password">
+
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Current Password</label>
+                            <div class="relative group">
+                                <input type="password" name="currentPassword" id="currentPassword" class="w-full bg-secondary/30 border border-border rounded-xl px-4 pr-12 py-2.5 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required>
+                                <button type="button" onclick="togglePassword('currentPassword', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors focus:outline-none">
+                                    <span class="eye-icon">Show</span>
+                                    <span class="eye-off-icon hidden">Hide</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">New Password</label>
+                            <div class="relative group">
+                                <input type="password" name="newPassword" id="newPassword" class="w-full bg-secondary/30 border border-border rounded-xl px-4 pr-12 py-2.5 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required minlength="6">
+                                <button type="button" onclick="togglePassword('newPassword', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors focus:outline-none">
+                                    <span class="eye-icon">Show</span>
+                                    <span class="eye-off-icon hidden">Hide</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold text-muted-foreground uppercase tracking-wider">Confirm New Password</label>
+                            <div class="relative group">
+                                <input type="password" name="confirmPassword" id="confirmPassword" class="w-full bg-secondary/30 border border-border rounded-xl px-4 pr-12 py-2.5 text-foreground font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all" required>
+                                <button type="button" onclick="togglePassword('confirmPassword', this)" class="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-primary transition-colors focus:outline-none">
+                                    <span class="eye-icon">Show</span>
+                                    <span class="eye-off-icon hidden">Hide</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="pt-4">
+                            <button type="submit" class="bg-primary hover:bg-primary/90 text-white font-bold px-8 py-2.5 rounded-xl transition-all shadow-sm">Update Password</button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -157,26 +203,87 @@
     }
 
     function switchTab(tab) {
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+        document.querySelectorAll('.tab-content').forEach((el) => el.classList.add('hidden'));
         document.getElementById('tab-' + tab).classList.remove('hidden');
-        
-        document.querySelectorAll('.tab-btn').forEach(el => {
+
+        document.querySelectorAll('.tab-btn').forEach((el) => {
             el.classList.remove('bg-primary', 'text-white');
             el.classList.add('text-muted-foreground', 'hover:bg-secondary/50', 'hover:text-foreground');
         });
-        
+
         const activeBtn = document.getElementById('tab-' + tab + '-btn');
         activeBtn.classList.remove('text-muted-foreground', 'hover:bg-secondary/50', 'hover:text-foreground');
         activeBtn.classList.add('bg-primary', 'text-white');
     }
 
+    function switchSecurityPanel(panel) {
+        document.querySelectorAll('.security-panel-content').forEach((el) => el.classList.add('hidden'));
+        document.getElementById('security-panel-' + panel).classList.remove('hidden');
+
+        document.querySelectorAll('.security-panel-btn').forEach((el) => {
+            el.classList.remove('bg-primary', 'text-white');
+            el.classList.add('text-muted-foreground', 'hover:bg-secondary/50');
+        });
+
+        const active = document.getElementById('security-panel-' + panel + '-btn');
+        active.classList.remove('text-muted-foreground', 'hover:bg-secondary/50');
+        active.classList.add('bg-primary', 'text-white');
+    }
+
     function previewImage(event) {
         const reader = new FileReader();
-        reader.onload = function(){
+        reader.onload = function () {
             const output = document.getElementById('preview-img');
             output.src = reader.result;
         };
         reader.readAsDataURL(event.target.files[0]);
     }
+
+    (function initFaceCapture() {
+        const video = document.getElementById('face-enroll-video');
+        const canvas = document.getElementById('face-enroll-canvas');
+        const startBtn = document.getElementById('start-face-enroll-camera');
+        const captureBtn = document.getElementById('capture-face-enroll');
+        const hiddenInput = document.getElementById('faceReferenceImageData');
+        const preview = document.getElementById('face-reference-preview');
+
+        if (!video || !canvas || !startBtn || !captureBtn || !hiddenInput || !preview) {
+            return;
+        }
+
+        async function startCamera() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                alert('Camera is not supported in this browser.');
+                return;
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+                video.srcObject = stream;
+            } catch (error) {
+                alert('Unable to access camera. Please allow camera permission.');
+            }
+        }
+
+        function captureFace() {
+            if (!video.videoWidth || !video.videoHeight) {
+                alert('Start camera before capturing your face.');
+                return;
+            }
+
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+            hiddenInput.value = dataUrl;
+            preview.src = dataUrl;
+            preview.classList.remove('hidden');
+            captureBtn.textContent = 'Face Captured';
+        }
+
+        startBtn.addEventListener('click', startCamera);
+        captureBtn.addEventListener('click', captureFace);
+    })();
 </script>
 {% endblock %}

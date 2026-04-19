@@ -2,112 +2,153 @@
 
 namespace App\Service;
 
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
-/**
- * Service IA utilisant l'API Groq (gratuit, 30 req/min, modèles Llama 3).
- * Clé gratuite : https://console.groq.com/keys
- */
 class GeminiService
 {
-    // Groq API — format OpenAI-compatible
-    private const API_URL = 'https://api.groq.com/openai/v1/chat/completions';
-    private const MODEL   = 'llama-3.1-8b-instant'; // Rapide, gratuit, très capable
+    private const MODEL_ENDPOINT = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=';
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
+        #[Autowire('%env(string:GEMINI_API_KEY)%')]
         private readonly string $apiKey,
-    ) {}
+        #[Autowire('%env(default::GEMINI_API_KEY_BACKUP)%')]
+        private readonly string $backupApiKey = '',
+    ) {
+    }
 
-    /**
-     * Génère du texte via Groq à partir d'un prompt.
-     */
-    public function generate(string $prompt): string
+    public function generateResponse(string $prompt): string
     {
-        if (empty($this->apiKey) || $this->apiKey === 'your_key_here') {
-            throw new \RuntimeException('Clé API non configurée. Ajoutez GEMINI_API_KEY (clé Groq) dans .env.local');
+        $normalizedPrompt = trim($prompt);
+        if ($normalizedPrompt === '') {
+            return 'Error: Prompt cannot be empty.';
         }
 
-        $response = $this->httpClient->request('POST', self::API_URL, [
-            'headers' => [
-                'Authorization' => 'Bearer ' . $this->apiKey,
-                'Content-Type'  => 'application/json',
-            ],
-            'json' => [
-                'model'       => self::MODEL,
-                'messages'    => [
-                    ['role' => 'user', 'content' => $prompt]
+        $keys = array_values(array_filter([$this->apiKey, $this->backupApiKey], static fn ($key) => is_string($key) && trim($key) !== ''));
+        if (count($keys) === 0) {
+            return 'Error: Gemini API key is not configured.';
+        }
+
+        $requestBody = [
+            'contents' => [
+                [
+                    'parts' => [
+                        ['text' => $normalizedPrompt],
+                    ],
                 ],
-                'temperature' => 0.7,
-                'max_tokens'  => 600,
             ],
-        ]);
+        ];
 
-        $statusCode = $response->getStatusCode();
+        $lastError = null;
+        foreach ($keys as $key) {
+            try {
+                $response = $this->httpClient->request('POST', self::MODEL_ENDPOINT . trim($key), [
+                    'json' => $requestBody,
+                    'timeout' => 30,
+                ]);
 
-        if ($statusCode === 429) {
-            throw new \RuntimeException('Limite de requêtes atteinte (429). Attendez quelques secondes.');
+                $data = $response->toArray();
+                if (isset($data['candidates'][0]['content']['parts'][0]['text'])) {
+                    return trim((string) $data['candidates'][0]['content']['parts'][0]['text']);
+                }
+
+                $lastError = 'No response generated';
+            } catch (\Throwable $exception) {
+                $lastError = $exception->getMessage();
+            }
         }
 
-        $data = $response->toArray();
+        return 'Error: ' . ($lastError ?? 'No response generated');
+    }
 
-        return $data['choices'][0]['message']['content']
-            ?? throw new \RuntimeException('Réponse Groq invalide.');
+    public function translate(string $text, string $targetLanguage): string
+    {
+        $prompt = sprintf(
+            "Translate this message to %s. Only return the translation, nothing else:\n\n%s",
+            trim($targetLanguage) !== '' ? trim($targetLanguage) : 'English',
+            trim($text)
+        );
+
+        return $this->generateResponse($prompt);
     }
 
     /**
-     * Génère une description enrichie pour une activité.
+     * @param array<int, array<string, mixed>> $recentMessages
      */
-    public function enhanceActivityDescription(string $titre, string $typeActivite, string $categorie): string
+    public function smartReply(array $recentMessages, string $currentUserId): string
     {
-        $prompt = <<<PROMPT
-Tu es un expert en activités de plein air et de voyage en Tunisie.
-Génère une description attractive et détaillée (3-4 phrases, maximum 200 mots) pour l'activité suivante :
+        $context = "Here's a conversation history. Generate a helpful, natural reply:\n\n";
 
-- Titre : {$titre}
-- Type : {$typeActivite}
-- Catégorie : {$categorie}
+        foreach ($recentMessages as $msg) {
+            $senderId = isset($msg['sender_id']) ? (string) $msg['sender_id'] : '';
+            $sender = $senderId === $currentUserId ? 'Me' : ((string) ($msg['sender_name'] ?? 'User'));
+            $content = trim((string) ($msg['content'] ?? ''));
+            if ($content !== '') {
+                $context .= $sender . ': ' . $content . "\n";
+            }
+        }
 
-La description doit :
-- Être en français, claire et engageante
-- Décrire l'expérience vécue par le participant
-- Mentionner les sensations et l'environnement
-- Être adaptée à une plateforme de réservation touristique
-- Ne pas mentionner de prix
+        $context .= "\nGenerate a single, natural reply to continue this conversation:";
 
-Réponds UNIQUEMENT avec la description, sans introduction ni explication.
-PROMPT;
+        return $this->generateResponse($context);
+    }
 
-        return trim($this->generate($prompt));
+    public function summarize(string $text): string
+    {
+        $prompt = sprintf(
+            "Summarize this message in 2-3 bullet points. Be concise:\n\n%s",
+            trim($text)
+        );
+
+        return $this->generateResponse($prompt);
     }
 
     /**
-     * Génère la liste des équipements nécessaires pour un event selon ses activités.
-     *
-     * @param array<string> $activitiesInfo  Tableau de chaînes "titre - type - categorie"
+     * @param array<int, array<string, mixed>> $messages
      */
-    public function enhanceEventEquipment(array $activitiesInfo): string
+    public function summarizeConversation(array $messages, int $limit = 20): string
     {
-        $activitiesText = implode("\n- ", $activitiesInfo);
+        $context = "Summarize this conversation in 3-5 bullet points:\n\n";
 
-        $prompt = <<<PROMPT
-Tu es un conseiller expert en événements outdoor et de voyage aventure.
-Pour un événement qui comprend ces activités :
-- {$activitiesText}
+        $start = max(0, count($messages) - $limit);
+        for ($i = $start; $i < count($messages); $i++) {
+            $msg = $messages[$i];
+            $sender = (string) ($msg['sender_name'] ?? 'User');
+            $content = (string) ($msg['content'] ?? '');
+            $type = strtoupper((string) ($msg['message_type'] ?? 'TEXT'));
 
-Génère une liste complète et pratique des équipements et matériels nécessaires pour les participants.
+            if ($type === 'IMAGE') {
+                $content = '[Image]';
+            } elseif ($type === 'VIDEO') {
+                $content = '[Video]';
+            } elseif ($type === 'AUDIO') {
+                $content = '[Audio]';
+            } elseif ($type === 'FILE') {
+                $content = '[File]';
+            }
 
-Format souhaité :
-- Commence par une phrase d'introduction courte
-- Liste les équipements par catégories (ex: Vêtements, Équipements sportifs, Sécurité, Divers)
-- Utilise des emojis pour chaque item
-- Ajoute des instructions importantes ou conseils de sécurité à la fin
-- Maximum 250 mots
-- Langue : français
+            $context .= $sender . ': ' . trim($content) . "\n";
+        }
 
-Réponds UNIQUEMENT avec le contenu formaté, sans introduction ni explication supplémentaire.
-PROMPT;
+        $context .= "\nProvide a concise summary with 3-5 bullet points:";
 
-        return trim($this->generate($prompt));
+        return $this->generateResponse($context);
+    }
+
+    /**
+     * @return string[]
+     */
+    public function suggestEmojis(string $text): array
+    {
+        $prompt = sprintf(
+            "Based on this message: '%s', suggest 3 relevant emojis. Return ONLY the emojis separated by spaces, nothing else.",
+            trim($text)
+        );
+
+        $response = $this->generateResponse($prompt);
+        $emojis = array_values(array_filter(explode(' ', trim($response)), static fn ($emoji) => trim($emoji) !== ''));
+
+        return array_slice($emojis, 0, 3);
     }
 }

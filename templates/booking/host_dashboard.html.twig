@@ -4,6 +4,7 @@
 
 {% block stylesheets %}
     {{ parent() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         .relative { position: relative; }
         .absolute { position: absolute; }
@@ -88,6 +89,7 @@
         .border-white\/15 { border-color: rgba(255,255,255,.15); }
         .border-slate-100 { border-color: #e2e8f0; }
         .border-slate-200 { border-color: #cbd5e1; }
+        .border-rose-500 { border-color: #e11d48; }
         .border-t { border-top: 1px solid #e2e8f0; }
         .border-b { border-bottom: 1px solid #e2e8f0; }
         .border-dashed { border-style: dashed; }
@@ -155,6 +157,55 @@
         @media (min-width: 1280px) {
             .xl\:grid-cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
             .xl\:grid-cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+        }
+
+        .location-suggestions {
+            position: absolute;
+            z-index: 1200;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            max-height: 210px;
+            overflow-y: auto;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #ffffff;
+            box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+        }
+
+        .location-suggestion-item {
+            width: 100%;
+            display: block;
+            text-align: left;
+            border: 0;
+            border-bottom: 1px solid #e2e8f0;
+            background: transparent;
+            padding: 10px 12px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            color: #0f172a;
+        }
+
+        .location-suggestion-item:last-child {
+            border-bottom: 0;
+        }
+
+        .location-suggestion-item:hover {
+            background: #f8fafc;
+        }
+
+        .location-map {
+            height: 220px;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        .location-map-preview {
+            width: 100%;
+            min-height: 240px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            overflow: hidden;
         }
     </style>
 {% endblock %}
@@ -289,6 +340,7 @@
                                         </form>
                                         <form method="post" action="{{ path('app_booking_host_booking_reject', { id: booking.id }) }}">
                                             <input type="hidden" name="_token" value="{{ csrf_token('booking_host_reject_' ~ booking.id) }}">
+                                            <input type="text" name="reason" placeholder="Reject reason (optional)" class="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs text-slate-700">
                                             <button type="submit" class="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white">Reject</button>
                                         </form>
                                     </div>
@@ -308,7 +360,7 @@
                     <div class="mt-6 grid gap-4">
                         <div>
                             <input name="title" type="text" value="{{ formData.title }}" placeholder="Place title" class="w-full rounded-2xl border border-border px-4 py-3" required>
-                            {% if formErrors.title is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.title }}</p>{% endif %}
+                                {% if formErrors.title is defined %}<p class="js-inline-validation-error mt-1 text-xs font-semibold text-rose-600">{{ formErrors.title }}</p>{% endif %}
                         </div>
                         <div>
                             <textarea name="description" rows="4" placeholder="Short description" class="w-full rounded-2xl border border-border px-4 py-3">{{ formData.description }}</textarea>
@@ -316,7 +368,7 @@
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
                                 <input name="city" type="text" value="{{ formData.city }}" placeholder="City" class="w-full rounded-2xl border border-border px-4 py-3" required>
-                                {% if formErrors.city is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.city }}</p>{% endif %}
+                                {% if formErrors.city is defined %}<p class="js-inline-validation-error mt-1 text-xs font-semibold text-rose-600">{{ formErrors.city }}</p>{% endif %}
                             </div>
                             <div>
                                 <input name="category" type="text" value="{{ formData.category }}" placeholder="Category" class="w-full rounded-2xl border border-border px-4 py-3">
@@ -325,17 +377,17 @@
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
                                 <input name="price_per_day" type="number" step="0.01" min="0" value="{{ formData.price_per_day }}" placeholder="Price per day" class="w-full rounded-2xl border border-border px-4 py-3" required>
-                                {% if formErrors.price_per_day is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.price_per_day }}</p>{% endif %}
+                                {% if formErrors.price_per_day is defined %}<p class="js-inline-validation-error mt-1 text-xs font-semibold text-rose-600">{{ formErrors.price_per_day }}</p>{% endif %}
                             </div>
                             <div>
-                                <input name="capacity" type="number" min="1" value="{{ formData.capacity }}" placeholder="Capacity" class="w-full rounded-2xl border border-border px-4 py-3" required>
-                                {% if formErrors.capacity is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.capacity }}</p>{% endif %}
+                                <input name="capacity" type="number" min="1" value="{{ formData.capacity }}" placeholder="Rooms" class="w-full rounded-2xl border border-border px-4 py-3" required>
+                                {% if formErrors.capacity is defined %}<p class="js-inline-validation-error mt-1 text-xs font-semibold text-rose-600">{{ formErrors.capacity }}</p>{% endif %}
                             </div>
                         </div>
                         <div class="grid gap-4 md:grid-cols-2">
                             <div>
                                 <input name="max_guests" type="number" min="1" value="{{ formData.max_guests }}" placeholder="Max guests" class="w-full rounded-2xl border border-border px-4 py-3" required>
-                                {% if formErrors.max_guests is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.max_guests }}</p>{% endif %}
+                                {% if formErrors.max_guests is defined %}<p class="js-inline-validation-error mt-1 text-xs font-semibold text-rose-600">{{ formErrors.max_guests }}</p>{% endif %}
                             </div>
                             <div data-image-uploader>
                                 <div class="flex items-center gap-3">
@@ -344,23 +396,17 @@
                                 </div>
                                 <input name="images[]" type="file" accept="image/*" multiple required class="js-image-input hidden">
                                 <div class="js-image-preview-grid mt-2 grid grid-cols-4 gap-2"></div>
-                                {% if formErrors.images is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.images }}</p>{% endif %}
+                                {% if formErrors.images is defined %}<p class="js-inline-validation-error mt-1 text-xs font-semibold text-rose-600">{{ formErrors.images }}</p>{% endif %}
                             </div>
                         </div>
-                        <div>
-                            <input name="address" type="text" value="{{ formData.address }}" placeholder="Address" class="w-full rounded-2xl border border-border px-4 py-3" required>
-                            {% if formErrors.address is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.address }}</p>{% endif %}
+                        <div class="relative" data-location-picker="host-create">
+                            <input id="host-place-create-address" name="address" type="text" value="{{ formData.address }}" placeholder="Address" autocomplete="off" class="w-full rounded-2xl border border-border px-4 py-3" required>
+                            <div id="host-place-create-suggestions" class="location-suggestions hidden"></div>
+                            {% if formErrors.address is defined %}<p class="js-inline-validation-error mt-1 text-xs font-semibold text-rose-600">{{ formErrors.address }}</p>{% endif %}
                         </div>
-                        <div class="grid gap-4 md:grid-cols-2">
-                            <div>
-                                <input name="latitude" type="number" step="0.00000001" min="-90" max="90" value="{{ formData.latitude }}" placeholder="Latitude" class="w-full rounded-2xl border border-border px-4 py-3" required>
-                                {% if formErrors.latitude is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.latitude }}</p>{% endif %}
-                            </div>
-                            <div>
-                                <input name="longitude" type="number" step="0.00000001" min="-180" max="180" value="{{ formData.longitude }}" placeholder="Longitude" class="w-full rounded-2xl border border-border px-4 py-3" required>
-                                {% if formErrors.longitude is defined %}<p class="mt-1 text-xs font-semibold text-rose-600">{{ formErrors.longitude }}</p>{% endif %}
-                            </div>
-                        </div>
+                        <input id="host-place-create-latitude" name="latitude" type="hidden" value="{{ formData.latitude }}" required>
+                        <input id="host-place-create-longitude" name="longitude" type="hidden" value="{{ formData.longitude }}" required>
+                        <div id="host-place-create-map" class="location-map"></div>
                     </div>
                     <button class="mt-6 w-full rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Submit for review</button>
                 </form>
@@ -478,25 +524,24 @@
                 <input id="host-place-edit-price" type="number" min="0.01" step="0.01" name="price_per_day" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
             </div>
             <div class="space-y-1">
-                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Capacity</label>
+                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Rooms</label>
                 <input id="host-place-edit-capacity" type="number" min="1" name="capacity" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                <p class="js-inline-validation-error mt-1 text-xs font-semibold text-rose-600"></p>
             </div>
             <div class="space-y-1">
                 <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Max Guests</label>
                 <input id="host-place-edit-max-guests" type="number" min="1" name="max_guests" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                <p class="js-inline-validation-error mt-1 text-xs font-semibold text-rose-600"></p>
             </div>
             <div class="space-y-1 md:col-span-2">
                 <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Address</label>
                 <input id="host-place-edit-address" type="text" name="address" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
+                <p class="js-inline-validation-error mt-1 text-xs font-semibold text-rose-600"></p>
+                <div id="host-place-edit-suggestions" class="location-suggestions hidden"></div>
             </div>
-            <div class="space-y-1">
-                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Latitude</label>
-                <input id="host-place-edit-latitude" type="text" name="latitude" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
-            </div>
-            <div class="space-y-1">
-                <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Longitude</label>
-                <input id="host-place-edit-longitude" type="text" name="longitude" required class="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm">
-            </div>
+            <input id="host-place-edit-latitude" type="hidden" name="latitude" required>
+            <input id="host-place-edit-longitude" type="hidden" name="longitude" required>
+            <div id="host-place-edit-map" class="location-map-preview md:col-span-2"></div>
             <div class="space-y-2 md:col-span-2" data-image-uploader>
                 <label class="text-xs font-bold uppercase tracking-wider text-muted-foreground">Add More Images</label>
                 <div class="flex items-center gap-3">
@@ -530,9 +575,12 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
     const bookingStatusChartData = {{ bookingStatusChartData|json_encode|raw }};
     const earningsChartData = {{ earningsChartData|json_encode|raw }};
+    const locationSearchUrl = '{{ path('app_booking_location_search') }}';
+    const tunisiaBounds = L.latLngBounds([30.1, 7.4], [37.6, 11.8]);
 
     const hostPlaceEditModal = document.getElementById('host-place-edit-modal');
     const hostPlaceEditForm = document.getElementById('host-place-edit-form');
@@ -673,6 +721,34 @@
     }
 
     function initHostValidation() {
+        const ensureInlineErrorElement = (field) => {
+            let errorElement = field.nextElementSibling;
+            if (!errorElement || !errorElement.classList.contains('js-inline-validation-error')) {
+                errorElement = document.createElement('p');
+                errorElement.className = 'js-inline-validation-error mt-1 text-xs font-semibold text-rose-600';
+                field.insertAdjacentElement('afterend', errorElement);
+            }
+
+            return errorElement;
+        };
+
+        const setInlineError = (field, message) => {
+            const errorElement = ensureInlineErrorElement(field);
+            errorElement.textContent = message;
+            field.classList.add('border-rose-500');
+            field.setAttribute('aria-invalid', 'true');
+        };
+
+        const clearInlineError = (field) => {
+            const errorElement = field.nextElementSibling;
+            if (errorElement && errorElement.classList.contains('js-inline-validation-error')) {
+                errorElement.textContent = '';
+            }
+
+            field.classList.remove('border-rose-500');
+            field.removeAttribute('aria-invalid');
+        };
+
         document.querySelectorAll('form[data-validate-form]').forEach((form) => {
             if (form.dataset.validationInitialized === '1') {
                 return;
@@ -687,28 +763,180 @@
                 }
 
                 const eventName = field.type === 'file' || field.tagName === 'SELECT' ? 'change' : 'input';
-                field.addEventListener(eventName, () => field.setCustomValidity(''));
-                field.addEventListener('blur', () => field.setCustomValidity(''));
+                field.addEventListener(eventName, () => {
+                    field.setCustomValidity('');
+                    clearInlineError(field);
+                });
+                field.addEventListener('blur', () => {
+                    field.setCustomValidity('');
+                    clearInlineError(field);
+                });
             });
 
             form.addEventListener('submit', (event) => {
-                let firstInvalid = null;
+                let hasInvalid = false;
 
                 fields.forEach((field) => {
                     if (field.type === 'hidden') {
                         return;
                     }
 
-                    if (!field.checkValidity() && !firstInvalid) {
-                        firstInvalid = field;
+                    if (!field.checkValidity()) {
+                        hasInvalid = true;
+                        setInlineError(field, field.validationMessage || 'Please correct this field.');
                     }
                 });
 
-                if (firstInvalid) {
+                if (hasInvalid) {
                     event.preventDefault();
-                    firstInvalid.reportValidity();
                 }
             });
+        });
+    }
+
+    function initLocationPicker(config) {
+        if (typeof L === 'undefined') {
+            return;
+        }
+
+        const addressInput = document.getElementById(config.addressId);
+        const latitudeInput = document.getElementById(config.latitudeId);
+        const longitudeInput = document.getElementById(config.longitudeId);
+        const suggestionsBox = document.getElementById(config.suggestionsId);
+        const mapContainer = document.getElementById(config.mapId);
+
+        if (!addressInput || !latitudeInput || !longitudeInput || !suggestionsBox || !mapContainer) {
+            return;
+        }
+
+        const initialLat = parseFloat(latitudeInput.value) || 36.8065;
+        const initialLng = parseFloat(longitudeInput.value) || 10.1815;
+        const map = L.map(mapContainer, {
+            maxBounds: tunisiaBounds,
+            maxBoundsViscosity: 1.0,
+            minZoom: 6,
+            maxZoom: 19,
+        }).setView([initialLat, initialLng], 12);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '&copy; OpenStreetMap contributors',
+        }).addTo(map);
+
+        const marker = L.marker([initialLat, initialLng], { draggable: true }).addTo(map);
+
+        const updateCoordinates = (lat, lng) => {
+            const boundedLat = Math.min(37.6, Math.max(30.1, Number(lat)));
+            const boundedLng = Math.min(11.8, Math.max(7.4, Number(lng)));
+            latitudeInput.value = boundedLat.toFixed(8);
+            longitudeInput.value = boundedLng.toFixed(8);
+            marker.setLatLng([boundedLat, boundedLng]);
+            map.setView([boundedLat, boundedLng], 14);
+        };
+
+        marker.on('dragend', () => {
+            const position = marker.getLatLng();
+            updateCoordinates(position.lat, position.lng);
+        });
+
+        let debounceTimer = null;
+
+        const clearSuggestions = () => {
+            suggestionsBox.innerHTML = '';
+            suggestionsBox.classList.add('hidden');
+        };
+
+        const renderSuggestions = (items) => {
+            suggestionsBox.innerHTML = '';
+            if (!Array.isArray(items) || items.length === 0) {
+                clearSuggestions();
+                return;
+            }
+
+            items.forEach((item) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'location-suggestion-item';
+                button.textContent = item.name;
+                button.addEventListener('click', () => {
+                    addressInput.value = item.name;
+                    updateCoordinates(parseFloat(item.latitude), parseFloat(item.longitude));
+                    clearSuggestions();
+                });
+                suggestionsBox.appendChild(button);
+            });
+
+            suggestionsBox.classList.remove('hidden');
+        };
+
+        const mapNominatimItems = (items) => {
+            if (!Array.isArray(items)) {
+                return [];
+            }
+
+            return items
+                .map((item) => ({
+                    name: item.name || item.display_name || '',
+                    latitude: item.latitude || item.lat || '',
+                    longitude: item.longitude || item.lon || '',
+                }))
+                .filter((item) => item.name && item.latitude && item.longitude);
+        };
+
+        const searchLocations = async (query) => {
+            try {
+                const response = await fetch(locationSearchUrl + '?q=' + encodeURIComponent(query), {
+                    headers: { 'Accept': 'application/json' },
+                });
+
+                let items = [];
+                if (response.ok) {
+                    const data = await response.json();
+                    items = mapNominatimItems(data.items || []);
+                }
+                renderSuggestions(items);
+            } catch (error) {
+                clearSuggestions();
+            }
+        };
+
+        addressInput.addEventListener('input', () => {
+            const query = addressInput.value.trim();
+            if (debounceTimer) {
+                window.clearTimeout(debounceTimer);
+            }
+
+            if (query.length < 2) {
+                clearSuggestions();
+                return;
+            }
+
+            debounceTimer = window.setTimeout(() => searchLocations(query), 250);
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!addressInput.closest('[data-location-picker]')?.contains(event.target)) {
+                clearSuggestions();
+            }
+        });
+
+        mapContainer.addEventListener('mouseenter', () => map.invalidateSize());
+        window.setTimeout(() => map.invalidateSize(), 250);
+
+        latitudeInput.addEventListener('change', () => {
+            const lat = parseFloat(latitudeInput.value);
+            const lng = parseFloat(longitudeInput.value);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                updateCoordinates(lat, lng);
+            }
+        });
+
+        longitudeInput.addEventListener('change', () => {
+            const lat = parseFloat(latitudeInput.value);
+            const lng = parseFloat(longitudeInput.value);
+            if (Number.isFinite(lat) && Number.isFinite(lng)) {
+                updateCoordinates(lat, lng);
+            }
         });
     }
 
@@ -735,6 +963,10 @@
         resetHostUploadersInContainer(hostPlaceEditModal);
         hostPlaceEditModal.classList.remove('hidden');
         hostPlaceEditModal.classList.add('flex');
+
+        if (window.hostEditLocationPicker && typeof window.hostEditLocationPicker.refresh === 'function') {
+            window.hostEditLocationPicker.refresh();
+        }
     }
 
     function closeEditHostPlaceModal() {
@@ -802,5 +1034,19 @@
     initHostCharts();
     initHostImageUploaders();
     initHostValidation();
+    initLocationPicker({
+        addressId: 'host-place-create-address',
+        latitudeId: 'host-place-create-latitude',
+        longitudeId: 'host-place-create-longitude',
+        suggestionsId: 'host-place-create-suggestions',
+        mapId: 'host-place-create-map',
+    });
+    window.hostEditLocationPicker = initLocationPicker({
+        addressId: 'host-place-edit-address',
+        latitudeId: 'host-place-edit-latitude',
+        longitudeId: 'host-place-edit-longitude',
+        suggestionsId: 'host-place-edit-suggestions',
+        mapId: 'host-place-edit-map',
+    });
 </script>
 {% endblock %}
