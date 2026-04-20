@@ -1,136 +1,218 @@
 {% extends 'base.html.twig' %}
-
-{% block title %}{{ action }} Product - WanderLust{% endblock %}
+{% block title %}{{ action }} Product — WanderLust{% endblock %}
 
 {% block stylesheets %}
-    {{ parent() }}
-    <style>
-        .module-hero {
-            background: linear-gradient(rgba(0, 0, 0, 0.50), rgba(0, 0, 0, 0.50)), url('{{ asset('adventure/img/slider5.jpg') }}') center center/cover no-repeat;
-            padding: 120px 0 80px;
-            color: #fff;
-            margin-bottom: 50px;
-        }
-
-        .form-card {
-            border: 1px solid #eee;
-            border-radius: 12px;
-            background: #fff;
-            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
-            padding: 22px;
-        }
-
-        .preview-wrap {
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            background: #f8fafc;
-            padding: 10px;
-        }
-
-        .preview-wrap img {
-            width: 100%;
-            height: 220px;
-            object-fit: cover;
-            border-radius: 8px;
-        }
-    </style>
+<style>
+:root{--blue-primary:#1D4ED8;--blue-light:#3B82F6;--blue-pale:#EFF6FF;--blue-dark:#1e3a8a;--gray-50:#F9FAFB;--gray-100:#F3F4F6;--gray-200:#E5E7EB;--gray-400:#9CA3AF;--gray-500:#6B7280;--gray-700:#374151;--gray-900:#111827;--shadow-sm:0 1px 3px rgba(0,0,0,0.06);--shadow-md:0 4px 16px rgba(0,0,0,0.10);--shadow-lg:0 8px 32px rgba(29,78,216,0.12);--font-display:'Playfair Display',serif;--font-body:'DM Sans',sans-serif;}
+.mp-topnav{background:#1565C0;position:sticky;top:0;z-index:90;box-shadow:0 2px 12px rgba(0,0,0,0.2);}
+.mp-topnav-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;gap:12px;}
+.mp-filter-bar{display:flex;align-items:center;padding:10px 24px;background:#0D47A1;gap:12px;flex-wrap:wrap;}
+.mp-nav-btn{background:rgba(255,255,255,0.15);color:white;text-decoration:none;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;font-family:var(--font-body);border:none;cursor:pointer;transition:background 0.2s;white-space:nowrap;display:inline-block;}
+.mp-nav-btn:hover{background:rgba(255,255,255,0.25);color:white;}
+.mp-nav-back{background:rgba(255,255,255,0.2);}.mp-cart-badge{background:rgba(255,255,255,0.2);font-weight:700;}
+.mp-input{padding:9px 16px;border-radius:20px;border:none;font-size:13px;font-family:var(--font-body);outline:none;flex:1;}
+.mp-select{padding:9px 14px;border-radius:20px;border:none;font-size:13px;font-family:var(--font-body);outline:none;background:white;cursor:pointer;}
+.mp-btn-primary{background:var(--blue-primary);color:white;padding:9px 20px;border-radius:20px;font-size:13px;font-weight:600;font-family:var(--font-body);border:none;cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s;white-space:nowrap;}
+.mp-btn-primary:hover{background:var(--blue-dark);transform:translateY(-1px);color:white;}
+.mp-btn-ghost{background:rgba(255,255,255,0.15);color:white;padding:9px 16px;border-radius:20px;font-size:13px;font-weight:500;font-family:var(--font-body);border:1px solid rgba(255,255,255,0.3);cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s;}
+.mp-btn-ghost:hover{background:rgba(255,255,255,0.25);color:white;}
+.mp-btn-outline{background:white;color:var(--blue-primary);padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;font-family:var(--font-body);border:1.5px solid var(--blue-primary);cursor:pointer;text-decoration:none;display:inline-block;transition:all 0.2s;}
+.mp-btn-outline:hover{background:var(--blue-pale);}
+.mp-btn-danger{background:#EF4444;color:white;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;font-family:var(--font-body);border:none;cursor:pointer;transition:all 0.2s;}
+.mp-btn-danger:hover{background:#DC2626;}
+.mp-btn-disabled{background:#BDBDBD;color:white;padding:8px 14px;border-radius:8px;font-size:12px;font-weight:600;border:none;cursor:not-allowed;}
+.mp-page-content{max-width:1200px;margin:0 auto;padding:32px 24px;}
+.mp-product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:20px;}
+.mp-product-card{background:white;border-radius:16px;border:1px solid var(--gray-200);overflow:hidden;box-shadow:var(--shadow-sm);transition:all 0.3s;display:flex;flex-direction:column;}
+.mp-product-card:hover{transform:translateY(-5px);box-shadow:var(--shadow-lg);border-color:rgba(29,78,216,0.2);}
+.mp-card-img{position:relative;height:160px;overflow:hidden;background:var(--gray-100);}
+.mp-card-img img{width:100%;height:100%;object-fit:cover;transition:transform 0.3s;}
+.mp-product-card:hover .mp-card-img img{transform:scale(1.04);}
+.mp-card-img-placeholder{display:flex;align-items:center;justify-content:center;height:100%;font-size:48px;background:linear-gradient(135deg,var(--gray-100),var(--gray-200));}
+.mp-type-badge{position:absolute;top:10px;left:10px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.mp-type-badge.sale{background:#E8F5E9;color:#2E7D32;}.mp-type-badge.rent{background:#E3F2FD;color:#1565C0;}
+.mp-card-body{padding:14px 16px;flex:1;}.mp-card-category{font-size:11px;color:var(--gray-400);margin-bottom:5px;}
+.mp-card-title{font-family:var(--font-display);font-size:15px;font-weight:700;color:var(--gray-900);margin-bottom:6px;line-height:1.3;}
+.mp-card-desc{font-size:12px;color:var(--gray-500);line-height:1.5;margin-bottom:8px;}
+.mp-card-price{font-family:var(--font-display);font-size:20px;font-weight:800;color:#2E7D32;}
+.mp-stock{font-size:11px;font-weight:600;margin-top:4px;}.mp-stock.in-stock{color:#10B981;}.mp-stock.out-stock{color:#EF4444;}
+.mp-card-footer{padding:12px 16px;border-top:1px solid var(--gray-100);display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.mp-card-footer-actions{display:flex;gap:10px;padding:14px;}
+.mp-btn-action{flex:1;text-align:center;padding:10px 14px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;border:none;cursor:pointer;transition:all 0.25s;display:inline-flex;align-items:center;justify-content:center;gap:6px;}
+.mp-btn-edit{background:linear-gradient(135deg,#3B82F6,#1D4ED8);color:white;box-shadow:0 4px 12px rgba(59,130,246,0.25);}
+.mp-btn-edit:hover{transform:translateY(-2px);}
+.mp-btn-delete{background:linear-gradient(135deg,#EF4444,#DC2626);color:white;box-shadow:0 4px 12px rgba(239,68,68,0.25);}
+.mp-btn-delete:hover{transform:translateY(-2px);}
+.mp-btn-action:active{transform:scale(0.97);}
+.mp-qty-input{width:60px;padding:7px 8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:var(--font-body);text-align:center;outline:none;}
+.mp-qty-input:focus{border-color:var(--blue-light);}
+.mp-empty{text-align:center;padding:80px 40px;color:var(--gray-400);}
+.mp-empty h3{font-family:var(--font-display);font-size:22px;color:var(--gray-700);margin-bottom:8px;}
+.mp-empty p{font-size:14px;margin:0;}
+.flash{padding:12px 20px;border-radius:10px;font-size:14px;font-weight:500;margin-bottom:12px;}
+.flash-success{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7;}
+.flash-error{background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;}
+.mp-status-badge{padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block;}
+.mp-status-badge.confirmed{background:#D1FAE5;color:#065F46;}
+.mp-status-badge.pending{background:#FEF3C7;color:#92400E;}
+.mp-status-badge.cancelled{background:#FEE2E2;color:#991B1B;}
+.mp-form-card{background:white;border-radius:16px;border:1px solid var(--gray-200);padding:36px;box-shadow:var(--shadow-sm);}
+.mp-form-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:16px;border-bottom:1px solid var(--gray-100);}
+.mp-form-header h2{font-family:var(--font-display);font-size:22px;font-weight:700;color:var(--gray-900);margin:0;}
+.mp-form-group{margin-bottom:18px;}
+.mp-form-label{display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:7px;}
+.mp-form-input{width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--gray-700);outline:none;transition:border-color 0.2s,box-shadow 0.2s;box-sizing:border-box;}
+.mp-form-input:focus{border-color:var(--blue-light);box-shadow:0 0 0 3px rgba(59,130,246,0.12);}
+.mp-payment-option{display:flex;gap:14px;align-items:center;padding:16px;border-radius:12px;border:2px solid var(--gray-200);cursor:pointer;transition:all 0.2s;}
+.mp-payment-option:hover{border-color:var(--blue-light);background:var(--blue-pale);}
+.mp-payment-option.selected{border-color:var(--blue-primary);background:var(--blue-pale);}
+.mp-payment-option input[type="radio"]{margin:0;}
+.mp-stat-card{background:linear-gradient(135deg,var(--blue-primary),var(--blue-dark));border-radius:16px;padding:28px 24px;color:white;text-align:center;box-shadow:var(--shadow-md);transition:transform 0.2s;}
+.mp-stat-card:hover{transform:translateY(-4px);}
+.mp-stat-icon{font-size:32px;margin-bottom:8px;}
+.mp-stat-value{font-family:var(--font-display);font-size:40px;font-weight:900;line-height:1;margin-bottom:6px;color:#93C5FD;}
+.mp-stat-label{font-size:13px;opacity:0.85;}
+.stats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:20px;}
+@media(max-width:1200px){.stats-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr);}.mp-product-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));}.mp-page-content{padding:20px 16px;}.mp-topnav-inner{flex-wrap:wrap;}.mp-filter-bar{flex-direction:column;}.mp-form-card{padding:20px;}}
+</style>
 {% endblock %}
 
 {% block content %}
-<section class="module-hero">
-    <div class="container">
-        <div class="d-flex flex-wrap" style="gap:10px; margin-bottom:14px;">
-            <a href="{{ path('app_marketplace_seller') }}" class="genric-btn default-border">Back To Seller</a>
-        </div>
-        <h1 class="mb-10">{{ action == 'Add' ? 'Add Product' : 'Edit Product' }}</h1>
-        <p class="mb-0">Fill in product details and publish it to your seller catalog.</p>
-    </div>
-</section>
 
-<section class="section-gap pt-0">
-    <div class="container" style="max-width: 900px;">
+<div class="mp-page-content" style="max-width:700px;">
+    <div class="mp-form-card">
+        <div class="mp-form-header">
+            <h2>{{ action == 'Add' ? '➕ Add New Product' : '✏️ Edit Product' }}</h2>
+            <a href="{{ path('app_marketplace_seller') }}" class="mp-btn-ghost">← Back</a>
+        </div>
+
         {% for msg in app.flashes('success') %}
-            <div class="alert alert-success">{{ msg }}</div>
+            <div class="flash flash-success">{{ msg }}</div>
         {% endfor %}
         {% for msg in app.flashes('error') %}
-            <div class="alert alert-danger">{{ msg }}</div>
+            <div class="flash flash-error">{{ msg }}</div>
         {% endfor %}
 
-        <form method="POST" action="{{ action == 'Add' ? path('app_marketplace_product_add') : path('app_marketplace_product_edit', {id: product.id}) }}" class="form-card">
-            <div class="row">
-                <div class="col-md-12 mb-3">
-                    <label>Title</label>
-                    <input type="text" name="title" required placeholder="Sahara Backpack 60L" value="{{ product ? product.title : '' }}" class="form-control">
-                </div>
+        <form method="POST" action="{{ action == 'Add' ? path('app_marketplace_product_add') : path('app_marketplace_product_edit', {id: product.id}) }}">
 
-                <div class="col-md-6 mb-3">
-                    <label>Type</label>
-                    <select name="type" required class="form-control">
+            <div class="mp-form-group">
+                <label class="mp-form-label">Product Title *</label>
+                <input type="text" name="title" required class="mp-form-input"
+                       placeholder="e.g. Sahara Backpack 60L"
+                       value="{{ product ? product.title : '' }}">
+            </div>
+
+            <div class="mp-form-group">
+                <label class="mp-form-label">Description *</label>
+                <textarea name="description" required class="mp-form-input" rows="4"
+                          placeholder="Describe your product...">{{ product ? product.description : '' }}</textarea>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Type *</label>
+                    <select name="type" required class="mp-form-input">
                         <option value="For Sale" {{ product and product.type == 'For Sale' ? 'selected' : '' }}>For Sale</option>
-                        <option value="For Rent" {{ product and product.type == 'For Rent' ? 'selected' : '' }}>For Rent</option>
+                        <option value="For Rent"  {{ product and product.type == 'For Rent'  ? 'selected' : '' }}>For Rent</option>
                     </select>
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label>Category</label>
-                    <select name="category" required class="form-control">
-                        <option value="camping" {{ product and product.category == 'camping' ? 'selected' : '' }}>Camping</option>
-                        <option value="hiking" {{ product and product.category == 'hiking' ? 'selected' : '' }}>Hiking</option>
-                        <option value="beach" {{ product and product.category == 'beach' ? 'selected' : '' }}>Beach</option>
-                        <option value="nature" {{ product and product.category == 'nature' ? 'selected' : '' }}>Nature</option>
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Category *</label>
+                    <select name="category" required class="mp-form-input">
+                        <option value="camping" {{ product and product.category == 'camping' ? 'selected' : '' }}>⛺ Camping</option>
+                        <option value="hiking"  {{ product and product.category == 'hiking'  ? 'selected' : '' }}>🥾 Hiking</option>
+                        <option value="beach"   {{ product and product.category == 'beach'   ? 'selected' : '' }}>🏖️ Beach</option>
+                        <option value="nature"  {{ product and product.category == 'nature'  ? 'selected' : '' }}>🌿 Nature</option>
                     </select>
                 </div>
+            </div>
 
-                <div class="col-md-6 mb-3">
-                    <label>Price (TND)</label>
-                    <input type="number" name="price" required step="0.01" min="0" value="{{ product ? product.price : '' }}" class="form-control">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Price (TND) *</label>
+                    <input type="number" name="price" required class="mp-form-input"
+                           placeholder="0.00" step="0.01" min="0"
+                           value="{{ product ? product.price : '' }}">
                 </div>
-                <div class="col-md-6 mb-3">
-                    <label>Quantity</label>
-                    <input type="number" name="quantity" required min="0" value="{{ product ? product.quantity : '' }}" class="form-control">
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Quantity *</label>
+                    <input type="number" name="quantity" required class="mp-form-input"
+                           placeholder="0" min="0"
+                           value="{{ product ? product.quantity : '' }}">
                 </div>
+            </div>
 
-                <div class="col-md-12 mb-3">
-                    <label>Description</label>
-                    <textarea name="description" required rows="4" placeholder="Describe your product..." class="form-control">{{ product ? product.description : '' }}</textarea>
-                </div>
+            <div class="mp-form-group">
+    <label class="mp-form-label">Product Image</label>
+    <input type="file" id="imageFileInput" accept="image/*" class="mp-form-input" style="padding:8px;">
+    <input type="hidden" name="image" id="imageUrlInput" value="{{ product ? product.image : '' }}">
+    <div id="uploadStatus" style="font-size:12px; color:var(--gray-500); margin-top:6px;"></div>
+    <div id="imgPreview" style="margin-top:10px; display:{{ product and product.image ? 'block' : 'none' }};">
+        <img id="previewImg" src="{{ product ? product.image : '' }}"
+             style="max-width:200px; border-radius:8px; border:1px solid var(--gray-200);"
+             onerror="this.style.display='none'">
+    </div>
+</div>
 
-                <div class="col-md-12 mb-3">
-                    <label>Image URL (optional)</label>
-                    <input type="url" name="image" id="imageUrlInput" placeholder="https://..." value="{{ product ? product.image : '' }}" class="form-control">
-                </div>
-
-                <div class="col-md-12 mb-3">
-                    <div id="imgPreview" class="preview-wrap {{ product and product.image ? '' : 'd-none' }}">
-                        <img id="previewImg" src="{{ product ? product.image : '' }}" alt="Product preview" onerror="this.style.display='none'">
-                    </div>
-                </div>
-
-                <div class="col-md-12 d-flex justify-content-end" style="gap:10px;">
-                    <a href="{{ path('app_marketplace_seller') }}" class="genric-btn default-border">Cancel</a>
-                    <button type="submit" class="primary-btn text-uppercase" style="border:none;">{{ action == 'Add' ? 'Add Product' : 'Save Changes' }}</button>
-                </div>
+            <div style="display:flex; gap:12px; margin-top:24px;">
+                <button type="submit" class="mp-btn-primary" style="flex:1; padding:14px; font-size:15px;">
+                    {{ action == 'Add' ? '➕ Add Product' : '💾 Save Changes' }}
+                </button>
+                <a href="{{ path('app_marketplace_seller') }}" lass="mp-btn-ghost"
+                   style="padding:14px 24px; background:var(--gray-100); color:var(--gray-700); border-color:var(--gray-200);">Cancel</a>
             </div>
         </form>
     </div>
-</section>
+</div>
+
 {% endblock %}
 
 {% block javascripts %}
 <script>
-document.getElementById('imageUrlInput')?.addEventListener('input', function() {
-    const preview = document.getElementById('imgPreview');
-    const img = document.getElementById('previewImg');
+const CLOUD_NAME = 'dvxulayhm';
+const UPLOAD_PRESET = 'cloudinarypreset1';
 
-    if (!preview || !img) {
-        return;
+// Store original values on page load
+const originalValues = {};
+document.querySelectorAll('input[name], select[name], textarea[name]').forEach(el => {
+    originalValues[el.name] = el.value;
+});
+
+// Block submit if nothing changed (only in Edit mode)
+const isEdit = '{{ action }}' === 'Edit';
+document.querySelector('form').addEventListener('submit', function(e) {
+    if (!isEdit) return;
+    let changed = false;
+    document.querySelectorAll('input[name], select[name], textarea[name]').forEach(el => {
+        if (el.value !== originalValues[el.name]) changed = true;
+    });
+    if (!changed) {
+        e.preventDefault();
+        alert('⚠️ You have not changed anything. Please modify at least one field before saving.');
     }
+});
 
-    if (this.value) {
-        img.src = this.value;
-        preview.classList.remove('d-none');
-        img.style.display = 'block';
-    } else {
-        preview.classList.add('d-none');
+// Cloudinary upload
+document.getElementById('imageFileInput').addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
+    const status = document.getElementById('uploadStatus');
+    status.textContent = '⏳ Uploading...';
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('upload_preset', UPLOAD_PRESET);
+    try {
+        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
+        const data = await res.json();
+        document.getElementById('imageUrlInput').value = data.secure_url;
+        document.getElementById('previewImg').src = data.secure_url;
+        document.getElementById('imgPreview').style.display = 'block';
+        status.textContent = '✅ Image uploaded!';
+        status.style.color = '#059669';
+    } catch(e) {
+        status.textContent = '❌ Upload failed. Try again.';
+        status.style.color = '#EF4444';
     }
 });
 </script>

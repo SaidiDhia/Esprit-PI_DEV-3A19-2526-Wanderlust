@@ -5,184 +5,166 @@
 {% block stylesheets %}
 {{ parent() }}
 <style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        --card-shadow: 0 10px 40px rgba(0,0,0,0.1);
-        --hover-shadow: 0 20px 60px rgba(0,0,0,0.15);
-        --border-radius: 20px;
-    }
-
-    /* Hero Section */
-    .form-hero {
-        background: var(--primary-gradient);
-        border-radius: 0 0 60px 60px;
-        padding: 3rem 0;
-        margin-bottom: 3rem;
+    .module-hero {
         position: relative;
+        color: #fff;
+        padding: 120px 0 80px;
+        margin-bottom: 40px;
         overflow: hidden;
     }
 
-    .form-hero::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320"><path fill="rgba(255,255,255,0.1)" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,122.7C672,117,768,139,864,154.7C960,171,1056,181,1152,165.3C1248,149,1344,107,1392,85.3L1440,64L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path></svg>') no-repeat bottom;
-        background-size: cover;
-        opacity: 0.1;
+    .module-hero h1,
+    .module-hero h2,
+    .module-hero h3,
+    .module-hero h4,
+    .module-hero h5,
+    .module-hero h6,
+    .module-hero p {
+        color: #fff !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
     }
 
-    .hero-title {
-        font-size: 3.5rem;
-        font-weight: 800;
-        background: linear-gradient(135deg, #fff 0%, #f0f0f0 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        animation: fadeInUp 0.8s ease;
-    }
-
-    .hero-subtitle {
-        color: rgba(255,255,255,0.95);
-        font-size: 1.2rem;
-        font-weight: 300;
-        animation: fadeInUp 0.8s ease 0.2s both;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Form Card */
-    .form-card {
-        border: none;
-        border-radius: var(--border-radius);
-        box-shadow: var(--card-shadow);
-        overflow: hidden;
-        transition: all 0.3s ease;
-        background: white;
-        position: relative;
-        max-width: 700px;
-        margin: 0 auto;
-    }
-
-    .form-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: var(--primary-gradient);
-        transform: scaleX(0);
-        transition: transform 0.3s ease;
-    }
-
-    .form-card:hover::before {
-        transform: scaleX(1);
-    }
-
-    .form-card:hover {
-        transform: translateY(-5px);
-        box-shadow: var(--hover-shadow);
-    }
-
-    .form-header {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 2rem;
-        border-bottom: 1px solid rgba(0,0,0,0.05);
-        position: relative;
-    }
-
-    .form-body {
-        padding: 3rem;
-    }
-
-    /* Form Controls Modernes */
-    .form-group-modern {
-        margin-bottom: 2rem;
-        position: relative;
-    }
-
-    .form-control-modern {
-        width: 100%;
-        padding: 15px 20px;
-        border: 2px solid #e9ecef;
-        border-radius: 15px;
-        font-size: 1rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        background: white;
-    }
-
-    .form-control-modern:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 5px rgba(102, 126, 234, 0.15);
-        outline: none;
-        transform: translateY(-2px);
-    }
-
-    .form-control-modern.is-valid {
-        border-color: #28a745;
-        background-image: none;
-    }
-
-    .form-control-modern.is-invalid {
-        border-color: #dc3545;
-        background-image: none;
-    }
-
-    textarea.form-control-modern {
-        resize: vertical;
-        min-height: 120px;
-    }
-
-    .form-select-modern {
-        appearance: none;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236c757d' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-        background-repeat: no-repeat;
-        background-position: right 20px center;
-        background-size: 16px;
-        padding-right: 50px !important;
-    }
-
-    /* Floating Labels Modernes */
-    .form-floating-modern {
-        position: relative;
-    }
-
-    .form-floating-modern .form-control-modern {
-        padding-top: 1.8rem;
-        padding-bottom: 0.6rem;
-    }
-
-    .form-floating-modern label {
-        position: absolute;
-        left: 20px;
-        top: 50%;
-        transform: translateY(-50%);
-        transition: all 0.3s ease;
-        color: #6c757d;
-        pointer-events: none;
-        font-size: 1rem;
-        font-weight: 500;
-    }
-
-    .form-floating-modern .form-control-modern:focus ~ label,
-    .form-floating-modern .form-control-modern:not(:placeholder-shown) ~ label {
-        top: 0.3rem;
-        font-size: 0.8rem;
-        color: #667eea;
+    .adventure-btn {
+        font-size: 14px;
         font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease 0s;
+        border-radius: 25px;
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        border: 2px solid transparent;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .adventure-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        background: linear-gradient(135deg, #5587ea 0%, #3f72df 100%);
+        color: #fff;
+    }
+
+    .adventure-btn.primary-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .adventure-btn.default-border {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
+
+    .adventure-btn.info {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: #fff;
+        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+    }
+
+    .module-hero .video-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: -1;
+    }
+
+    .module-hero .video-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, 
+            rgba(0, 0, 0, 0.6) 0%, 
+            rgba(0, 0, 0, 0.4) 100%);
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 1;
+    }
+
+    .surface-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+        padding: 24px;
+        margin-bottom: 24px;
+        transition: all 0.3s ease 0s;
+    }
+
+    .surface-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
+    }
+
+    .enhance-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        border: none;
+        border-radius: 50px;
+        padding: 8px 16px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 4px 14px rgba(102, 126, 234, 0.35);
+    }
+
+    .enhance-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    }
+
+    .enhance-btn:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .enhance-spinner {
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .enhance-message {
+        margin-top: 8px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 0.82rem;
+        display: none;
+    }
+
+    .enhance-message.success {
+        background: #d1fae5;
+        color: #065f46;
+        border: 1px solid #34d399;
+    }
+
+    .enhance-message.error {
+        background: #fee2e2;
+        color: #991b1b;
+        border: 1px solid #f87171;
     }
 
     /* Image Upload Modern */
@@ -205,7 +187,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: var(--primary-gradient);
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         opacity: 0;
         transition: opacity 0.3s ease;
     }
@@ -232,472 +214,588 @@
         transform: translateY(-5px) scale(1.1);
     }
 
-    /* Boutons Modernes */
-    .btn-modern {
-        border-radius: 25px;
-        font-weight: 600;
-        padding: 12px 30px;
-        transition: all 0.3s ease;
-        position: relative;
-        overflow: hidden;
-        border: 2px solid transparent;
-    }
-
-    .btn-modern::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
-        transition: left 0.5s ease;
-    }
-
-    .btn-modern:hover::before {
-        left: 100%;
-    }
-
-    .btn-modern:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-    }
-
-    .btn-primary-modern {
-        background: var(--primary-gradient);
-        border-color: transparent;
-        color: white;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    }
-
-    .btn-primary-modern:hover {
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-    }
-
-    .btn-secondary-modern {
-        background: white;
-        border: 2px solid #dee2e6;
-        color: #6c757d;
-    }
-
-    .btn-secondary-modern:hover {
-        border-color: #667eea;
-        color: #667eea;
-    }
-
-    /* Alertes Modernes */
-    .alert-modern {
-        border-radius: 15px;
-        border: none;
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
-        animation: slideInRight 0.5s ease;
-        position: relative;
-        overflow: hidden;
-    }
-
-    .alert-modern::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: var(--primary-gradient);
-    }
-
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .form-body {
-            padding: 2rem;
-        }
-        
-        .hero-title {
-            font-size: 2.5rem;
-        }
-
-        .form-hero {
-            padding: 2rem 0;
-            border-radius: 0 0 40px 40px;
-        }
+    .spinner-border {
+        border: 2px solid #667eea;
+        border-top-color: transparent;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        animation: spin 1s linear infinite;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="form-hero">
-    <div class="container text-center">
-        <h1 class="hero-title mb-4">
-            ➕ Créer une nouvelle activité
-        </h1>
-        <p class="hero-subtitle mb-0">
-            Remplissez le formulaire ci-dessous pour ajouter une activité
-        </p>
+<section class="module-hero">
+    <video class="video-background" autoplay muted loop playsinline>
+        <source src="{{ asset('adventure/video/letsDiscover.mp4') }}" type="video/mp4">
+        Votre navigateur ne supporte pas les vidéos HTML5.
+    </video>
+    
+    <div class="video-overlay"></div>
+    
+    <div class="hero-content">
+        <div class="container text-center">
+            <h2 class="mb-2">Créer une nouvelle activité</h2>
+            <p class="mb-0">Remplissez le formulaire ci-dessous pour ajouter une activité</p>
+        </div>
     </div>
-</div>
+</section>
 
-<div class="container mb-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-10 col-xl-8">
-            <!-- Messages Flash -->
-            {% for message in app.flashes('success') %}
-                <div class="alert alert-success alert-modern alert-dismissible fade show mb-4" role="alert">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <i class="fas fa-check-circle fa-lg"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            {{ message }}
-                        </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                </div>
-            {% endfor %}
+<div class="container">
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success">{{ message }}</div>
+    {% endfor %}
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger">{{ message }}</div>
+    {% endfor %}
 
-            {% for message in app.flashes('error') %}
-                <div class="alert alert-danger alert-modern alert-dismissible fade show mb-4" role="alert">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <i class="fas fa-exclamation-circle fa-lg"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            {{ message }}
-                        </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                </div>
-            {% endfor %}
+    <div class="surface-card">
+        {{ form_start(form, {'attr': {'novalidate': 'novalidate'}}) }}
 
-            {% for message in app.flashes('info') %}
-                <div class="alert alert-info alert-modern alert-dismissible fade show mb-4" role="alert">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <i class="fas fa-info-circle fa-lg"></i>
-                        </div>
-                        <div class="flex-grow-1">
-                            {{ message }}
-                        </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                </div>
-            {% endfor %}
+            <div class="form-group">
+                {{ form_label(form.titre) }}
+                {{ form_widget(form.titre, {'attr': {'class': 'form-control'}}) }}
+                {{ form_errors(form.titre) }}
+            </div>
 
-            <!-- Formulaire -->
-            <div class="form-card">
-                <div class="form-header">
-                    <div class="d-flex align-items-center">
-                        <div class="me-3">
-                            <i class="fas fa-clipboard-list fa-3x text-primary"></i>
-                        </div>
-                        <div>
-                            <h4 class="mb-0 fw-bold">Formulaire d'activité</h4>
-                            <p class="text-muted mb-0">Tous les champs marqués d'un <span class="text-danger">*</span> sont obligatoires</p>
-                        </div>
-                    </div>
-                </div>
+            <div class="form-group">
+                {{ form_label(form.description) }}
+                {{ form_widget(form.description, {'attr': {'class': 'form-control', 'rows': 5, 'id': 'activity_description'}}) }}
+                {{ form_errors(form.description) }}
                 
-                <div class="form-body">
-                    {{ form_start(form, {'attr': {'novalidate': 'novalidate', 'id': 'activityForm'}}) }}
-                        
-                        <!-- Titre -->
-                        <div class="form-group-modern">
-                            <div class="form-floating-modern">
-                                {{ form_widget(form.titre, {'attr': {
-                                    'class': 'form-control-modern',
-                                    'placeholder': ' ',
-                                    'id': 'titre'
-                                }}) }}
-                                {{ form_label(form.titre, 'Titre de l\'activité *', {'label_attr': {'for': 'titre'}}) }}
-                            </div>
-                            
-                            {{ form_errors(form.titre) }}
-                        </div>
+                <div style="margin-top: 10px;">
+                    <button type="button" id="btnEnhanceDesc" class="enhance-btn" onclick="enhanceDescription()">
+                        <span id="enhanceDescIcon">✨</span>
+                        <span id="enhanceDescText">Améliorer avec l'IA</span>
+                    </button>
+                    <div id="enhanceDescMsg" class="enhance-message"></div>
+                </div>
+            </div>
 
-                        <!-- Description -->
-                        <div class="form-group-modern">
-                            <div class="form-floating-modern">
-                                {{ form_widget(form.description, {'attr': {
-                                    'class': 'form-control-modern',
-                                    'rows': 5,
-                                    'placeholder': ' ',
-                                    'id': 'description'
-                                }}) }}
-                                {{ form_label(form.description, 'Description *', {'label_attr': {'for': 'description'}}) }}
-                            </div>
-                            
-                            {{ form_errors(form.description) }}
-                        </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group">
+                        {{ form_label(form.categorie) }}
+                        {{ form_widget(form.categorie, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_errors(form.categorie) }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        {{ form_label(form.type_activite) }}
+                        {{ form_widget(form.type_activite, {'attr': {'class': 'form-control'}}) }}
+                        {{ form_errors(form.type_activite) }}
+                    </div>
+                </div>
+            </div>
 
-                        <!-- Catégorie et Type -->
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label fw-bold mb-2">
-                                        <i class="fas fa-layer-group me-1"></i>
-                                        Catégorie <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form_widget(form.categorie, {'attr': {
-                                        'class': 'form-control-modern form-select-modern',
-                                        'id': 'activite_categorie'
-                                    }}) }}
-                                    {{ form_errors(form.categorie) }}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group-modern">
-                                    <label class="form-label fw-bold mb-2">
-                                        <i class="fas fa-tag me-1"></i>
-                                        Type d'activité <span class="text-danger">*</span>
-                                    </label>
-                                    {{ form_widget(form.type_activite, {'attr': {
-                                        'class': 'form-control-modern',
-                                        'placeholder': 'Ex: Randonnée, Plongée...',
-                                        'id': 'activite_type'
-                                    }}) }}
-                        
-                                    {{ form_errors(form.type_activite) }}
-                                </div>
-                            </div>
-                        </div>
+            <div class="form-group">
+                {{ form_label(form.ageMinimum) }}
+                {{ form_widget(form.ageMinimum, {'attr': {'class': 'form-control'}}) }}
+                {{ form_errors(form.ageMinimum) }}
+            </div>
 
-                        <!-- Âge minimum -->
-                        <div class="form-group-modern">
-                            <div class="form-floating-modern">
-                                {{ form_widget(form.ageMinimum, {'attr': {
-                                    'class': 'form-control-modern',
-                                    'placeholder': ' ',
-                                    'id': 'ageMinimum',
-                                    'min': '0',
-                                    'max': '100'
-                                }}) }}
-                                {{ form_label(form.ageMinimum, 'Âge minimum (optionnel)', {'label_attr': {'for': 'ageMinimum'}}) }}
-                            </div>
-                            <small class="text-muted">
-                                <i class="fas fa-info-circle me-1"></i>
-                                Laissez vide si aucune restriction d'âge n'est requise
-                            </small>
-                            {{ form_errors(form.ageMinimum) }}
-                        </div>
+            <div class="form-group">
+                {{ form_label(form.image) }}
+                {{ form_widget(form.image, {'attr': {'class': 'd-none', 'id': 'activity_image', 'accept': 'image/* '}}) }}
+                {{ form_errors(form.image) }}
+                
+                <!-- Zone d'upload moderne -->
+                <div class="image-upload-modern" id="imageUploadArea" style="cursor:pointer;">
+                    <i class="fas fa-cloud-upload-alt upload-icon-modern"></i>
+                    <h6 class="mb-2">Cliquez ou glissez-déposez une image</h6>
+                    <p class="text-muted small mb-0">JPG, PNG ou GIF (Max 5MB)</p>
+                </div>
 
-                        <!-- Image Upload -->
-                        <div class="form-group-modern">
-                            <label class="form-label fw-bold mb-2">
-                                <i class="fas fa-image me-1"></i>
-                                Image de l'activité
-                            </label>
-                            <div class="image-upload-modern" id="imageUploadArea">
-                                <i class="fas fa-cloud-upload-alt upload-icon-modern"></i>
-                                <h6 class="mb-2">Cliquez ou glissez-déposez une image</h6>
-                                <p class="text-muted small mb-0">JPG, PNG ou GIF (Max 5MB)</p>
-                                {{ form_widget(form.image, {'attr': {
-                                    'class': 'd-none',
-                                    'id': 'imageInput',
-                                    'accept': 'image/jpeg,image/png,image/gif'
-                                }}) }}
-                            </div>
-                            <div id="imagePreview" class="mt-3" style="display: none;">
-                                <div class="position-relative d-inline-block">
-                                    <img id="previewImg" src="" alt="Preview" class="rounded-3" style="max-width: 200px; max-height: 150px; object-fit: cover;">
-                                    <button type="button" id="removeImage" class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 translate-middle">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            {{ form_errors(form.image) }}
-                        </div>
-
-                        <!-- Boutons -->
-                        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                            <a href="{{ path('app_activities_index') }}" class="btn btn-secondary-modern btn-modern">
-                                <i class="fas fa-times me-2"></i>Annuler
-                            </a>
-                            <button type="submit" class="btn btn-primary-modern btn-modern">
-                                <i class="fas fa-check-circle me-2"></i>Créer l'activité
+                <!-- Preview + Modération Result -->
+                <div id="imagePreview" class="mt-3" style="display: none;">
+                    <div class="d-flex align-items-start gap-3 flex-wrap">
+                        <!-- Miniature -->
+                        <div class="position-relative d-inline-block">
+                            <img id="previewImg" src="" alt="Preview" class="rounded-3 shadow-sm"
+                                 style="max-width: 180px; max-height: 140px; object-fit: cover; border: 2px solid #dee2e6;">
+                            <button type="button" id="removeImage"
+                                    class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 translate-middle"
+                                    style="width:26px;height:26px;padding:0;font-size:0.7rem;">
+                                <i class="fas fa-times"></i>
                             </button>
                         </div>
 
-                    {{ form_end(form) }}
+                        <!-- Badge de modération -->
+                        <div id="moderationResult" style="display:none; min-width:220px;">
+                            <!-- Chargement -->
+                            <div id="modLoading" style="display:none;" class="d-flex align-items-center gap-2 text-muted">
+                                <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                                <span style="font-size:0.85rem;">Analyse IA en cours…</span>
+                            </div>
+
+                            <!-- Résultat Safe -->
+                            <div id="modSafe" style="display:none;
+                                 background:linear-gradient(135deg,#d1fae5,#a7f3d0);
+                                 border:1.5px solid #34d399; border-radius:14px; padding:14px 16px;">
+                                <div style="font-weight:700; color:#065f46; font-size:0.95rem; margin-bottom:4px;">
+                                    ✅ Image approuvée
+                                </div>
+                                <div style="font-size:0.78rem; color:#047857;" id="modSafeReason"></div>
+                                <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;" id="modSafeBadges"></div>
+                            </div>
+
+                            <!-- Résultat Unsafe -->
+                            <div id="modUnsafe" style="display:none;
+                                 background:linear-gradient(135deg,#fee2e2,#fecaca);
+                                 border:1.5px solid #f87171; border-radius:14px; padding:14px 16px;">
+                                <div style="font-weight:700; color:#991b1b; font-size:0.95rem; margin-bottom:4px;">
+                                    🚫 Image refusée
+                                </div>
+                                <div style="font-size:0.78rem; color:#b91c1c;" id="modUnsafeReason"></div>
+                                <div style="margin-top:8px; display:flex; gap:6px; flex-wrap:wrap;" id="modUnsafeBadges"></div>
+                                <div style="margin-top:10px; font-size:0.78rem; color:#7f1d1d; font-weight:600;">
+                                    ⚠️ Cette image ne peut pas être utilisée sur Wanderlust.
+                                </div>
+                            </div>
+
+                            <!-- Erreur API -->
+                            <div id="modError" style="display:none;
+                                 background:#f8f9fa; border:1.5px solid #dee2e6;
+                                 border-radius:14px; padding:12px 16px;
+                                 font-size:0.8rem; color:#6c757d;">
+                                ⚠️ Analyse indisponible — la soumission reste possible.
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
+
+            <div class="d-flex justify-content-between align-items-center mt-4">
+                <div>
+                    <a href="{{ path('app_activities_index') }}" class="adventure-btn default-border">Retour</a>
+                </div>
+                <div>
+                    <button type="submit" class="adventure-btn primary-btn text-uppercase">Créer</button>
+                </div>
+            </div>
+
+        {{ form_end(form) }}
     </div>
 </div>
+
 {% endblock %}
 
 {% block javascripts %}
 {{ parent() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Image upload preview
-    const imageUploadArea = document.getElementById('imageUploadArea');
-    const imageInput = document.getElementById('activities_image'); // Corriger l'ID
-    const imagePreview = document.getElementById('imagePreview');
-    const previewImg = document.getElementById('previewImg');
-    const removeImageBtn = document.getElementById('removeImage');
+    const categorieSelect = document.querySelector('select[name="activities[categorie]"]');
+    const typeSelect = document.querySelector('select[name="activities[type_activite]"]');
     
-    if (imageUploadArea && imageInput) {
-        imageUploadArea.addEventListener('click', () => imageInput.click());
-        
-        imageUploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            imageUploadArea.style.borderColor = '#667eea';
-            imageUploadArea.style.background = 'rgba(102, 126, 234, 0.05)';
-        });
-        
-        imageUploadArea.addEventListener('dragleave', () => {
-            imageUploadArea.style.borderColor = '#dee2e6';
-            imageUploadArea.style.background = '#f8f9fa';
-        });
-        
-        imageUploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            imageUploadArea.style.borderColor = '#dee2e6';
-            imageUploadArea.style.background = '#f8f9fa';
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                imageInput.files = files;
-                previewImage(files[0]);
-            }
-        });
-        
-        // Gestion de la dépendance catégorie -> type d'activité
-        const categorieSelect = document.getElementById('activite_categorie');
-        const typeSelect = document.getElementById('activite_type');
-        
-        if (categorieSelect && typeSelect) {
-            categorieSelect.addEventListener('change', function() {
-                let selectedCategorie = this.value;
-                // Normaliser: supprimer les accents et mettre en minuscules
-                selectedCategorie = selectedCategorie
-                    .toLowerCase()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, ''); // Supprime les accents
-
-                loadTypesByCategorie(selectedCategorie);
-            });
+    if (categorieSelect && typeSelect) {
+        categorieSelect.addEventListener('change', function() {
+            let selectedCategorie = this.value;
+            console.log('Catégorie sélectionnée:', selectedCategorie);
             
-            // Charger les types au chargement de la page si une catégorie est déjà sélectionnée
-            if (categorieSelect.value) {
-                let selectedCategorie = categorieSelect.value;
-                // Normaliser: supprimer les accents et mettre en minuscules
-                selectedCategorie = selectedCategorie
-                    .toLowerCase()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, ''); // Supprime les accents
-
-                loadTypesByCategorie(selectedCategorie);
-            }
+            loadTypesByCategorie(selectedCategorie);
+        });
+        
+        if (categorieSelect.value) {
+            let selectedCategorie = categorieSelect.value;
+            console.log('Catégorie sélectionnée:', selectedCategorie);
+            
+            loadTypesByCategorie(selectedCategorie);
+        }
+    }
+    
+    function loadTypesByCategorie(categorie) {
+        if (!categorie) {
+            typeSelect.innerHTML = '<option value="">Choisir d\'abord une catégorie</option>';
+            typeSelect.disabled = true;
+            return;
         }
         
-        async function loadTypesByCategorie(categorie) {
-            if (!categorie) {
-                // Réinitialiser le champ type
-                typeSelect.innerHTML = '<option value="">Choisir d\'abord une catégorie</option>';
-                typeSelect.disabled = true;
-                return;
-            }
+        try {
+            typeSelect.innerHTML = '<option value="">Chargement...</option>';
+            typeSelect.disabled = true;
             
-            try {
-                // Afficher un état de chargement
-                typeSelect.innerHTML = '<option value="">Chargement...</option>';
-                typeSelect.disabled = true;
-                
-                // Typage immédiat avec les types codés en dur (sans appel API)
-                const typesSecours = {
-                    'desert': [
-                        {nom: 'Randonnée dans le Sahara', emoji: '🏜️'},
-                        {nom: 'Trekking dans les dunes', emoji: '🚶'},
-                        {nom: 'Quad et buggy', emoji: '🏎️'},
-                        {nom: 'Balade à dos de dromadaire', emoji: '🐪'},
-                        {nom: 'Nuit en campement saharien', emoji: '🏕️'}
-                    ],
-                    'mer': [
-                        {nom: 'Jet ski', emoji: '🚤'},
-                        {nom: 'Plongée sous-marine', emoji: '🤿'},
-                        {nom: 'Kayak', emoji: '🛶'},
-                        {nom: 'Pêche touristique', emoji: '🎣'}
-                    ],
-                    'aerien': [
-                        {nom: 'Parachutisme', emoji: '🪂'},
-                        {nom: 'Parapente', emoji: '🪂'},
-                        {nom: 'Montgolfière', emoji: '🎈'}
-                    ],
-                    'nature': [
-                        {nom: 'Randonnée en forêt', emoji: '🥾'},
-                        {nom: 'Escalade', emoji: '🧗'},
-                        {nom: 'Camping', emoji: '⛺'},
-                        {nom: 'VTT', emoji: '🚵'}
-                    ],
-                    'culture': [
-                        {nom: 'Visite des ksour', emoji: '🏛️'},
-                        {nom: 'Décors de films', emoji: '🎬'},
-                        {nom: 'Visite archéologique', emoji: '🏺'}
-                    ]
-                };
-                
-                const types = typesSecours[categorie.toLowerCase()] || [];
-                
-                if (types.length === 0) {
-                    throw new Error('Aucun type disponible pour cette catégorie');
-                }
-                
-                // Vider et remplir le select avec les types
-                typeSelect.innerHTML = '<option value="">Choisir un type</option>';
-                
-                types.forEach(type => {
-                    const option = document.createElement('option');
-                    option.value = type.nom;
-                    option.textContent = `${type.nom} ${type.emoji}`;
-                    typeSelect.appendChild(option);
-                });
-                
-                typeSelect.disabled = false;
-            } catch (error) {
-                console.error('Erreur lors du chargement des types:', error);
-                typeSelect.innerHTML = '<option value="">Erreur au chargement</option>';
-                typeSelect.disabled = true;
-            }
-        }
-        
-        imageInput.addEventListener('change', function() {
-            if (this.files.length > 0) {
-                previewImage(this.files[0]);
-            } else {
-                if (imagePreview) imagePreview.style.display = 'none';
-                if (imageUploadArea) imageUploadArea.style.display = 'block';
-            }
-        });
-        
-        function previewImage(file) {
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                if (previewImg) {
-                    previewImg.src = e.target.result;
-                    if (imagePreview) imagePreview.style.display = 'block';
-                    if (imageUploadArea) imageUploadArea.style.display = 'none';
-                }
+            const typesByCategorie = {
+                'desert': [
+                    {nom: 'Quad et buggy 🏎️', valeur: 'Quad et buggy'},
+                    {nom: 'Trekking dans les dunes 🥾', valeur: 'Trekking dans les dunes'},
+                    {nom: 'Moto cross désert 🏍️', valeur: 'Moto cross désert'},
+                    {nom: 'Balade à dos de dromadaire 🐪', valeur: 'Balade à dos de dromadaire'},
+                    {nom: 'Nuit en campement saharien 🏕️', valeur: 'Nuit en campement saharien'},
+                    {nom: 'Observation des étoiles ⭐', valeur: 'Observation des étoiles'}
+                ],
+                'Mer': [
+                    {nom: 'Jet ski 🏄‍♂️', valeur: 'Jet ski'},
+                    {nom: 'Parachute ascensionnel 🪂', valeur: 'Parachute ascensionnel'},
+                    {nom: 'Paddle 🛶', valeur: 'Paddle'},
+                    {nom: 'Kayak 🛶', valeur: 'Kayak'},
+                    {nom: 'Planche à voile ⛵', valeur: 'Planche à voile'},
+                    {nom: 'Plongée sous-marine 🤿', valeur: 'Plongée sous-marine'},
+                    {nom: 'Snorkeling 🤽', valeur: 'Snorkeling'},
+                    {nom: 'Sortie en bateau ⛵', valeur: 'Sortie en bateau'},
+                    {nom: 'Pêche touristique 🎣', valeur: 'Pêche touristique'}
+                ],
+                'Aérien': [
+                    {nom: 'Parachutisme 🪂', valeur: 'Parachutisme'},
+                    {nom: 'Parapente 🪂', valeur: 'Parapente'},
+                    {nom: 'ULM (Ultra léger motorisé) 🪂', valeur: 'ULM (Ultra léger motorisé)'},
+                    {nom: 'Montgolfière (occasionnellement dans le sud) 🎈', valeur: 'Montgolfière (occasionnellement dans le sud)'},
+                    {nom: 'Parachute ascensionnel (mer) 🪂', valeur: 'Parachute ascensionnel (mer)'}
+                ],
+                'nature': [
+                    {nom: 'Randonnée en forêt 🥾', valeur: 'Randonnée en forêt'},
+                    {nom: 'Escalade 🧗', valeur: 'Escalade'},
+                    {nom: 'Camping 🏕️', valeur: 'Camping'},
+                    {nom: 'VTT 🚵', valeur: 'VTT'},
+                    {nom: 'Spéléologie ⛰️', valeur: 'Spéléologie'},
+                    {nom: 'Nuit en campement 🏕️', valeur: 'Nuit en campement'}
+                ],
+                'Culture': [
+                    {nom: 'Visite des ksour de Tataouine 🏛️', valeur: 'Visite des ksour de Tataouine'},
+                    {nom: 'Décors de films à Tozeur 🎬', valeur: 'Décors de films à Tozeur'},
+                    {nom: 'Visite archéologique 🏺', valeur: 'Visite archéologique'},
+                    {nom: 'Festivals 🎉', valeur: 'Festivals'},
+                    {nom: 'Tourisme historique 📚', valeur: 'Tourisme historique'},
+                    {nom: 'Photographie 📷', valeur: 'Photographie'}
+                ]
             };
-            reader.readAsDataURL(file);
-        }
-        
-        if (removeImageBtn) {
-            removeImageBtn.addEventListener('click', function() {
-                imageInput.value = '';
-                if (imagePreview) imagePreview.style.display = 'none';
-                if (imageUploadArea) imageUploadArea.style.display = 'block';
+            
+            const types = typesByCategorie[categorie] || [];
+            
+            if (types.length === 0) {
+                throw new Error('Aucun type disponible pour cette catégorie');
+            }
+            
+            typeSelect.innerHTML = '<option value="">Choisir un type</option>';
+            
+            types.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type.valeur;
+                option.textContent = type.nom;
+                typeSelect.appendChild(option);
             });
+            
+            typeSelect.disabled = false;
+        } catch (error) {
+            console.error('Erreur lors du chargement des types:', error);
+            typeSelect.innerHTML = '<option value="">Erreur au chargement</option>';
+            typeSelect.disabled = true;
         }
     }
 });
+
+async function enhanceDescription() {
+    const btn = document.getElementById('btnEnhanceDesc');
+    const icon = document.getElementById('enhanceDescIcon');
+    const text = document.getElementById('enhanceDescText');
+    const msg = document.getElementById('enhanceDescMsg');
+    
+    // Trouver le champ description avec plusieurs sélecteurs possibles
+    const descArea = document.getElementById('activity_description') || 
+                     document.querySelector('textarea[name*="description"]') ||
+                     document.querySelector('textarea[id*="description"]') ||
+                     document.querySelector('#activities_description') ||
+                     document.querySelector('textarea.form-control');
+    
+    const titre = document.querySelector('[id*="titre"]')?.value?.trim() || '';
+    const type = document.querySelector('[id*="type"]')?.value?.trim() || '';
+    const catEl = document.querySelector('[id*="categorie"]');
+    const categorie = catEl?.options[catEl?.selectedIndex]?.text?.trim() || catEl?.value?.trim() || '';
+    
+    // Vérifier si le champ description a été trouvé
+    if (!descArea) {
+        console.error('Champ description non trouvé!');
+        msg.style.display = 'block';
+        msg.className = 'enhance-message error';
+        msg.textContent = '❌ Erreur: Champ description introuvable';
+        return;
+    }
+    
+    if (!titre) {
+        msg.style.display = 'block';
+        msg.className = 'enhance-message error';
+        msg.textContent = '⚠️ Veuillez remplir le titre de l\'activité.';
+        return;
+    }
+    
+    btn.disabled = true;
+    icon.innerHTML = '<span class="enhance-spinner"></span>';
+    text.textContent = 'Génération en cours…';
+    msg.style.display = 'none';
+    
+    try {
+        const res = await fetch('/api/ai/activity-description', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ titre, type_activite: type, categorie })
+        });
+        
+        const data = await res.json();
+        
+        if (data.description) {
+            descArea.value = data.description;
+            msg.style.display = 'block';
+            msg.className = 'enhance-message success';
+            msg.textContent = '✅ Description améliorée avec succès !';
+        } else {
+            throw new Error('Aucune description générée');
+        }
+    } catch (error) {
+        msg.style.display = 'block';
+        msg.className = 'enhance-message error';
+        msg.textContent = '❌ Erreur lors de la génération: ' + error.message;
+    } finally {
+        btn.disabled = false;
+        icon.innerHTML = '✨';
+        text.textContent = 'Améliorer avec l\'IA';
+    }
+}
+
+// Gestionnaire de changement d'image avec modération IA
+const imageInput = document.querySelector('input[type="file"]');
+const imageUploadArea = document.getElementById('imageUploadArea');
+const imagePreview = document.getElementById('imagePreview');
+const previewImg = document.getElementById('previewImg');
+const removeImageBtn = document.getElementById('removeImage');
+
+if (imageUploadArea && imageInput) {
+    imageUploadArea.addEventListener('click', () => imageInput.click());
+    
+    imageUploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        imageUploadArea.style.borderColor = '#667eea';
+        imageUploadArea.style.background = 'rgba(102, 126, 234, 0.05)';
+    });
+    
+    imageUploadArea.addEventListener('dragleave', () => {
+        imageUploadArea.style.borderColor = '#dee2e6';
+        imageUploadArea.style.background = '#f8f9fa';
+    });
+    
+    imageUploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        imageUploadArea.style.borderColor = '#dee2e6';
+        imageUploadArea.style.background = '#f8f9fa';
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            imageInput.files = files;
+            previewAndModerate(files[0]);
+        }
+    });
+    
+    imageInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            previewAndModerate(this.files[0]);
+        } else {
+            resetImageUI();
+        }
+    });
+}
+
+function resetImageUI() {
+    const modResult = document.getElementById('moderationResult');
+    const modLoading = document.getElementById('modLoading');
+    const modSafe = document.getElementById('modSafe');
+    const modUnsafe = document.getElementById('modUnsafe');
+    const modError = document.getElementById('modError');
+
+    if (modResult) modResult.style.display = 'none';
+    if (modLoading) modLoading.style.display = 'none';
+    if (modSafe) modSafe.style.display = 'none';
+    if (modUnsafe) modUnsafe.style.display = 'none';
+    if (modError) modError.style.display = 'none';
+    
+    if (imagePreview) imagePreview.style.display = 'none';
+    if (imageUploadArea) imageUploadArea.style.display = 'block';
+}
+
+async function previewAndModerate(file) {
+    // 1. Afficher la miniature immédiatement
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        if (previewImg) {
+            previewImg.src = e.target.result;
+            previewImg.style.border = '2px solid #dee2e6';
+        }
+        if (imagePreview) imagePreview.style.display = 'flex';
+        if (imageUploadArea) imageUploadArea.style.display = 'none';
+
+        // 2. Afficher le spinner de modération
+        const modResult = document.getElementById('moderationResult');
+        const modLoading = document.getElementById('modLoading');
+        const modSafe = document.getElementById('modSafe');
+        const modUnsafe = document.getElementById('modUnsafe');
+        const modError = document.getElementById('modError');
+
+        if (modResult) modResult.style.display = 'block';
+        if (modLoading) modLoading.style.display = 'flex';
+        if (modSafe) modSafe.style.display = 'none';
+        if (modUnsafe) modUnsafe.style.display = 'none';
+        if (modError) modError.style.display = 'none';
+
+        // 3. Appel API modération
+        try {
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const resp = await fetch('/api/ai/moderate-image', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await resp.json();
+
+            if (modLoading) modLoading.style.display = 'none';
+
+            const status = data.status || (data.safe ? 'safe' : 'unsafe');
+
+            if (status === 'safe') {
+                // ✅ Image approuvée - avec les badges !!
+                if (previewImg) previewImg.style.border = '2.5px solid #34d399';
+                if (modSafe) {
+                    modSafe.style.display = 'block';
+                    
+                    const badges = [];
+                    if (data.suitableForKids) badges.push({label: '👶 Kids friendly', bg: '#d1fae5', color: '#065f46'});
+                    if (!data.violent) badges.push({label: '✋ Non violent', bg: '#d1fae5', color: '#065f46'});
+                    if (!data.adultContent) badges.push({label: '✅ Contenu sûr', bg: '#d1fae5', color: '#065f46'});
+                    if (data.confidence) badges.push({label: `${data.confidence}% confiance`, bg: '#f3f4f6', color: '#374151'});
+
+                    let badgesHtml = badges.map(b => 
+                        `<span style="background:${b.bg}; color:${b.color}; padding: 6px 12px; border-radius: 50px; font-size: 0.8rem; font-weight: 700;">${b.label}</span>`
+                    ).join('');
+
+                    modSafe.innerHTML = `
+                        <div style="font-weight: 800; color: #065f46; font-size: 1.1rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                            <div style="background: #34d399; color: white; border-radius: 4px; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem;">✓</div> 
+                            Image approuvée
+                        </div>
+                        <div style="font-size: 0.9rem; color: #047857; margin-bottom: 12px;">Analyse partielle effectuée.</div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            ${badgesHtml}
+                        </div>
+                    `;
+                    
+                    modSafe.style.background = '#bbf7d0'; // Light green matching image 2
+                    modSafe.style.border = '1.5px solid #34d399';
+                    modSafe.style.borderRadius = '16px';
+                    modSafe.style.padding = '16px 20px';
+                }
+                
+                // Masquer tous les autres éléments
+                if (modUnsafe) modUnsafe.style.display = 'none';
+                if (modError) modError.style.display = 'none';
+                if (modLoading) modLoading.style.display = 'none';
+
+            } else if (status === 'unsafe') {
+                // 🚫 Image refusée
+                if (previewImg) previewImg.style.border = '2.5px solid #f87171';
+                if (modUnsafe) {
+                    modUnsafe.style.display = 'block';
+                    
+                    const badges = [];
+                    if (data.violent) badges.push({label: '⚠️ Violence', bg: '#fee2e2', color: '#991b1b'});
+                    if (data.adultContent) badges.push({label: '🔞 Adulte', bg: '#fee2e2', color: '#991b1b'});
+                    if (!data.suitableForKids) badges.push({label: '🚫 Non adapté', bg: '#fee2e2', color: '#991b1b'});
+                    if (data.confidence) badges.push({label: `${data.confidence}% confiance`, bg: '#f3f4f6', color: '#374151'});
+
+                    let badgesHtml = badges.map(b => 
+                        `<span style="background:${b.bg}; color:${b.color}; padding: 6px 12px; border-radius: 50px; font-size: 0.8rem; font-weight: 700;">${b.label}</span>`
+                    ).join('');
+
+                    modUnsafe.innerHTML = `
+                        <div style="font-weight: 800; color: #991b1b; font-size: 1.1rem; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+                            <div style="background: #f87171; color: white; border-radius: 4px; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem;">!</div> 
+                            Image refusée
+                        </div>
+                        <div style="font-size: 0.9rem; color: #b91c1c; margin-bottom: 12px;">Contenu inapproprié détecté.</div>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            ${badgesHtml}
+                        </div>
+                    `;
+                    
+                    modUnsafe.style.background = '#fecaca';
+                    modUnsafe.style.border = '1.5px solid #f87171';
+                    modUnsafe.style.borderRadius = '16px';
+                    modUnsafe.style.padding = '16px 20px';
+                }
+                
+                // Masquer tous les autres éléments
+                if (modSafe) modSafe.style.display = 'none';
+                if (modError) modError.style.display = 'none';
+                if (modLoading) modLoading.style.display = 'none';
+
+            } else if (status === 'quota') {
+                // ⏳ Quota dépassé
+                if (previewImg) previewImg.style.border = '2.5px solid #94a3b8';
+                if (modError) {
+                    modError.style.display = 'block';
+                    modError.style.background = '#fef3c7';
+                    modError.style.border = '1.5px solid #f59e0b';
+                    modError.style.color = '#92400e';
+                    modError.innerHTML = `⏳ <strong>Quota API dépassé.</strong><br>
+                        Réessayez dans 1 minute, puis rechoisissez votre image.
+                        <br><button type="button" onclick="document.getElementById('removeImage').click()"
+                            style="margin-top:8px;background:#f59e0b;color:#fff;border:none;
+                            border-radius:20px;padding:5px 14px;font-size:0.78rem;cursor:pointer;">
+                            🔄 Changer d'image
+                        </button>`;
+                }
+                
+                // Masquer tous les autres éléments
+                if (modSafe) modSafe.style.display = 'none';
+                if (modUnsafe) modUnsafe.style.display = 'none';
+                if (modLoading) modLoading.style.display = 'none';
+
+            } else {
+                // ❌ Erreur API
+                if (previewImg) previewImg.style.border = '2.5px solid #94a3b8';
+                if (modError) {
+                    modError.style.display = 'block';
+                    modError.style.background = '#f1f5f9';
+                    modError.style.border = '1.5px solid #94a3b8';
+                    modError.style.color = '#475569';
+                    modError.innerHTML = `❌ <strong>Analyse impossible.</strong><br>
+                        ${data.reason || 'Service temporairement indisponible.'}<br>
+                        <small style="opacity:0.7">${data.debug || ''}</small>
+                        <br><button type="button" onclick="document.getElementById('removeImage').click()"
+                            style="margin-top:8px;background:#64748b;color:#fff;border:none;
+                            border-radius:20px;padding:5px 14px;font-size:0.78rem;cursor:pointer;">
+                            🔄 Changer d'image
+                        </button>`;
+                }
+                
+                // Masquer tous les autres éléments
+                if (modSafe) modSafe.style.display = 'none';
+                if (modUnsafe) modUnsafe.style.display = 'none';
+                if (modLoading) modLoading.style.display = 'none';
+            }
+
+        } catch (err) {
+            if (modLoading) modLoading.style.display = 'none';
+            // Erreur réseau → BLOQUER et informer
+            if (modError) {
+                modError.style.display = 'block';
+                modError.innerHTML = `❌ Connexion à l'API impossible. Vérifiez le serveur Symfony.<br>
+                    <small>${err.message}</small>`;
+            }
+            
+            // Masquer tous les autres éléments en cas d'erreur
+            if (modSafe) modSafe.style.display = 'none';
+            if (modUnsafe) modUnsafe.style.display = 'none';
+            if (modLoading) modLoading.style.display = 'none';
+        }
+
+    };
+    reader.readAsDataURL(file);
+}
+
+if (removeImageBtn) {
+    removeImageBtn.addEventListener('click', function() {
+        imageInput.value = '';
+        resetImageUI();
+    });
+}
+
 </script>
 {% endblock %}

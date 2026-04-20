@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Activities;
 use App\Entity\User;
+use App\Enum\StatusActiviteEnum;
 use App\Form\ActivitiesType;
 use App\Repository\ActivitiesRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -14,6 +15,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Knp\Component\Pager\PaginatorInterface;
 
 #[Route('/activities')]
 class ActivitiesController extends AbstractController
@@ -40,20 +42,22 @@ class ActivitiesController extends AbstractController
     }
 
     #[Route('/', name: 'app_activities_index', methods: ['GET'])]
-    public function index(Request $request, ActivitiesRepository $activitiesRepository): Response
+    public function index(Request $request, ActivitiesRepository $activitiesRepository, PaginatorInterface $paginator): Response
     {
-        $page = max(1, $request->query->getInt('page', 1));
-        $limit = 9; // 3x3 grid
-        
-        $activities = $activitiesRepository->findAllWithPagination($page, $limit);
-        $totalActivities = $activitiesRepository->countAll();
-        $totalPages = ceil($totalActivities / $limit);
+        $query = $activitiesRepository->createQueryBuilder('a')
+            ->where('a.status = :acceptedStatus')
+            ->setParameter('acceptedStatus', StatusActiviteEnum::ACCEPTE)
+            ->orderBy('a.id', 'DESC')
+            ->getQuery();
+
+        $pagination = $paginator->paginate(
+            $query,
+            $request->query->getInt('page', 1),
+            6 // Limite demandée
+        );
         
         return $this->render('activities/index.html.twig', [
-            'activities' => $activities,
-            'currentPage' => $page,
-            'totalPages' => $totalPages,
-            'totalActivities' => $totalActivities,
+            'activities' => $pagination,
         ]);
     }
 
@@ -190,6 +194,13 @@ class ActivitiesController extends AbstractController
     #[Route('/{id}', name: 'app_activities_show', methods: ['GET'])]
     public function show(Activities $activity): Response
     {
+        $currentUser = $this->getUser();
+        $isOwner = $currentUser instanceof User && $activity->getCreatedBy()?->getId() === $currentUser->getId();
+
+        if (!$activity->isAccepted() && !$isOwner && !$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createNotFoundException('Activity not found.');
+        }
+
         return $this->render('activities/show.html.twig', [
             'activity' => $activity,
         ]);

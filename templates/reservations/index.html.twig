@@ -93,6 +93,9 @@
 
                             <div class="reservation-actions">
                                 <a href="{{ path('app_reservations_show', {'id': reservation.id}) }}" class="genric-btn info-border small">View</a>
+                                
+
+
                                 <form method="post" action="{{ path('app_reservations_delete', {'id': reservation.id}) }}" onsubmit="return confirm('Delete this reservation?');" style="display:inline;">
                                     <input type="hidden" name="_token" value="{{ csrf_token('delete' ~ reservation.id) }}">
                                     <button type="submit" class="genric-btn danger-border small">Delete</button>
@@ -105,4 +108,6 @@
         {% endif %}
     </div>
 </section>
+
+{% include '_chatbot.html.twig' with { chatContext: 'reservations' } %}
 {% endblock %}

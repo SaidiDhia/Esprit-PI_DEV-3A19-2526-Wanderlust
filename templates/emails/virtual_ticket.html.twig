@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Votre Ticket Wanderlust</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            margin: 0;
+            padding: 0;
+            color: #1e293b;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background-color: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        .header {
+            background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+            padding: 40px 20px;
+            text-align: center;
+            color: #ffffff;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 800;
+        }
+        .header p {
+            margin: 10px 0 0;
+            opacity: 0.9;
+        }
+        .content {
+            padding: 30px;
+        }
+        .ai-reminder {
+            background-color: #fff7ed;
+            border-left: 4px solid #f97316;
+            padding: 15px 20px;
+            border-radius: 4px;
+            margin-bottom: 30px;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .ai-reminder .title {
+            color: #f97316;
+            font-weight: 700;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+        }
+        .ticket-info {
+            background-color: #f1f5f9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 12px 0;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: #64748b;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        .info-value {
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .qr-section {
+            text-align: center;
+            padding: 20px;
+            background-color: #ffffff;
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+        }
+        .qr-section img {
+            max-width: 200px;
+            height: auto;
+        }
+        .qr-section p {
+            color: #64748b;
+            font-size: 14px;
+            margin-top: 15px;
+            margin-bottom: 0;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #94a3b8;
+            font-size: 13px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #0ea5e9;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 700;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎫 Ticket e-Wanderlust</h1>
+            <p>Réservation Confirmée ! Préparez-vous pour l'aventure.</p>
+        </div>
+        
+        <div class="content">
+            <div class="ai-reminder">
+                <div class="title">🤖 Assistant Wanderlust :</div>
+                {{ aiInstruction|nl2br }}
+            </div>
+
+            <div class="ticket-info">
+                <div class="info-row">
+                    <span class="info-label">Événement</span>
+                    <span class="info-value">{{ event.lieu }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Date & Heure</span>
+                    <span class="info-value">{{ event.dateDebut ? event.dateDebut|date('d/m/Y H:i') : 'Date non définie' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Participant</span>
+                    <span class="info-value">{{ reservation.nomComplet }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Places réversées</span>
+                    <span class="info-value">{{ reservation.nombrePersonnes }} ({{ reservation.nombreAdultes }} A, {{ reservation.nombreEnfants }} E)</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Total Gérant</span>
+                    <span class="info-value" style="color: #0ea5e9;">{{ reservation.prixTotal }} TND</span>
+                </div>
+            </div>
+
+            <div class="qr-section">
+                <!-- QR Code embedding using Cid -->
+                <img src="cid:qrcode" alt="QR Code de votre ticket virtuel">
+                <p>Présentez ce QR Code à l'entrée de l'événement.</p>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{ absolute_url(path('app_reservations_show', {'id': reservation.id})) }}" class="btn">Voir ma réservation en ligne</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            © {{ 'now'|date('Y') }} Wanderlust Tunisie. L'aventure n'attend que vous.
+        </div>
+    </div>
+</body>
+</html>

@@ -4,6 +4,7 @@
 
 {% block stylesheets %}
     {{ parent() }}
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
     <style>
         .module-hero {
             background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), url('{{ asset('adventure/img/slider2.jpg') }}') center center/cover no-repeat;
@@ -60,8 +61,240 @@
         }
 
         .status-available { background: #dcfce7; color: #166534; }
-        .status-full { background: #fee2e2; color: #991b1b; }
-        .status-ended { background: #e5e7eb; color: #374151; }
+        .status-full      { background: #fee2e2; color: #991b1b; }
+        .status-ended     { background: #e5e7eb; color: #374151; }
+        
+        /* ── Event Status Pills ── */
+        .status-pending { 
+            background: linear-gradient(135deg, #fbbf24, #f59e0b); 
+            color: #92400e; 
+            font-weight: 600;
+        }
+        .status-accepted { 
+            background: linear-gradient(135deg, #10b981, #059669); 
+            color: #fff; 
+            font-weight: 600;
+        }
+        .status-refused { 
+            background: linear-gradient(135deg, #ef4444, #dc2626); 
+            color: #fff; 
+            font-weight: 600;
+        }
+        .status-cancelled { 
+            background: linear-gradient(135deg, #6b7280, #4b5563); 
+            color: #fff; 
+            font-weight: 600;
+        }
+        .status-finished { 
+            background: linear-gradient(135deg, #3b82f6, #1e40af); 
+            color: #fff; 
+            font-weight: 600;
+        }
+
+        /* ── Auto Discount badge ── */
+        .price-block { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+        .price-original { text-decoration: line-through; color: #9ca3af; font-size: 0.85rem; }
+        .price-discounted { font-size: 1.1rem; font-weight: 800; color: #dc2626; }
+        .price-normal { font-size: 1rem; font-weight: 700; color: #1a3a5c; }
+        .discount-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #dc2626, #f97316);
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 20px;
+            margin-left: 6px;
+            vertical-align: middle;
+            animation: badge-pop 0.4s ease;
+        }
+        @keyframes badge-pop {
+            from { transform: scale(0.6); opacity: 0; }
+            to   { transform: scale(1);   opacity: 1; }
+        }
+
+        /* ── Discover Map button ── */
+        .btn-discover-map {
+            background: linear-gradient(135deg, #1a3a5c, #2c5364);
+            color: #fff !important;
+            border: none;
+            border-radius: 50px;
+            padding: 11px 26px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            box-shadow: 0 4px 16px rgba(26,58,92,0.4);
+        }
+        .btn-discover-map:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,58,92,0.5); color: #fff !important; }
+        .btn-discover-map .map-pulse {
+            width: 10px; height: 10px;
+            background: #4ade80;
+            border-radius: 50%;
+            animation: pulse-dot 1.5s infinite;
+            flex-shrink: 0;
+        }
+        @keyframes pulse-dot {
+            0%,100% { box-shadow: 0 0 0 0 rgba(74,222,128,0.7); }
+            50%      { box-shadow: 0 0 0 6px rgba(74,222,128,0); }
+        }
+
+        /* ── Map overlay ── */
+        .map-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.0);
+            z-index: 8000;
+            display: flex;
+            flex-direction: column;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.35s ease, background 0.35s ease;
+        }
+        .map-overlay.open {
+            opacity: 1;
+            background: rgba(0,0,0,0.55);
+            pointer-events: all;
+        }
+
+        /* ── Map panel ── */
+        .map-panel {
+            position: absolute;
+            inset: 0;
+            background: #0f172a;
+            transform: translateY(100%);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+        .map-overlay.open .map-panel { transform: translateY(0); }
+
+        /* Map top bar */
+        .map-bar {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        }
+        .map-bar-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .map-count-badge {
+            background: rgba(247,151,30,0.2);
+            border: 1px solid rgba(247,151,30,0.4);
+            color: #ffd200;
+            border-radius: 50px;
+            padding: 3px 12px;
+            font-size: 0.78rem;
+            font-weight: 700;
+        }
+        .map-close-btn {
+            background: rgba(255,255,255,0.1);
+            border: 1.5px solid rgba(255,255,255,0.2);
+            color: #fff;
+            border-radius: 50%;
+            width: 38px; height: 38px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .map-close-btn:hover { background: rgba(239,68,68,0.3); border-color: rgba(239,68,68,0.5); }
+
+        /* Loading bar */
+        .map-loading {
+            background: rgba(255,255,255,0.06);
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.82rem;
+            color: rgba(255,255,255,0.6);
+            flex-shrink: 0;
+            transition: max-height 0.4s, opacity 0.4s;
+            max-height: 50px;
+            overflow: hidden;
+        }
+        .map-loading.hidden { max-height: 0; opacity: 0; padding: 0 24px; }
+        .map-spinner {
+            width: 16px; height: 16px;
+            border: 2px solid rgba(247,151,30,0.3);
+            border-top-color: #f7971e;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            flex-shrink: 0;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Leaflet map */
+        #eventsMap { flex: 1; min-height: 0; }
+
+        /* ── Custom Leaflet marker ── */
+        .custom-marker-icon {
+            background: linear-gradient(135deg, #f7971e, #ffd200);
+            border: 2.5px solid #fff;
+            border-radius: 50% 50% 50% 0;
+            width: 32px !important; height: 32px !important;
+            transform: rotate(-45deg);
+            box-shadow: 0 3px 10px rgba(247,151,30,0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .custom-marker-icon .marker-inner {
+            width: 12px; height: 12px;
+            background: #1a3a5c;
+            border-radius: 50%;
+            transform: rotate(45deg);
+        }
+
+        /* ── Leaflet popup custom style ── */
+        .leaflet-popup-content-wrapper {
+            border-radius: 14px !important;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.2) !important;
+            overflow: hidden;
+            padding: 0 !important;
+        }
+        .leaflet-popup-content { margin: 0 !important; width: auto !important; min-width: 220px; }
+        .popup-card { font-family: 'Poppins', sans-serif; }
+        .popup-img {
+            width: 100%; height: 110px; object-fit: cover;
+            background: linear-gradient(135deg, #1a2a3a, #2c3e50);
+        }
+        .popup-body { padding: 12px 14px; }
+        .popup-lieu { font-size: 0.95rem; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
+        .popup-meta { font-size: 0.78rem; color: #6b7280; margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
+        .popup-price { font-size: 1rem; font-weight: 800; color: #1a3a5c; margin: 8px 0 10px; }
+        .popup-btn {
+            display: block;
+            background: linear-gradient(135deg, #1a3a5c, #2c5364);
+            color: #fff;
+            text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 0.82rem;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
+        .popup-btn:hover { opacity: 0.85; color: #fff; }
+        .leaflet-popup-tip { background: #fff !important; }
     </style>
 {% endblock %}
 
@@ -70,11 +303,20 @@
     <div class="container">
         <h1 class="mb-10">Events</h1>
         <p class="mb-20">Discover and manage travel events with the Adventure theme.</p>
-        {% if app.user %}
-            <a href="{{ path('app_events_new') }}" class="primary-btn text-uppercase">Create Event</a>
-        {% else %}
-            <a href="{{ path('app_login') }}" class="primary-btn text-uppercase">Login To Create</a>
-        {% endif %}
+        <div class="mb-20" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+            {% if app.user %}
+                <a href="{{ path('app_events_new') }}" class="primary-btn text-uppercase">Create Event</a>
+            {% endif %}
+            <a href="{{ path('app_events_suggestions') }}" class="btn btn-outline-light text-uppercase">
+                <i class="fa fa-lightbulb me-2"></i>Get Suggestions
+            </a>
+            {# ★ DISCOVER EVENTS MAP ★ #}
+            <button class="btn-discover-map" id="openMapBtn" onclick="openEventsMap()">
+                <span class="map-pulse"></span>
+                <i class="fa fa-map-marker"></i>
+                Discover Events on Map
+            </button>
+        </div>
     </div>
 </section>
 
@@ -112,12 +354,18 @@
 
                             <div class="event-body">
                                 {% if canManage %}
-                                    {% if event.placesDisponibles > 0 and eventDate and eventDate > now %}
-                                        <span class="status-pill status-available">Available</span>
+                                    <span class="status-pill status-{{ event.status.value }}">
+                                        <i class="{{ event.status.getIcon() }} me-1"></i>
+                                        {{ event.status.getLabel() }}
+                                    </span>
+                                {% else %}
+                                    <!-- Affichage pour les utilisateurs non-admin -->
+                                    {% if event.isAccepted() and event.placesDisponibles > 0 and eventDate and eventDate > now %}
+                                        <span class="status-pill status-available">Disponible</span>
                                     {% elseif event.placesDisponibles <= 0 %}
-                                        <span class="status-pill status-full">Full</span>
+                                        <span class="status-pill status-full">Complet</span>
                                     {% else %}
-                                        <span class="status-pill status-ended">Ended</span>
+                                        <span class="status-pill status-ended">Terminé</span>
                                     {% endif %}
                                 {% endif %}
 
@@ -125,7 +373,14 @@
                                 <div class="event-meta"><i class="fa fa-calendar"></i> {{ event.dateDebut ? event.dateDebut|date('d/m/Y H:i') : 'N/A' }}</div>
                                 <div class="event-meta"><i class="fa fa-user"></i> {{ event.organisateur }}</div>
                                 <div class="event-meta"><i class="fa fa-ticket"></i> {{ event.placesDisponibles }}/{{ event.capaciteMax }} places</div>
-                                <p class="mb-0 mt-2"><strong>{{ event.prix }} TND</strong></p>
+                                <div class="price-block" id="price-block-{{ event.id }}"
+                                     data-prix="{{ event.prix }}"
+                                     data-places="{{ event.placesDisponibles }}"
+                                     data-capacite="{{ event.capaciteMax }}"
+                                     data-debut="{{ event.dateDebut ? event.dateDebut|date('Y-m-d') : '' }}"
+                                     data-status="{{ event.status.value }}">
+                                    <span class="price-normal">{{ event.prix }} TND</span>
+                                </div>
                             </div>
 
                             <div class="event-actions">
@@ -142,7 +397,271 @@
                     </div>
                 {% endfor %}
             </div>
+
+            <div class="d-flex justify-content-center mt-5">
+                {{ knp_pagination_render(events) }}
+            </div>
         {% endif %}
     </div>
 </section>
+
+{# ══════════════════════════════════════════════════════
+   MAP OVERLAY (Leaflet + Nominatim geocoding)
+══════════════════════════════════════════════════════ #}
+<div class="map-overlay" id="mapOverlay">
+    <div class="map-panel">
+
+        {# Top bar #}
+        <div class="map-bar">
+            <div class="map-bar-title">
+                🗺️ Événements sur la carte
+                <span class="map-count-badge" id="mapCountBadge">{{ events|length }} événements</span>
+            </div>
+            <button class="map-close-btn" onclick="closeEventsMap()" title="Fermer la carte">✕</button>
+        </div>
+
+        {# Loading bar #}
+        <div class="map-loading" id="mapLoading">
+            <span class="map-spinner"></span>
+            Géolocalisation des événements en cours…
+        </div>
+
+        {# Map #}
+        <div id="eventsMap"></div>
+
+    </div>
+</div>
+
+{# Pass events data to JS #}
+<script>
+const EVENTS_DATA = [
+    {% for event in events %}
+    {
+        id: {{ event.id }},
+        lieu: {{ event.lieu|json_encode|raw }},
+        organisateur: {{ event.organisateur|json_encode|raw }},
+        prix: {{ event.prix|json_encode|raw }},
+        date: {{ event.dateDebut ? event.dateDebut|date('d/m/Y H:i')|json_encode|raw : 'null' }},
+        dateDebut: {{ event.dateDebut ? event.dateDebut|date('Y-m-d')|json_encode|raw : 'null' }},
+        places: {{ event.placesDisponibles }},
+        capacite: {{ event.capaciteMax }},
+        statut: {{ event.status.value|json_encode|raw }},
+        image: {% if event.images and event.images|length > 0 %}{{ asset('uploads/events/' ~ event.images|first.imagePath)|json_encode|raw }}{% else %}null{% endif %},
+        url: {{ path('app_events_show', {'id': event.id})|json_encode|raw }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+];
+
+// ── Réduction automatique côté frontend ─────────────────────────────────
+/**
+ * Conditions OBLIGATOIRES pour appliquer la réduction :
+ *  1. Statut = 'accepte' uniquement
+ *  2. Date NON passée (événement futur)
+ *  3. Pas complètement complet (places > 0)
+ *  4. Presque plein  : taux d'occupation >= 70%
+ *  5. Date qui approche : <= 30 jours restants
+ *
+ * Montant : proportionnel à l'urgence (occupation + proximité), max 30%
+ */
+function calcAutoDiscount(places, capacite, dateDebutStr, statut) {
+    // Condition 1 : statut accepte seulement
+    if (statut !== 'accepte') return 0;
+
+    // Condition 2 : date non passée
+    if (!dateDebutStr) return 0;
+    const now      = new Date();
+    const debut    = new Date(dateDebutStr);
+    const daysLeft = (debut - now) / 86400000;
+    if (daysLeft < 0) return 0;   // événement passé
+
+    // Condition 3 : pas complètement complet
+    if (!capacite || capacite <= 0 || places <= 0) return 0;
+
+    // Condition 4 : presque plein (>= 70% occupé)
+    const occupancyRate = (capacite - places) / capacite;  // 0=vide, 1=plein
+    if (occupancyRate < 0.70) return 0;   // pas assez plein → pas de réduction
+
+    // Condition 5 : date dans <= 30 jours
+    if (daysLeft > 30) return 0;  // trop tôt → pas de réduction
+
+    // Calcul de la réduction : plus c'est urgent, plus c'est fort
+    // Facteur occupation  (0.70→1.00 occupé  → 0%→15% réduction)
+    const occDiscount  = ((occupancyRate - 0.70) / 0.30) * 0.15;
+    // Facteur temps (30→0 jours restants → 0%→15% réduction)
+    const timeDiscount = ((30 - daysLeft) / 30) * 0.15;
+
+    return Math.min(Math.round((occDiscount + timeDiscount) * 100) / 100, 0.30);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('.price-block[data-prix]').forEach(function (block) {
+        const prix     = parseFloat(block.dataset.prix);
+        const places   = parseInt(block.dataset.places, 10);
+        const capacite = parseInt(block.dataset.capacite, 10);
+        const debut    = block.dataset.debut || '';
+        const statut   = block.dataset.status || '';
+
+        const discount = calcAutoDiscount(places, capacite, debut, statut);
+
+        if (discount >= 0.05) {
+            const pct        = Math.round(discount * 100);
+            const prixReduit = (prix * (1 - discount)).toFixed(2);
+            block.innerHTML =
+                `<span class="price-original">${prix.toFixed(2)} TND</span>
+                 <span class="price-discounted">
+                     ${prixReduit} TND
+                     <span class="discount-badge">-${pct}%</span>
+                 </span>`;
+        } else {
+            block.innerHTML = `<span class="price-normal">${prix.toFixed(2)} TND</span>`;
+        }
+    });
+
+    // Mise à jour des popups de la carte
+    EVENTS_DATA.forEach(function (ev) {
+        const d = calcAutoDiscount(ev.places, ev.capacite, ev.dateDebut, ev.statut);
+        if (d >= 0.05) {
+            const pct     = Math.round(d * 100);
+            const reduced = (parseFloat(ev.prix) * (1 - d)).toFixed(2);
+            ev._prixAffiche = `<s style="color:#9ca3af;font-size:.85em">${parseFloat(ev.prix).toFixed(2)} TND</s> <strong style="color:#dc2626">${reduced} TND</strong> <span style="background:#dc2626;color:#fff;border-radius:12px;padding:1px 6px;font-size:.75em">-${pct}%</span>`;
+        } else {
+            ev._prixAffiche = `${parseFloat(ev.prix).toFixed(2)} TND`;
+        }
+    });
+});
+</script>
+{% endblock %}
+
+{% block javascripts %}
+    {{ parent() }}
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+    let map = null;
+    let mapInitialized = false;
+
+    // ── Open map overlay ──────────────────────────────────────────────
+    function openEventsMap() {
+        document.getElementById('mapOverlay').classList.add('open');
+        document.body.style.overflow = 'hidden';
+        if (!mapInitialized) {
+            setTimeout(initMap, 400); // wait for animation
+        }
+    }
+
+    // ── Close map overlay ─────────────────────────────────────────────
+    function closeEventsMap() {
+        document.getElementById('mapOverlay').classList.remove('open');
+        document.body.style.overflow = '';
+    }
+
+    // ESC key closes map
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape') closeEventsMap();
+    });
+
+    // ── Initialize Leaflet map ────────────────────────────────────────
+    function initMap() {
+        map = L.map('eventsMap', { zoomControl: true }).setView([33.886917, 9.537499], 6);
+
+        // Tile layer (OpenStreetMap — gratuit)
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+            maxZoom: 18
+        }).addTo(map);
+
+        mapInitialized = true;
+        geocodeAndPlaceMarkers();
+    }
+
+    // ── Custom marker icon ────────────────────────────────────────────
+    function createMarkerIcon() {
+        return L.divIcon({
+            className: '',
+            html: `<div style="
+                background: linear-gradient(135deg,#f7971e,#ffd200);
+                border: 2.5px solid #fff;
+                border-radius: 50% 50% 50% 0;
+                width: 32px; height: 32px;
+                transform: rotate(-45deg);
+                box-shadow: 0 3px 12px rgba(247,151,30,0.65);
+                display: flex; align-items: center; justify-content: center;
+            "><div style="width:12px;height:12px;background:#1a3a5c;border-radius:50%;transform:rotate(45deg);"></div></div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -36]
+        });
+    }
+
+    // ── Popup HTML ────────────────────────────────────────────────────
+    function buildPopup(ev) {
+        const imgHtml = ev.image
+            ? `<img class="popup-img" src="${ev.image}" alt="${ev.lieu}">`
+            : `<div class="popup-img" style="background:linear-gradient(135deg,#1a2a3a,#2c3e50);display:flex;align-items:center;justify-content:center;font-size:2.5rem;">🗓️</div>`;
+        const prixHtml = ev._prixAffiche || `${ev.prix} TND`;
+        return `
+            <div class="popup-card">
+                ${imgHtml}
+                <div class="popup-body">
+                    <div class="popup-lieu">📍 ${ev.lieu}</div>
+                    <div class="popup-meta"><span>📅</span> ${ev.date || 'N/A'}</div>
+                    <div class="popup-meta"><span>👥</span> ${ev.places}/${ev.capacite} places</div>
+                    <div class="popup-meta"><span>🧑</span> ${ev.organisateur}</div>
+                    <div class="popup-price">${prixHtml}</div>
+                    <a href="${ev.url}" class="popup-btn">Voir l'événement →</a>
+                </div>
+            </div>`;
+    }
+
+    // ── Geocode via Nominatim & place markers ─────────────────────────
+    async function geocodeAndPlaceMarkers() {
+        const loading   = document.getElementById('mapLoading');
+        const bounds    = [];
+        let geocoded    = 0;
+        let failed      = 0;
+
+        for (const ev of EVENTS_DATA) {
+            try {
+                const res  = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ev.lieu)}&limit=1&accept-language=fr`,
+                    { headers: { 'Accept-Language': 'fr' } }
+                );
+                const data = await res.json();
+
+                if (data && data.length > 0) {
+                    const lat = parseFloat(data[0].lat);
+                    const lng = parseFloat(data[0].lon);
+
+                    const marker = L.marker([lat, lng], { icon: createMarkerIcon() })
+                        .addTo(map)
+                        .bindPopup(buildPopup(ev), { maxWidth: 260, className: '' });
+
+                    bounds.push([lat, lng]);
+                    geocoded++;
+                } else {
+                    failed++;
+                }
+
+                // Small delay to respect Nominatim rate limit (1 req/sec)
+                await new Promise(r => setTimeout(r, 1100));
+
+            } catch (err) {
+                console.warn('Geocoding failed for:', ev.lieu, err);
+                failed++;
+            }
+        }
+
+        // Fit map to all markers
+        if (bounds.length > 0) {
+            map.fitBounds(bounds, { padding: [50, 50], maxZoom: 12 });
+        }
+
+        // Hide loading bar
+        loading.classList.add('hidden');
+
+        // Update badge
+        const badge = document.getElementById('mapCountBadge');
+        badge.textContent = `${geocoded} événement${geocoded > 1 ? 's' : ''} sur la carte`;
+    }
+    </script>
+{% include '_chatbot.html.twig' with { chatContext: 'events' } %}
 {% endblock %}

@@ -1,4 +1,4 @@
-﻿{% extends 'base.html.twig' %}
+{% extends 'base.html.twig' %}
 
 {% block title %}Modifier l'activite{% endblock %}
 
@@ -6,11 +6,90 @@
 {{ parent() }}
 <style>
     .module-hero {
-        background: linear-gradient(rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)),
-                    url('{{ asset('adventure/img/banner-bg.jpg') }}') center/cover no-repeat;
+        position: relative;
         color: #fff;
         padding: 120px 0 80px;
         margin-bottom: 40px;
+        overflow: hidden;
+    }
+
+    .module-hero h1,
+    .module-hero h2,
+    .module-hero h3,
+    .module-hero h4,
+    .module-hero h5,
+    .module-hero h6,
+    .module-hero p {
+        color: #fff !important;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.7);
+    }
+
+    .adventure-btn {
+        font-size: 14px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease 0s;
+        border-radius: 25px;
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        border: 2px solid transparent;
+        text-decoration: none;
+        display: inline-block;
+    }
+
+    .adventure-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        background: linear-gradient(135deg, #5587ea 0%, #3f72df 100%);
+        color: #fff;
+    }
+
+    .adventure-btn.primary-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: #fff;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    .adventure-btn.default-border {
+        background: white;
+        color: #667eea;
+        border: 2px solid #667eea;
+    }
+
+    .adventure-btn.info {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        color: #fff;
+        box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+    }
+
+    .module-hero .video-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: -1;
+    }
+
+    .module-hero .video-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, 
+            rgba(0, 0, 0, 0.6) 0%, 
+            rgba(0, 0, 0, 0.4) 100%);
+        z-index: 0;
+        pointer-events: none;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 1;
     }
 
     .surface-card {
@@ -19,6 +98,12 @@
         box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
         padding: 24px;
         margin-bottom: 24px;
+        transition: all 0.3s ease 0s;
+    }
+
+    .surface-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12);
     }
 
     .current-image {
@@ -37,9 +122,20 @@
 
 {% block content %}
 <section class="module-hero">
-    <div class="container text-center">
-        <h2 class="mb-2">Modifier l'activite</h2>
-        <p class="mb-0">Mettez a jour les informations de l'activite</p>
+    <!-- Video Background -->
+    <video class="video-background" autoplay muted loop playsinline>
+        <source src="{{ asset('adventure/video/letsDiscover.mp4') }}" type="video/mp4">
+        Votre navigateur ne supporte pas les vidéos HTML5.
+    </video>
+    
+    <!-- Video Overlay -->
+    <div class="video-overlay"></div>
+    
+    <div class="hero-content">
+        <div class="container text-center">
+            <h2 class="mb-2">Modifier l'activite</h2>
+            <p class="mb-0">Mettez a jour les informations de l'activite</p>
+        </div>
     </div>
 </section>
 
@@ -104,13 +200,131 @@
 
             <div class="d-flex justify-content-between align-items-center mt-4">
                 <div>
-                    <a href="{{ path('app_activities_index') }}" class="genric-btn default-border">Retour</a>
-                    <a href="{{ path('app_activities_show', {'id': activity.id}) }}" class="genric-btn info ml-2">Voir</a>
+                    <a href="{{ path('app_activities_index') }}" class="adventure-btn default-border">Retour</a>
+                    <a href="{{ path('app_activities_show', {'id': activity.id}) }}" class="adventure-btn info ml-2">Voir</a>
                 </div>
-                <button type="submit" class="primary-btn text-uppercase">Enregistrer</button>
+                <div>
+                    <button type="submit" class="adventure-btn primary-btn text-uppercase">Enregistrer</button>
+                </div>
             </div>
 
         {{ form_end(form) }}
     </div>
 </div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion de la dépendance catégorie -> type d'activité
+    const categorieSelect = document.querySelector('select[name="activities[categorie]"]');
+    const typeSelect = document.querySelector('select[name="activities[type_activite]"]');
+    
+    if (categorieSelect && typeSelect) {
+        categorieSelect.addEventListener('change', function() {
+            let selectedCategorie = this.value;
+            console.log('Catégorie sélectionnée:', selectedCategorie);
+            
+            loadTypesByCategorie(selectedCategorie);
+        });
+        
+        // Charger les types au chargement de la page si une catégorie est déjà sélectionnée
+        if (categorieSelect.value) {
+            let selectedCategorie = categorieSelect.value;
+            console.log('Catégorie sélectionnée:', selectedCategorie);
+            
+            loadTypesByCategorie(selectedCategorie);
+        }
+    }
+    
+    function loadTypesByCategorie(categorie) {
+        if (!categorie) {
+            // Réinitialiser le champ type
+            typeSelect.innerHTML = '<option value="">Choisir d\'abord une catégorie</option>';
+            typeSelect.disabled = true;
+            return;
+        }
+        
+        try {
+            // Afficher un état de chargement
+            typeSelect.innerHTML = '<option value="">Chargement...</option>';
+            typeSelect.disabled = true;
+            
+            // Types d'activité par catégorie avec les vraies valeurs de l'énumération
+            const typesByCategorie = {
+                'desert': [
+                    {nom: 'Quad et buggy 🏎️', valeur: 'Quad et buggy'},
+                    {nom: 'Trekking dans les dunes 🥾', valeur: 'Trekking dans les dunes'},
+                    {nom: 'Moto cross désert 🏍️', valeur: 'Moto cross désert'},
+                    {nom: 'Balade à dos de dromadaire 🐪', valeur: 'Balade à dos de dromadaire'},
+                    {nom: 'Nuit en campement saharien 🏕️', valeur: 'Nuit en campement saharien'},
+                    {nom: 'Observation des étoiles ⭐', valeur: 'Observation des étoiles'}
+                ],
+                'Mer': [
+                    {nom: 'Jet ski 🏄‍♂️', valeur: 'Jet ski'},
+                    {nom: 'Parachute ascensionnel 🪂', valeur: 'Parachute ascensionnel'},
+                    {nom: 'Paddle 🛶', valeur: 'Paddle'},
+                    {nom: 'Kayak 🛶', valeur: 'Kayak'},
+                    {nom: 'Planche à voile ⛵', valeur: 'Planche à voile'},
+                    {nom: 'Plongée sous-marine 🤿', valeur: 'Plongée sous-marine'},
+                    {nom: 'Snorkeling 🤽', valeur: 'Snorkeling'},
+                    {nom: 'Sortie en bateau ⛵', valeur: 'Sortie en bateau'},
+                    {nom: 'Pêche touristique 🎣', valeur: 'Pêche touristique'}
+                ],
+                'Aérien': [
+                    {nom: 'Parachutisme 🪂', valeur: 'Parachutisme'},
+                    {nom: 'Parapente 🪂', valeur: 'Parapente'},
+                    {nom: 'ULM (Ultra léger motorisé) 🪂', valeur: 'ULM (Ultra léger motorisé)'},
+                    {nom: 'Montgolfière (occasionnellement dans le sud) 🎈', valeur: 'Montgolfière (occasionnellement dans le sud)'},
+                    {nom: 'Parachute ascensionnel (mer) 🪂', valeur: 'Parachute ascensionnel (mer)'}
+                ],
+                'nature': [
+                    {nom: 'Randonnée en forêt 🥾', valeur: 'Randonnée en forêt'},
+                    {nom: 'Escalade 🧗', valeur: 'Escalade'},
+                    {nom: 'Camping 🏕️', valeur: 'Camping'},
+                    {nom: 'VTT 🚵', valeur: 'VTT'},
+                    {nom: 'Spéléologie ⛰️', valeur: 'Spéléologie'}
+                ],
+                'Culture': [
+                    {nom: 'Visite des ksour de Tataouine 🏛️', valeur: 'Visite des ksour de Tataouine'},
+                    {nom: 'Décors de films à Tozeur 🎬', valeur: 'Décors de films à Tozeur'},
+                    {nom: 'Visite archéologique 🏺', valeur: 'Visite archéologique'},
+                    {nom: 'Festivals 🎉', valeur: 'Festivals'},
+                    {nom: 'Tourisme historique 📚', valeur: 'Tourisme historique'},
+                    {nom: 'Photographie 📷', valeur: 'Photographie'}
+                ]
+            };
+            
+            const types = typesByCategorie[categorie] || [];
+            
+            if (types.length === 0) {
+                throw new Error('Aucun type disponible pour cette catégorie');
+            }
+            
+            // Garder la valeur actuelle si elle existe et est valide
+            const currentValue = typeSelect.value;
+            
+            // Vider et remplir le select avec les types
+            typeSelect.innerHTML = '<option value="">Choisir un type</option>';
+            
+            types.forEach(type => {
+                const option = document.createElement('option');
+                option.value = type.valeur;
+                option.textContent = type.nom;
+                if (option.value === currentValue) {
+                    option.selected = true;
+                }
+                typeSelect.appendChild(option);
+            });
+            
+            typeSelect.disabled = false;
+        } catch (error) {
+            console.error('Erreur lors du chargement des types:', error);
+            typeSelect.innerHTML = '<option value="">Erreur au chargement</option>';
+            typeSelect.disabled = true;
+        }
+    }
+});
+</script>
 {% endblock %}

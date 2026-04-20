@@ -56,7 +56,7 @@
 
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
 
-        .modal { background: white; border-radius: 12px; max-width: 800px; max-height: 80vh; width: 90%; overflow: hidden; }
+        .modal-dialog-custom { background: white; border-radius: 12px; max-width: 800px; max-height: 80vh; width: 90%; overflow: hidden; }
 
         .modal-header { padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
 
@@ -266,7 +266,7 @@
 
         <div id="activitiesModal" class="modal-overlay" aria-hidden="true">
 
-            <div class="modal" role="dialog" aria-modal="true" aria-labelledby="activitiesModalTitle">
+            <div class="modal-dialog-custom" role="dialog" aria-modal="true" aria-labelledby="activitiesModalTitle">
 
                 <div class="modal-header">
 
@@ -430,9 +430,28 @@
 
             <div class="form-group">
 
-                {{ form_widget(form.materielsNecessaires, {'attr': {'class': 'form-control'}}) }}
+                {{ form_widget(form.materielsNecessaires, {'attr': {'class': 'form-control', 'id': 'materielsNecessaires', 'rows': 6}}) }}
 
                 {{ form_errors(form.materielsNecessaires) }}
+
+                <!-- ★ ENHANCE EQUIPMENT BUTTON ★ -->
+                <div style="margin-top:12px;">
+                    <button type="button" id="btnEnhanceEquip" onclick="enhanceEquipment()"
+                        style="
+                            background: linear-gradient(135deg,#f7971e,#ffd200);
+                            color:#1a1a1a; border:none; border-radius:50px;
+                            padding:10px 24px; font-size:0.9rem; font-weight:700;
+                            cursor:pointer; display:inline-flex; align-items:center;
+                            gap:8px; transition:all 0.3s; box-shadow:0 4px 14px rgba(247,151,30,0.4);
+                        ">
+                        <span id="enhanceEquipIcon">✨</span>
+                        <span id="enhanceEquipText">Générer les équipements avec l'IA</span>
+                    </button>
+                    <small style="display:block; color:#9ca3af; margin-top:6px; font-size:0.78rem;">
+                        💡 Basé sur les activités sélectionnées ci-dessus
+                    </small>
+                    <div id="enhanceEquipMsg" style="display:none; margin-top:8px; font-size:0.82rem; padding:8px 12px; border-radius:8px;"></div>
+                </div>
 
             </div>
 
@@ -1138,6 +1157,99 @@ function escapeHtml(text) {
 
     });
 
+    </script>
+
+    <script>
+    // ── ✨ Enhance Equipment via Gemini ────────────────────────────────────────
+    async function enhanceEquipment() {
+        const btn    = document.getElementById('btnEnhanceEquip');
+        const icon   = document.getElementById('enhanceEquipIcon');
+        const text   = document.getElementById('enhanceEquipText');
+        const msg    = document.getElementById('enhanceEquipMsg');
+        // Use the real Symfony-generated ID via Twig
+        const area   = document.getElementById('{{ form.materielsNecessaires.vars.id }}')
+                    || document.querySelector('textarea[name*="materielsNecessaires"]')
+                    || document.getElementById('materielsNecessaires');
+
+        // Collect selected activities from the DOM (cards rendered by renderSelectedActivities)
+        const actCards = document.querySelectorAll('#selected-activities .activity-card');
+        const activities = [];
+
+        actCards.forEach(card => {
+            const titre = card.querySelector('.activity-card-title')?.textContent?.trim() || '';
+            const desc  = card.querySelector('.activity-card-desc')?.textContent?.trim()  || '';
+            if (titre) activities.push({ titre, type_activite: desc, categorie: '' });
+        });
+
+        // Fallback: use allActivities JS variable filtered by selectedActivities
+        if (activities.length === 0 && typeof selectedActivities !== 'undefined' && selectedActivities.length > 0) {
+            selectedActivities.forEach(a => {
+                activities.push({
+                    titre: a.titre || '',
+                    type_activite: a.description || '',
+                    categorie: a.categorie || ''
+                });
+            });
+        }
+
+        if (activities.length === 0) {
+            msg.style.display = 'block';
+            msg.style.background = '#fff4cf';
+            msg.style.color = '#8a6d00';
+            msg.textContent = '⚠️ Veuillez d\'abord sélectionner des activités pour l\'événement.';
+            return;
+        }
+
+        // Loading state
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+        icon.innerHTML = '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(26,26,26,0.2);border-top-color:#1a1a1a;border-radius:50%;animation:spin 0.8s linear infinite;"></span>';
+        text.textContent = 'Génération en cours…';
+        msg.style.display = 'none';
+
+        try {
+            const res  = await fetch('/api/ai/event-equipment', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ activities })
+            });
+
+            // Read body ONCE
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || `Erreur serveur (${res.status})`);
+            }
+
+            if (data.equipment) {
+                if (area) {
+                    area.value = data.equipment;
+                    msg.style.display    = 'block';
+                    msg.style.background = '#d7f7e4';
+                    msg.style.color      = '#10663b';
+                    msg.textContent      = '✅ Équipements générés avec succès par l\'IA !';
+                } else {
+                    msg.style.display    = 'block';
+                    msg.style.background = '#fee2e2';
+                    msg.style.color      = '#991b1b';
+                    msg.textContent      = '❌ Champ matériels introuvable dans le formulaire.';
+                    console.error('Textarea matériels non trouvé. ID Symfony attendu: events_materielsNecessaires');
+                }
+            } else {
+                throw new Error(data.error || 'Réponse IA invalide');
+            }
+        } catch (err) {
+            msg.style.display    = 'block';
+            msg.style.background = '#fee2e2';
+            msg.style.color      = '#991b1b';
+            msg.textContent      = '❌ ' + (err.message || 'Erreur de connexion à l\'IA.');
+        } finally {
+            btn.disabled     = false;
+            btn.style.opacity = '1';
+            icon.textContent = '✨';
+            text.textContent = 'Générer les équipements avec l\'IA';
+        }
+    }
     </script>
 
 {% endblock %}

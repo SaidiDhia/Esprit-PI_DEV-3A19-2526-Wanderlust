@@ -3,6 +3,7 @@
 
 namespace App\Entity;
 
+use App\Enum\StatusEventEnum;
 use App\Repository\EventsRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -58,8 +59,8 @@ class Events
     #[ORM\Column(type: Types::STRING, length: 500, nullable: true)]
     private ?string $video = null;
 
-    #[ORM\Column(type: Types::STRING, length: 20)]
-    private ?string $statut = null;
+    #[ORM\Column(type: 'string', length: 50, enumType: StatusEventEnum::class, options: ['default' => 'en_attente'])]
+    private StatusEventEnum $status = StatusEventEnum::EN_ATTENTE;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $dateCreation = null;
@@ -74,6 +75,9 @@ class Events
     #[ORM\ManyToOne(targetEntity: User::class)]
     #[ORM\JoinColumn(name: 'created_by_id', referencedColumnName: 'id', nullable: true, onDelete: 'SET NULL')]
     private ?User $createdBy = null;
+
+    #[ORM\Column(type: Types::INTEGER, options: ['default' => 0])]
+    private int $shareCount = 0;
 
     public function __construct()
     {
@@ -261,15 +265,40 @@ class Events
         return $this;
     }
 
-    public function getStatut(): ?string
+    public function getStatus(): StatusEventEnum
     {
-        return $this->statut;
+        return $this->status;
     }
 
-    public function setStatut(string $statut): static
+    public function setStatus(StatusEventEnum $status): static
     {
-        $this->statut = $statut;
+        $this->status = $status;
         return $this;
+    }
+
+    public function isAccepted(): bool
+    {
+        return $this->status === StatusEventEnum::ACCEPTE;
+    }
+
+    public function isRefused(): bool
+    {
+        return $this->status === StatusEventEnum::REFUSE;
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === StatusEventEnum::EN_ATTENTE;
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === StatusEventEnum::ANNULE;
+    }
+
+    public function isFinished(): bool
+    {
+        return $this->status === StatusEventEnum::TERMINE;
     }
 
     public function getDateCreation(): ?\DateTimeInterface
@@ -329,5 +358,15 @@ class Events
 
         return $this;
     }
-    
+
+    public function getShareCount(): int
+    {
+        return $this->shareCount;
+    }
+
+    public function setShareCount(int $shareCount): static
+    {
+        $this->shareCount = $shareCount;
+        return $this;
+    }
 }

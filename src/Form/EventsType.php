@@ -5,9 +5,11 @@ namespace App\Form;
 
 use App\Entity\Activities;
 use App\Entity\Events;
+use App\Enum\StatusEventEnum;
 use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
@@ -33,6 +35,8 @@ class EventsType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
+        $isAdmin = $options['is_admin'] ?? false;
+        
         $builder
             // Activités associées
             ->add('activities', EntityType::class, [
@@ -180,8 +184,24 @@ class EventsType extends AbstractType
                 'label' => 'Matériels nécessaires',
                 'attr'  => ['placeholder' => 'Listez les matériels requis...', 'rows' => 4],
                 'constraints' => [
-                    new Length(['max' => 1000, 'maxMessage' => 'La description des matériels ne peut pas dépasser 1000 caractères.']),
+                    new Length(['max' => 5000, 'maxMessage' => 'La description des matériels ne peut pas dépasser 5000 caractères.']),
                 ],
+            ])
+            // Statut (admin uniquement)
+            ->add('status', ChoiceType::class, [
+                'label' => 'Statut',
+                'choices' => [
+                    'En attente' => StatusEventEnum::EN_ATTENTE,
+                    'Accepté' => StatusEventEnum::ACCEPTE,
+                    'Refusé' => StatusEventEnum::REFUSE,
+                    'Annulé' => StatusEventEnum::ANNULE,
+                    'Terminé' => StatusEventEnum::TERMINE,
+                ],
+                'attr' => [
+                    'class' => 'form-select-modern',
+                ],
+                'required' => false,
+                'disabled' => !$isAdmin, // Activé uniquement pour les admins
             ])
         ;
     }
@@ -190,6 +210,7 @@ class EventsType extends AbstractType
     {
         $resolver->setDefaults([
             'data_class' => Events::class,
+            'is_admin' => false,
         ]);
     }
 }

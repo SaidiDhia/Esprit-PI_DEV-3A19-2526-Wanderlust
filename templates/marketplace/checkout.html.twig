@@ -1,149 +1,511 @@
 {% extends 'base.html.twig' %}
-
-{% block title %}Checkout - WanderLust{% endblock %}
+{% block title %}Checkout — WanderLust{% endblock %}
 
 {% block stylesheets %}
-    {{ parent() }}
-    <style>
-        .module-hero {
-            background: linear-gradient(rgba(0, 0, 0, 0.48), rgba(0, 0, 0, 0.48)), url('{{ asset('adventure/img/slider3.jpg') }}') center center/cover no-repeat;
-            padding: 120px 0 80px;
-            color: #fff;
-            margin-bottom: 50px;
-        }
+<style>
+:root{--blue-primary:#1D4ED8;--blue-light:#3B82F6;--blue-pale:#EFF6FF;--blue-dark:#1e3a8a;--gray-50:#F9FAFB;--gray-100:#F3F4F6;--gray-200:#E5E7EB;--gray-400:#9CA3AF;--gray-500:#6B7280;--gray-700:#374151;--gray-900:#111827;--shadow-sm:0 1px 3px rgba(0,0,0,0.06);--shadow-md:0 4px 16px rgba(0,0,0,0.10);--font-display:'Playfair Display',serif;--font-body:'DM Sans',sans-serif;}
+.mp-topnav{background:#1565C0;position:sticky;top:0;z-index:90;box-shadow:0 2px 12px rgba(0,0,0,0.2);}
+.mp-topnav-inner{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;gap:12px;}
+.mp-nav-btn{background:rgba(255,255,255,0.15);color:white;text-decoration:none;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;font-family:var(--font-body);border:none;cursor:pointer;transition:background 0.2s;white-space:nowrap;display:inline-block;}
+.mp-nav-btn:hover{background:rgba(255,255,255,0.25);color:white;}
+.mp-nav-back{background:rgba(255,255,255,0.2);}
+.mp-page-content{max-width:1200px;margin:0 auto;padding:32px 24px;}
+.flash{padding:12px 20px;border-radius:10px;font-size:14px;font-weight:500;margin-bottom:12px;}
+.flash-success{background:#D1FAE5;color:#065F46;border:1px solid #6EE7B7;}
+.flash-error{background:#FEE2E2;color:#991B1B;border:1px solid #FCA5A5;}
+.mp-form-group{margin-bottom:18px;}
+.mp-form-label{display:block;font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:7px;}
+.mp-form-input{width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;font-family:var(--font-body);color:var(--gray-700);outline:none;transition:border-color 0.2s,box-shadow 0.2s;box-sizing:border-box;}
+.mp-form-input:focus{border-color:var(--blue-light);box-shadow:0 0 0 3px rgba(59,130,246,0.12);}
+.mp-payment-option{display:flex;gap:14px;align-items:center;padding:16px;border-radius:12px;border:2px solid var(--gray-200);cursor:pointer;transition:all 0.2s;margin-bottom:12px;}
+.mp-payment-option:hover{border-color:var(--blue-light);background:var(--blue-pale);}
+.mp-payment-option.selected{border-color:var(--blue-primary);background:var(--blue-pale);}
+.mp-payment-option input[type="radio"]{margin:0;}
 
-        .checkout-card {
-            border: 1px solid #eee;
-            border-radius: 12px;
-            background: #fff;
-            box-shadow: 0 10px 26px rgba(0, 0, 0, 0.08);
-            padding: 20px;
-            margin-bottom: 20px;
-        }
+/* ── Stripe Payment Panel ─────────────────────────────────── */
+#stripe-payment-panel {
+    display: none;
+    margin-top: 20px;
+    background: white;
+    border: 2px solid #635BFF;
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 4px 20px rgba(99,91,255,0.15);
+}
+#stripe-payment-panel.visible { display: block; }
 
-        .payment-option {
-            display: flex;
-            gap: 12px;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 12px;
-            align-items: center;
-            cursor: pointer;
-        }
+.stripe-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--gray-100);
+}
+.stripe-logo-wrap {
+    background: #635BFF;
+    border-radius: 8px;
+    padding: 6px 12px;
+    display: flex;
+    align-items: center;
+}
+.stripe-logo-wrap svg { height: 18px; fill: white; }
+.stripe-header-text { font-size: 13px; color: var(--gray-500); }
 
-        .payment-option.selected {
-            border-color: #22c55e;
-            background: #ecfdf5;
-        }
+/* Stripe Elements container */
+#card-element {
+    background: #F9FAFB;
+    border: 1.5px solid var(--gray-200);
+    border-radius: 8px;
+    padding: 14px 16px;
+    transition: border-color 0.2s;
+    min-height: 44px;
+}
+#card-element.StripeElement--focus { border-color: #635BFF; box-shadow: 0 0 0 3px rgba(99,91,255,0.12); }
+#card-element.StripeElement--invalid { border-color: #EF4444; }
 
-        .order-line {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-bottom: 10px;
-        }
+/* Card error message */
+#card-errors {
+    display: none;
+    margin-top: 10px;
+    padding: 12px 16px;
+    background: #FEF2F2;
+    border: 1px solid #FCA5A5;
+    border-radius: 8px;
+    color: #991B1B;
+    font-size: 13px;
+    font-weight: 500;
+    gap: 8px;
+    align-items: flex-start;
+}
+#card-errors.visible { display: flex; }
+#card-errors-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
 
-        .order-line img {
-            width: 48px;
-            height: 48px;
-            border-radius: 8px;
-            object-fit: cover;
-            background: #f7f7f7;
-        }
-    </style>
+/* Test card helper */
+.test-cards-hint {
+    background: #FFFBEB;
+    border: 1px solid #FCD34D;
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 14px;
+    font-size: 12px;
+    color: #92400E;
+}
+.test-cards-hint strong { display: block; margin-bottom: 4px; }
+.test-card-row { display: flex; gap: 8px; align-items: center; margin-top: 4px; font-family: monospace; }
+.test-card-row span { background: white; border: 1px solid #FCD34D; padding: 2px 8px; border-radius: 4px; font-size: 11px; cursor: pointer; transition: background 0.15s; }
+.test-card-row span:hover { background: #FEF3C7; }
+
+/* Pay button */
+#stripe-pay-btn {
+    width: 100%;
+    margin-top: 18px;
+    padding: 15px;
+    background: linear-gradient(135deg, #635BFF, #4F46E5);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: var(--font-body);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.25s;
+    box-shadow: 0 4px 14px rgba(99,91,255,0.35);
+}
+#stripe-pay-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,91,255,0.45); }
+#stripe-pay-btn:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+#stripe-pay-btn .spinner {
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+}
+#stripe-pay-btn.loading .spinner { display: block; }
+#stripe-pay-btn.loading .btn-text { opacity: 0.7; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Security badges */
+.stripe-security {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 12px;
+    font-size: 11px;
+    color: var(--gray-400);
+}
+
+/* Success overlay */
+#payment-success {
+    display: none;
+    text-align: center;
+    padding: 28px 20px;
+}
+#payment-success.visible { display: block; }
+.success-icon { font-size: 52px; margin-bottom: 12px; }
+.success-title { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: #059669; margin-bottom: 8px; }
+.success-sub { font-size: 14px; color: var(--gray-500); margin-bottom: 20px; }
+.processing-bar { height: 4px; background: var(--gray-100); border-radius: 2px; overflow: hidden; }
+.processing-bar-fill { height: 100%; background: linear-gradient(90deg, #059669, #10B981); border-radius: 2px; width: 0; transition: width 0.1s linear; }
+</style>
 {% endblock %}
 
 {% block content %}
-<section class="module-hero">
-    <div class="container">
-        <div class="d-flex flex-wrap" style="gap:10px; margin-bottom:14px;">
-            <a href="{{ path('app_marketplace_cart') }}" class="genric-btn default-border">Back To Cart</a>
-        </div>
-        <h1 class="mb-10">Checkout</h1>
-        <p class="mb-0">Confirm address, choose payment, and place your order.</p>
+<div class="mp-topnav">
+    <div class="mp-topnav-inner">
+        <a href="{{ path('app_marketplace_cart') }}" class="mp-nav-btn mp-nav-back">← Back to Cart</a>
+        <span style="font-size:16px; font-weight:700; color:white;">🧾 Checkout</span>
+        <span></span>
     </div>
-</section>
+</div>
 
-<section class="section-gap pt-0">
-    <div class="container">
-        {% for msg in app.flashes('error') %}
-            <div class="alert alert-danger">{{ msg }}</div>
-        {% endfor %}
+<div class="mp-page-content" style="max-width:900px;">
+    {% for msg in app.flashes('error') %}
+        <div class="flash flash-error">{{ msg }}</div>
+    {% endfor %}
 
-        <form method="POST" action="{{ path('app_marketplace_checkout_confirm') }}">
-            <div class="row">
-                <div class="col-lg-7">
-                    <div class="checkout-card">
-                        <h4 class="mb-3">Delivery Address</h4>
-                        <div class="row">
-                            <div class="col-md-12 mb-3"><label>Full Name</label><input type="text" name="full_name" required class="form-control"></div>
-                            <div class="col-md-6 mb-3"><label>Phone</label><input type="tel" name="phone" required class="form-control"></div>
-                            <div class="col-md-6 mb-3"><label>Email</label><input type="email" name="email" class="form-control"></div>
-                            <div class="col-md-12 mb-3"><label>Address</label><input type="text" name="address" required class="form-control"></div>
-                            <div class="col-md-6 mb-3"><label>City</label><input type="text" name="city" required class="form-control"></div>
-                            <div class="col-md-6 mb-3"><label>Postal Code</label><input type="text" name="postal_code" class="form-control"></div>
-                            <div class="col-md-12 mb-0"><label>Notes</label><textarea name="notes" rows="2" class="form-control"></textarea></div>
-                        </div>
+    {# ── Hidden form for cash orders (submitted directly) ── #}
+    <form id="cash-form" method="POST" action="{{ path('app_marketplace_checkout_confirm') }}" style="display:none;">
+        <input type="hidden" name="payment_method" value="cash">
+        <input id="cf-name"    type="hidden" name="full_name">
+        <input id="cf-phone"   type="hidden" name="phone">
+        <input id="cf-email"   type="hidden" name="email">
+        <input id="cf-address" type="hidden" name="address">
+        <input id="cf-city"    type="hidden" name="city">
+        <input id="cf-zip"     type="hidden" name="postal_code">
+        <input id="cf-notes"   type="hidden" name="notes">
+    </form>
+
+    {# ── Hidden form for online/Stripe orders ── #}
+    <form id="stripe-form" method="POST" action="{{ path('app_marketplace_checkout_confirm') }}" style="display:none;">
+        <input type="hidden" name="payment_method" value="online">
+        <input id="sf-name"          type="hidden" name="full_name">
+        <input id="sf-phone"         type="hidden" name="phone">
+        <input id="sf-email"         type="hidden" name="email">
+        <input id="sf-address"       type="hidden" name="address">
+        <input id="sf-city"          type="hidden" name="city">
+        <input id="sf-zip"           type="hidden" name="postal_code">
+        <input id="sf-notes"         type="hidden" name="notes">
+        <input id="sf-stripe-token"  type="hidden" name="stripe_token">
+    </form>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px;">
+
+        {# ── LEFT: Address + Payment ── #}
+        <div>
+            {# Delivery Address #}
+            <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:28px; box-shadow:var(--shadow-sm); margin-bottom:24px;">
+                <h3 style="font-family:var(--font-display); font-size:20px; font-weight:700; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--gray-100);">📦 Delivery Address</h3>
+
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Full Name *</label>
+                    <input type="text" id="in-name" required class="mp-form-input" placeholder="Your full name">
+                </div>
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Phone *</label>
+                    <input type="tel" id="in-phone" required class="mp-form-input" placeholder="(+216) XX XXX XXX">
+                </div>
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Email</label>
+                    <input type="email" id="in-email" class="mp-form-input" placeholder="your@email.com">
+                </div>
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Address *</label>
+                    <input type="text" id="in-address" required class="mp-form-input" placeholder="Street, Building, Apt...">
+                </div>
+                <div style="display:grid; grid-template-columns:2fr 1fr; gap:12px;">
+                    <div class="mp-form-group">
+                        <label class="mp-form-label">City *</label>
+                        <input type="text" id="in-city" required class="mp-form-input" placeholder="Tunis">
                     </div>
-
-                    <div class="checkout-card">
-                        <h4 class="mb-3">Payment Method</h4>
-                        <label class="payment-option selected" id="opt-cash">
-                            <input type="radio" name="payment_method" value="cash" checked onchange="selectPayment(this)">
-                            <div>
-                                <div style="font-weight:700;">Cash On Delivery</div>
-                                <div class="small text-muted">Stock is reserved until order confirmation.</div>
-                            </div>
-                        </label>
-                        <label class="payment-option mt-2" id="opt-online">
-                            <input type="radio" name="payment_method" value="online" onchange="selectPayment(this)">
-                            <div>
-                                <div style="font-weight:700;">Pay Online</div>
-                                <div class="small text-muted">Instant confirmation and stock deduction.</div>
-                            </div>
-                        </label>
+                    <div class="mp-form-group">
+                        <label class="mp-form-label">Postal Code</label>
+                        <input type="text" id="in-zip" class="mp-form-input" placeholder="1000">
                     </div>
                 </div>
+                <div class="mp-form-group">
+                    <label class="mp-form-label">Notes</label>
+                    <textarea id="in-notes" class="mp-form-input" rows="2" placeholder="Delivery instructions..."></textarea>
+                </div>
+            </div>
 
-                <div class="col-lg-5">
-                    <div class="checkout-card" style="position:sticky; top:110px;">
-                        <h4 class="mb-3">Order Summary</h4>
-                        {% for item in cartItems %}
-                            <div class="order-line">
-                                {% if item.image %}
-                                    <img src="{{ item.image }}" alt="{{ item.product_title }}" onerror="this.src='https://dummyimage.com/200x200/d1d5db/64748b&text=No+Photo'">
-                                {% else %}
-                                    <img src="{{ asset('adventure/img/g6.jpg') }}" alt="No image">
-                                {% endif %}
-                                <div style="flex:1;">
-                                    <div style="font-weight:600; font-size:14px;">{{ item.product_title }}</div>
-                                    <div class="small text-muted">x {{ item.cart_qty }}</div>
-                                </div>
-                                <strong>{{ (item.price * item.cart_qty)|number_format(2) }} TND</strong>
-                            </div>
-                        {% endfor %}
+            {# Payment Method #}
+            <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:28px; box-shadow:var(--shadow-sm);">
+                <h3 style="font-family:var(--font-display); font-size:20px; font-weight:700; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--gray-100);">💳 Payment Method</h3>
 
-                        <hr>
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <span style="font-weight:600;">Total</span>
-                            <h4 class="mb-0">{{ total|number_format(2) }} TND</h4>
+                <label class="mp-payment-option selected" id="opt-cash" onclick="selectPayment('cash')">
+                    <input type="radio" name="pm" value="cash" checked>
+                    <span style="font-size:28px;">💵</span>
+                    <div>
+                        <div style="font-weight:700;">Cash on Delivery</div>
+                        <div style="font-size:12px; color:var(--gray-400);">Pay when your order arrives. Stock reserved until confirmed.</div>
+                    </div>
+                </label>
+
+                <label class="mp-payment-option" id="opt-online" onclick="selectPayment('online')">
+                    <input type="radio" name="pm" value="online">
+                    <span style="font-size:28px;">💳</span>
+                    <div>
+                        <div style="font-weight:700; display:flex; align-items:center; gap:8px;">
+                            Pay Online
+                            <svg viewBox="0 0 60 25" style="height:16px;" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <text x="0" y="20" font-family="Arial" font-size="22" font-weight="bold" fill="#635BFF">stripe</text>
+                            </svg>
                         </div>
-                        <button type="submit" class="primary-btn text-uppercase" style="border:none; width:100%;">Place Order</button>
+                        <div style="font-size:12px; color:var(--gray-400);">Instant confirmation. Secure card payment.</div>
+                    </div>
+                </label>
+
+                {# ── Stripe Embedded Panel ── #}
+                <div id="stripe-payment-panel">
+                    <div class="stripe-header">
+                        <div class="stripe-logo-wrap">
+                            <svg viewBox="0 0 60 25" xmlns="http://www.w3.org/2000/svg">
+                                <text x="0" y="20" font-family="Arial" font-size="22" font-weight="bold" fill="white">stripe</text>
+                            </svg>
+                        </div>
+                        <div class="stripe-header-text">
+                            🔒 Secured by Stripe · 256-bit SSL encryption
+                        </div>
+                    </div>
+
+                    {# Card element injected by Stripe.js #}
+                    <div class="mp-form-group" style="margin-bottom:8px;">
+                        <label class="mp-form-label">Card Details</label>
+                        <div id="card-element"></div>
+                    </div>
+
+                    {# Error display #}
+                    <div id="card-errors" role="alert">
+                        <span id="card-errors-icon">⚠️</span>
+                        <div>
+                            <div id="card-errors-title" style="font-weight:700; margin-bottom:2px;">Payment Failed</div>
+                            <div id="card-errors-msg"></div>
+                        </div>
+                    </div>
+
+                  
+
+                    {# Pay button #}
+                    <a href="{{ path('app_marketplace_stripe_checkout') }}" 
+   style="width:100%; padding:16px; font-size:16px; border-radius:12px;
+   background:linear-gradient(135deg,#635BFF,#4F46E5); color:white;
+   display:block; text-align:center; font-weight:700; text-decoration:none;">
+   💳 Pay with Stripe
+</a>
+
+                    <div class="stripe-security">
+                        🔒 Payments secured by Stripe &nbsp;·&nbsp; Your card data is never stored
+                    </div>
+
+                    {# Success state (shown after payment confirmed) #}
+                    <div id="payment-success">
+                        <div class="success-icon">✅</div>
+                        <div class="success-title">Payment Successful!</div>
+                        <div class="success-sub">Processing your order — please wait…</div>
+                        <div class="processing-bar">
+                            <div class="processing-bar-fill" id="progress-bar"></div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </form>
+        </div>
+
+        {# ── RIGHT: Order Summary + Cash Place Order ── #}
+        <div>
+            <div style="background:white; border-radius:16px; border:1px solid var(--gray-200); padding:28px; box-shadow:var(--shadow-sm); position:sticky; top:80px;">
+                <h3 style="font-family:var(--font-display); font-size:20px; font-weight:700; margin-bottom:20px; padding-bottom:12px; border-bottom:1px solid var(--gray-100);">🛒 Order Summary</h3>
+
+                {% for item in cartItems %}
+                    <div style="display:flex; gap:12px; align-items:center; margin-bottom:14px;">
+                        <div style="width:50px; height:50px; border-radius:8px; overflow:hidden; flex-shrink:0; background:var(--gray-100);">
+                            {% if item.image %}
+                                <img src="{{ item.image }}" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentNode.innerHTML='📦'">
+                            {% else %}
+                                <div style="display:flex; align-items:center; justify-content:center; height:100%;">📦</div>
+                            {% endif %}
+                        </div>
+                        <div style="flex:1; font-size:13px;">
+                            <div style="font-weight:600; color:var(--gray-900);">{{ item.product_title }}</div>
+                            <div style="color:var(--gray-400);">× {{ item.cart_qty }}</div>
+                        </div>
+                        <div style="font-weight:700; color:var(--gray-900); white-space:nowrap;">{{ (item.price * item.cart_qty)|number_format(2) }} TND</div>
+                    </div>
+                {% endfor %}
+
+                <div style="border-top:2px solid var(--gray-100); padding-top:16px; margin-top:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+                        <span style="font-size:16px; font-weight:600; color:var(--gray-700);">Total:</span>
+                        <span style="font-family:var(--font-display); font-size:28px; font-weight:900; color:#2E7D32;">{{ total|number_format(2) }} TND</span>
+                    </div>
+
+                    {# Cash: direct submit button #}
+                    <button type="button" id="cash-place-order-btn"
+                            onclick="placeOrder()"
+                            style="width:100%; padding:16px; font-size:16px; border-radius:12px; background:linear-gradient(135deg,#1D4ED8,#1e3a8a); color:white; border:none; font-weight:700; cursor:pointer; font-family:var(--font-body); transition:all 0.2s; box-shadow:0 4px 14px rgba(29,78,216,0.3);">
+                        ✅ Place Order
+                    </button>
+
+                    {# Online: scroll to stripe panel note #}
+                    <div id="stripe-note" style="display:none; text-align:center; font-size:13px; color:var(--gray-500); padding:14px 0;">
+                        ↑ Complete card payment above to place order
+                    </div>
+                </div>
+            </div>
+        </div>
+
     </div>
-</section>
+</div>
+
 {% endblock %}
 
 {% block javascripts %}
 <script>
-function selectPayment(radio) {
-    document.querySelectorAll('.payment-option').forEach(function(el) {
-        el.classList.remove('selected');
-    });
-    radio.closest('.payment-option').classList.add('selected');
+let currentPayment = 'cash';
+
+// ═══════════════════════════════
+// PAYMENT METHOD TOGGLE
+// ═══════════════════════════════
+function selectPayment(method) {
+   currentPayment = method;
+
+    document.getElementById('opt-cash').classList.toggle('selected', method === 'cash');
+    document.getElementById('opt-online').classList.toggle('selected', method === 'online');
+
+    
+} 
+
+// ═══════════════════════════════
+// GET FORM DATA
+// ═══════════════════════════════
+function getDeliveryData() {
+    return {
+        name: document.getElementById('in-name').value.trim(),
+        phone: document.getElementById('in-phone').value.trim(),
+        email: document.getElementById('in-email').value.trim(),
+        address: document.getElementById('in-address').value.trim(),
+        city: document.getElementById('in-city').value.trim(),
+        zip: document.getElementById('in-zip').value.trim(),
+        notes: document.getElementById('in-notes').value.trim(),
+    };
+}
+
+// ═══════════════════════════════
+// VALIDATION
+// ═══════════════════════════════
+function validateDelivery(d) {
+    if (!d.name) { alert('Enter name'); return false; }
+    if (!d.phone) { alert('Enter phone'); return false; }
+    if (!d.address) { alert('Enter address'); return false; }
+    if (!d.city) { alert('Enter city'); return false; }
+    return true;
+}
+
+// ═══════════════════════════════
+// FILL HIDDEN FORM
+// ═══════════════════════════════
+function fillForm(prefix, d) {
+    document.getElementById(prefix + 'name').value = d.name;
+    document.getElementById(prefix + 'phone').value = d.phone;
+    document.getElementById(prefix + 'email').value = d.email;
+    document.getElementById(prefix + 'address').value = d.address;
+    document.getElementById(prefix + 'city').value = d.city;
+    document.getElementById(prefix + 'zip').value = d.zip;
+    document.getElementById(prefix + 'notes').value = d.notes;
+}
+
+// ═══════════════════════════════
+// MAIN BUTTON (PLACE ORDER)
+// ═══════════════════════════════
+// 1. Define a lock outside the function to prevent double-clicks
+let isProcessingOrder = false;
+
+function placeOrder() {
+    // Check if we are already processing a request
+    if (isProcessingOrder) return;
+
+    const d = getDeliveryData();
+    if (!validateDelivery(d)) return;
+
+    // 2. Lock the process and disable the button visually
+    isProcessingOrder = true;
+    const btn = document.querySelector('button[onclick="placeOrder()"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
+    }
+
+    if (currentPayment === 'cash') {
+        // ✅ For Cash: Send email immediately
+        sendEmail(d, 'cash'); 
+        
+        fillForm('cf-', d);
+        
+        // Give EmailJS 800ms to fire before the page redirects via submit
+        setTimeout(() => {
+            document.getElementById('cash-form').submit();
+        }, 800);
+        return;
+    }
+
+    if (currentPayment === 'online') {
+        // ❌ For Online: DO NOT send email here (handled by Orders page after payment)
+        fillForm('cf-', d);
+
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{{ path("app_marketplace_stripe_checkout") }}';
+
+        Object.entries(d).forEach(([k, v]) => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = k;
+            input.value = v;
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+</script>
+<script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+
+<script>
+(function(){
+    emailjs.init("acj2ZNp2H8YaxnoXl"); // 🔑 public key
+})();
+</script>
+<script>
+function sendEmail(data, paymentMethod) {
+
+    let message;
+
+    if (paymentMethod === 'online') {
+        message = "✅ Your payment was successful! Your order is confirmed and will arrive soon.";
+    } else {
+        message = "📦 Your order has been received! We will call you soon to confirm.";
+    }
+
+    const templateParams = {
+        to_name: data.name,
+        to_email: data.email,
+        message: message
+    };
+
+    emailjs.send("service_9xd7f5q", "template_k3dmmg4", templateParams)
+        .then(function(response) {
+            console.log("Email sent ✅", response);
+        }, function(error) {
+            console.error("Email failed ❌", error);
+        });
 }
 </script>
 {% endblock %}
