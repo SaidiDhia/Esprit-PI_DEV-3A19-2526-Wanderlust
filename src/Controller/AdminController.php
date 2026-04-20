@@ -13,6 +13,7 @@ use App\Enum\RoleEnum;
 use App\Enum\StatusActiviteEnum;
 use App\Enum\TFAMethod;
 use App\Repository\UserRepository;
+use App\Service\PDFExportService;
 use Doctrine\DBAL\Connection;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -746,6 +747,77 @@ class AdminController extends AbstractController
             'activityLogsModuleChartData' => $activityLogsModuleChartData,
             'activityLogsSeverityChartData' => $activityLogsSeverityChartData,
         ]);
+    }
+
+    #[Route('/admin/activity-logs/export/user/{userId}', name: 'app_admin_activity_export_user', methods: ['GET'])]
+    public function exportUserActivityLogPDF(string $userId, Connection $conn, PDFExportService $pdfExportService): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        $userId = trim($userId);
+        if ($userId === '') {
+            throw $this->createNotFoundException('User ID is required');
+        }
+
+        try {
+            $user = $conn->executeQuery(
+                "SELECT id, full_name, email FROM users WHERE id = :user_id LIMIT 1",
+                ['user_id' => $userId]
+            )->fetchAssociative();
+
+            if (!is_array($user)) {
+                throw $this->createNotFoundException('User not found');
+            }
+
+            $activities = $conn->executeQuery(
+                "SELECT * FROM activity_log WHERE user_id = :user_id ORDER BY created_at DESC LIMIT 500",
+                ['user_id' => $userId]
+            )->fetchAllAssociative();
+
+            $userName = (string) ($user['full_name'] ?? $user['id']);
+            $userEmail = (string) ($user['email'] ?? 'unknown@example.com');
+
+            $pdfContent = $pdfExportService->generateUserActivityLogPDF($userName, $userEmail, $activities);
+
+            $filename = sprintf(
+                'activity_log_%s_%s.pdf',
+                str_replace([' ', '@'], '_', strtolower($userName)),
+                (new \DateTime())->format('Y-m-d_H-i-s')
+            );
+
+            return new Response($pdfContent, Response::HTTP_OK, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => sprintf('attachment; filename="%s"', $filename),
+            ]);
+        } catch (\Throwable $e) {
+            throw $this->createNotFoundException(sprintf('Error generating PDF: %s', $e->getMessage()));
+        }
+    }
+
+    #[Route('/admin/activity-feed/export', name: 'app_admin_activity_feed_export', methods: ['GET'])]
+    public function exportPlatformActivityFeedPDF(Connection $conn, PDFExportService $pdfExportService): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        try {
+            $activities = $conn->executeQuery(
+                "SELECT * FROM activity_log ORDER BY created_at DESC LIMIT 500"
+            )->fetchAllAssociative();
+
+            $pdfContent = $pdfExportService->generatePlatformFeedPDF($activities);
+
+            $filename = sprintf(
+                'platform_activity_feed_%s.pdf',
+                (new \DateTime())->format('Y-m-d_H-i-s')
+            );
+
+            return new Response($pdfContent, Response::HTTP_OK, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => sprintf('attachment; filename="%s"', $filename),
+            ]);
+        } catch (\Throwable $e) {
+            throw $this->createNotFoundException(sprintf('Error generating PDF: %s', $e->getMessage()));
+        }
     }
 
     #[Route('/admin/dashboard/activities/{id}/status', name: 'app_admin_activity_status', methods: ['POST'])]

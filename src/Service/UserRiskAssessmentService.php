@@ -15,6 +15,7 @@ class UserRiskAssessmentService
         private readonly BotBehaviorService $botBehaviorService,
         private readonly AnomalyDetectionService $anomalyDetectionService,
         private readonly RuleEngineApiService $ruleEngineApiService,
+        private readonly EmailService $emailService,
     ) {
     }
 
@@ -26,6 +27,7 @@ class UserRiskAssessmentService
         }
 
         $this->ensureRiskTable();
+        $previousSignalScores = $this->loadPreviousSignalScores($userId);
 
         $metrics = $this->collectMetrics($userId);
         $ruleResponse = $this->ruleEngineApiService->score($userId, $metrics);
@@ -108,8 +110,268 @@ class UserRiskAssessmentService
                     'updated_at' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
                 ]
             );
+
+            $this->notifyRiskSignalEscalations(
+                $userId,
+                $signals,
+                $previousSignalScores,
+                (string) ($classification['recommended_action'] ?? 'manual_review_or_ban')
+            );
+
+            $this->notifyCancellationPatternIfNeeded($userId);
         } catch (\Throwable) {
             // Risk scoring is non-blocking by design.
+        }
+    }
+
+    /**
+     * @return array<string, float>
+     */
+    private function loadPreviousSignalScores(string $userId): array
+    {
+        try {
+            $row = $this->connection->executeQuery(
+                "SELECT anomaly_score, bot_behavior_score
+                 FROM risk_assessment
+                 WHERE user_id = :user_id
+                 LIMIT 1",
+                ['user_id' => $userId]
+            )->fetchAssociative();
+
+            if (!is_array($row)) {
+                return [];
+            }
+
+            return [
+                'anomaly_score' => (float) ($row['anomaly_score'] ?? 0.0),
+                'bot_behavior_score' => (float) ($row['bot_behavior_score'] ?? 0.0),
+            ];
+        } catch (\Throwable) {
+            return [];
+        }
+    }
+
+    /**
+     * @param array<string, float|int> $signals
+     * @param array<string, float> $previousSignalScores
+     */
+    private function notifyRiskSignalEscalations(
+        string $userId,
+        array $signals,
+        array $previousSignalScores,
+        string $recommendedAction
+    ): void {
+        $thresholds = [
+            'anomaly_score' => 70.0,
+            'bot_behavior_score' => 70.0,
+            'cancellation_abuse_score' => 60.0,
+        ];
+
+        $labels = [
+            'anomaly_score' => 'Potential anomaly behavior detected',
+            'bot_behavior_score' => 'Potential bot-like behavior detected',
+            'cancellation_abuse_score' => 'Potential booking cancellation abuse detected',
+        ];
+
+        $triggered = [];
+        foreach ($thresholds as $signalKey => $threshold) {
+            $current = (float) ($signals[$signalKey] ?? 0.0);
+            $previous = (float) ($previousSignalScores[$signalKey] ?? 0.0);
+
+            if ($current >= $threshold && $previous < $threshold) {
+                $triggered[] = [
+                    'key' => $signalKey,
+                    'label' => (string) ($labels[$signalKey] ?? $signalKey),
+                    'score' => $current,
+                ];
+            }
+        }
+
+        if ($triggered === []) {
+            return;
+        }
+
+        $userRow = $this->loadUserIdentity($userId);
+        if ($userRow === null) {
+            return;
+        }
+
+        $userEmail = trim((string) ($userRow['email'] ?? ''));
+        $userName = trim((string) ($userRow['full_name'] ?? ''));
+        if ($userName === '') {
+            $userName = $userEmail !== '' ? $userEmail : $userId;
+        }
+
+        $adminEmails = $this->loadAdminEmails();
+
+        foreach ($triggered as $event) {
+            try {
+                if ($userEmail !== '') {
+                    $this->emailService->sendRiskDetectionUserAlert(
+                        $userEmail,
+                        $userName,
+                        (string) $event['label'],
+                        (float) $event['score'],
+                        $recommendedAction
+                    );
+                }
+
+                foreach ($adminEmails as $adminEmail) {
+                    $this->emailService->sendRiskDetectionAdminAlert(
+                        $adminEmail,
+                        $userName,
+                        $userEmail,
+                        (string) $event['label'],
+                        (float) $event['score'],
+                        $recommendedAction
+                    );
+                }
+            } catch (\Throwable) {
+                // Email notifications are best-effort and must not block risk scoring.
+            }
+        }
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function loadUserIdentity(string $userId): ?array
+    {
+        try {
+            $row = $this->connection->executeQuery(
+                "SELECT id, full_name, email
+                 FROM users
+                 WHERE id = :user_id
+                 LIMIT 1",
+                ['user_id' => $userId]
+            )->fetchAssociative();
+
+            return is_array($row) ? $row : null;
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function loadAdminEmails(): array
+    {
+        try {
+            $rows = $this->connection->executeQuery(
+                "SELECT email
+                 FROM users
+                 WHERE role = 'ADMIN'
+                   AND is_active = 1
+                   AND email IS NOT NULL
+                   AND TRIM(email) != ''"
+            )->fetchAllAssociative();
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $emails = [];
+        foreach ($rows as $row) {
+            $email = trim((string) ($row['email'] ?? ''));
+            if ($email !== '') {
+                $emails[] = $email;
+            }
+        }
+
+        return array_values(array_unique($emails));
+    }
+
+    private function notifyCancellationPatternIfNeeded(string $userId): void
+    {
+        $threshold = 5;
+        $windowDays = 30;
+        $cooldownHours = 24;
+
+        try {
+            $cancelCount = (int) $this->connection->executeQuery(
+                "SELECT COUNT(*)
+                 FROM booking
+                 WHERE user_id = :user_id
+                   AND status = 'CANCELLED'
+                   AND cancelled_by = 'GUEST'
+                   AND cancelled_at IS NOT NULL
+                   AND cancelled_at >= DATE_SUB(NOW(), INTERVAL :window_days DAY)",
+                [
+                    'user_id' => $userId,
+                    'window_days' => $windowDays,
+                ]
+            )->fetchOne();
+        } catch (\Throwable) {
+            return;
+        }
+
+        if ($cancelCount < $threshold) {
+            return;
+        }
+
+        try {
+            $recentAlertCount = (int) $this->connection->executeQuery(
+                "SELECT COUNT(*)
+                 FROM activity_log
+                 WHERE module = 'risk'
+                   AND action = 'cancellation_pattern_alert_sent'
+                   AND user_id = :user_id
+                   AND created_at >= DATE_SUB(NOW(), INTERVAL :cooldown_hours HOUR)",
+                [
+                    'user_id' => $userId,
+                    'cooldown_hours' => $cooldownHours,
+                ]
+            )->fetchOne();
+        } catch (\Throwable) {
+            $recentAlertCount = 1;
+        }
+
+        if ($recentAlertCount > 0) {
+            return;
+        }
+
+        $identity = $this->loadUserIdentity($userId);
+        if ($identity === null) {
+            return;
+        }
+
+        $userEmail = trim((string) ($identity['email'] ?? ''));
+        if ($userEmail === '') {
+            return;
+        }
+
+        $userName = trim((string) ($identity['full_name'] ?? ''));
+        if ($userName === '') {
+            $userName = $userEmail;
+        }
+
+        try {
+            $this->emailService->sendCancellationPatternUserAlert($userEmail, $userName, $cancelCount, $windowDays);
+        } catch (\Throwable) {
+            return;
+        }
+
+        try {
+            $this->connection->insert('activity_log', [
+                'module' => 'risk',
+                'action' => 'cancellation_pattern_alert_sent',
+                'user_id' => $userId,
+                'user_name' => $userName,
+                'user_avatar' => null,
+                'target_type' => 'user',
+                'target_id' => $userId,
+                'target_name' => $userEmail,
+                'target_image' => null,
+                'content' => sprintf('Cancellation pattern alert sent after %d guest cancellations in %d days.', $cancelCount, $windowDays),
+                'destination' => '/admin/dashboard?section=risk',
+                'metadata_json' => json_encode([
+                    'cancel_count' => $cancelCount,
+                    'window_days' => $windowDays,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                'created_at' => (new \DateTimeImmutable())->format('Y-m-d H:i:s'),
+            ]);
+        } catch (\Throwable) {
+            // Best-effort activity audit only.
         }
     }
 

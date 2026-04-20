@@ -61,6 +61,8 @@ class MainController extends AbstractController
                 ->from(Testimonial::class, 't')
                 ->where('t.user = :user')
                 ->setParameter('user', $user)
+                ->orderBy('t.createdAt', 'DESC')
+                ->setMaxResults(1)
                 ->getQuery()
                 ->getOneOrNullResult();
 
@@ -177,6 +179,8 @@ class MainController extends AbstractController
                 ->from(Testimonial::class, 't')
                 ->where('t.user = :user')
                 ->setParameter('user', $currentUser)
+                ->orderBy('t.createdAt', 'DESC')
+                ->setMaxResults(1)
                 ->getQuery()
                 ->getOneOrNullResult();
         }
