@@ -51,6 +51,71 @@
             flex-wrap: wrap;
         }
 
+        .event-hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .event-cta {
+            background: linear-gradient(135deg, #1e4f78, #2c6a90);
+            color: #fff !important;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 999px;
+            padding: 11px 24px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            text-decoration: none;
+            transition: all 0.25s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .event-cta:hover {
+            color: #fff !important;
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(30, 79, 120, 0.35);
+        }
+
+        .event-cta.event-cta-outline {
+            background: rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .event-actions .genric-btn.info-border {
+            border-color: #1e4f78;
+            color: #1e4f78;
+        }
+
+        .event-actions .genric-btn.info-border:hover {
+            background: #1e4f78;
+            color: #fff;
+        }
+
+        .event-actions .genric-btn.warning-border {
+            border-color: #d97706;
+            color: #b45309;
+        }
+
+        .event-actions .genric-btn.warning-border:hover {
+            background: #d97706;
+            color: #fff;
+        }
+
+        .event-actions .genric-btn.danger-border {
+            border-color: #dc2626;
+            color: #b91c1c;
+        }
+
+        .event-actions .genric-btn.danger-border:hover {
+            background: #dc2626;
+            color: #fff;
+        }
+
         .status-pill {
             display: inline-block;
             padding: 4px 10px;
@@ -301,13 +366,13 @@
 {% block content %}
 <section class="module-hero">
     <div class="container">
-        <h1 class="mb-10">Events</h1>
+        <h1 class="module-page-title mb-10">Events</h1>
         <p class="mb-20">Discover and manage travel events with the Adventure theme.</p>
-        <div class="mb-20" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+        <div class="event-hero-actions">
             {% if app.user %}
-                <a href="{{ path('app_events_new') }}" class="primary-btn text-uppercase">Create Event</a>
+                <a href="{{ path('app_events_new') }}" class="event-cta">Create Event</a>
             {% endif %}
-            <a href="{{ path('app_events_suggestions') }}" class="btn btn-outline-light text-uppercase">
+            <a href="{{ path('app_events_suggestions') }}" class="event-cta event-cta-outline">
                 <i class="fa fa-lightbulb me-2"></i>Get Suggestions
             </a>
             {# ★ DISCOVER EVENTS MAP ★ #}

@@ -18,6 +18,7 @@ services:
             $botApiUrl: '%env(default::BOT_API_URL)%'
             $rulesApiUrl: '%env(default::AI_RULES_API_URL)%'
             $locationApiUrl: '%env(default::LOCATION_API_URL)%'
+            $openrouterApiKey: '%env(string:OPENROUTER_API_KEY)%'
             $groqApiKey: '%env(string:GROQ_API_KEY)%'
             $googleVisionApiKey: '%env(string:GOOGLE_VISION_API_KEY)%'
             $emailVerificationExemptEmails: []

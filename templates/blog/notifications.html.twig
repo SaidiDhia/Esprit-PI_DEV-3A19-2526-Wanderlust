@@ -1,0 +1,67 @@
+{% extends 'base.html.twig' %}
+
+{% block content %}
+<div class="container" style="padding:40px 15px">
+<div class="row justify-content-center">
+<div class="col-md-7">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 style="font-weight:700;margin:0;color:#0f172a">🔔 Notifications</h2>
+        <div class="d-flex align-items-center" style="gap:12px">
+            {% if notifications|length > 0 %}
+                <form method="post" action="{{ path('blog_notifications_read_all') }}">
+                    <button type="submit" style="padding:7px 16px;border-radius:8px;border:1px solid #e2e8f0;background:#fff;color:#64748b;font-size:13px;font-weight:600;cursor:pointer">
+                        Tout marquer comme lu
+                    </button>
+                </form>
+            {% endif %}
+            <a href="{{ path('app_blog') }}" style="color:#64748b;text-decoration:none;font-size:14px">← Blog</a>
+        </div>
+    </div>
+
+    {% if notifications is empty %}
+        <div style="text-align:center;padding:60px;color:#94a3b8">
+            <div style="font-size:3rem;margin-bottom:12px">🔔</div>
+            <p style="font-size:1.1rem">Aucune notification.</p>
+        </div>
+    {% else %}
+        {% set icons = {'COMMENT': '💬', 'REPLY_TO_COMMENT': '↩', 'REACTION_POST': '♥', 'REACTION_COMMENT': '♥'} %}
+        {% set verbs = {
+            'COMMENT': ' a commenté votre publication',
+            'REPLY_TO_COMMENT': ' a répondu à votre commentaire',
+            'REACTION_POST': ' a réagi à votre publication',
+            'REACTION_COMMENT': ' a réagi à votre commentaire'
+        } %}
+
+        {% for notif in notifications %}
+            <div style="display:flex;align-items:flex-start;gap:14px;padding:16px;border-radius:12px;margin-bottom:8px;background:{{ notif.isRead ? '#fff' : '#eff6ff' }};border:1px solid {{ notif.isRead ? '#e2e8f0' : '#bfdbfe' }}">
+                <div style="width:40px;height:40px;border-radius:50%;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">
+                    {{ icons[notif.type] ?? '🔔' }}
+                </div>
+                <div style="flex:1;min-width:0">
+                    <p style="margin:0 0 4px;font-size:13px;color:#111827;font-weight:{{ notif.isRead ? '400' : '600' }}">
+                        <strong>{{ notif.actorUsername }}</strong>{{ verbs[notif.type] ?? '' }}
+                    </p>
+                    {% if notif.postPreview %}
+                        <p style="margin:0 0 2px;font-size:12px;color:#64748b">
+                            📄 {{ notif.postPreview|slice(0,60) }}{% if notif.postPreview|length > 60 %}…{% endif %}
+                        </p>
+                    {% endif %}
+                    {% if notif.contentPreview %}
+                        <p style="margin:0 0 2px;font-size:12px;color:#374151;font-style:italic">
+                            « {{ notif.contentPreview|slice(0,70) }}{% if notif.contentPreview|length > 70 %}…{% endif %} »
+                        </p>
+                    {% endif %}
+                    <small style="color:#94a3b8;font-size:11px">{{ notif.createdAt|date('d M Y · H:i') }}</small>
+                </div>
+                {% if not notif.isRead %}
+                    <span style="width:8px;height:8px;border-radius:50%;background:#3b82f6;flex-shrink:0;margin-top:6px"></span>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+</div>
+</div>
+</div>
+{% endblock %}

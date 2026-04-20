@@ -1,0 +1,313 @@
+{% extends 'base.html.twig' %}
+
+{% block content %}
+<div class="container" style="padding:40px 15px">
+<div class="row justify-content-center">
+<div class="col-md-8">
+
+{# ── Styled validation popup ── #}
+<div id="edit-popup" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;max-width:400px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,.22);overflow:hidden">
+        <div style="background:linear-gradient(135deg,#dc2626,#ef4444);padding:22px 24px 16px;display:flex;align-items:center;gap:12px">
+            <div style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">⚠</div>
+            <div>
+                <div style="color:#fff;font-weight:700;font-size:15px">Erreur de saisie</div>
+                <div style="color:rgba(255,255,255,.8);font-size:12px;margin-top:2px">Veuillez corriger avant de continuer</div>
+            </div>
+        </div>
+        <div style="padding:18px 24px">
+            <p id="edit-popup-msg" style="margin:0;color:#374151;font-size:14px;line-height:1.6"></p>
+        </div>
+        <div style="padding:0 24px 18px;text-align:right">
+            <button onclick="document.getElementById('edit-popup').style.display='none'"
+                    style="padding:10px 26px;border-radius:8px;border:none;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;font-weight:700;font-size:14px;cursor:pointer">
+                Corriger
+            </button>
+        </div>
+    </div>
+</div>
+
+{# ── AI Moderation flash popup ── #}
+{% set flashErrors = app.flashes('error') %}
+{% if flashErrors|length > 0 %}
+<div id="flash-popup" style="display:flex;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;max-width:440px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,.22);overflow:hidden">
+        <div style="background:linear-gradient(135deg,#d97706,#f59e0b);padding:22px 24px 16px;display:flex;align-items:center;gap:14px">
+            <div style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">🤖</div>
+            <div>
+                <div style="color:#fff;font-weight:700;font-size:16px">Modération IA</div>
+                <div style="color:rgba(255,255,255,.85);font-size:12px;margin-top:2px">Contenu analysé automatiquement</div>
+            </div>
+        </div>
+        <div style="padding:20px 24px">
+            {% for msg in flashErrors %}
+                <p style="margin:0 0 8px;color:#374151;font-size:14px;line-height:1.6">{{ msg }}</p>
+            {% endfor %}
+        </div>
+        <div style="padding:0 24px 20px;text-align:right">
+            <button onclick="document.getElementById('flash-popup').style.display='none'"
+                    style="padding:10px 26px;border-radius:8px;border:none;background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;font-weight:700;font-size:14px;cursor:pointer">
+                Compris
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+    <h2 style="font-weight:700;margin-bottom:24px;color:#0f172a">✏ Modifier la publication</h2>
+
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ type == 'error' ? 'danger' : type }} alert-dismissible" style="border-radius:10px">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    <div style="background:#fff;border-radius:16px;box-shadow:0 2px 20px rgba(0,0,0,.07);padding:32px">
+
+        {{ form_start(form, {'attr': {
+            'enctype':    'multipart/form-data',
+            'id':         'edit-post-form',
+            'novalidate': 'novalidate'
+        }}) }}
+
+            {# ── Contenu ── #}
+            <div style="margin-bottom:20px">
+                <label style="font-weight:700;font-size:13px;color:#374151;display:block;margin-bottom:6px">
+                    Contenu <span style="color:#ef4444">*</span>
+                </label>
+                <div style="position:relative">
+                    {{ form_widget(form.contenu, {
+                        'attr': {
+                            'rows': 8,
+                            'maxlength': 2000,
+                            'style': 'width:100%;padding:12px 14px 30px;border:2px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;resize:vertical;transition:border-color .2s'
+                        }
+                    }) }}
+                    <span id="edit-counter" style="position:absolute;bottom:8px;right:12px;font-size:11px;color:#94a3b8;pointer-events:none">0 / 2000</span>
+                </div>
+                {{ form_errors(form.contenu) }}
+            </div>
+
+            {# ── Current media preview ── #}
+            {% if post.media %}
+            <div style="margin-bottom:16px;padding:12px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
+                <p style="font-size:13px;color:#64748b;margin:0 0 8px;font-weight:600">📎 Média actuel :</p>
+                {% if post.media matches '/\\.(mp4|avi|mov|mkv)$/i' %}
+                    <video controls style="max-width:100%;max-height:260px;border-radius:8px">
+                        <source src="{{ asset('uploads/' ~ post.media) }}">
+                    </video>
+                {% else %}
+                    <img src="{{ asset('uploads/' ~ post.media) }}"
+                         style="max-width:100%;max-height:260px;border-radius:8px;object-fit:cover" alt="Média actuel">
+                {% endif %}
+                <p style="font-size:11px;color:#94a3b8;margin:6px 0 0">Choisissez un nouveau fichier ci-dessous pour remplacer ce média.</p>
+            </div>
+            {% endif %}
+
+            {# ── Media upload ── #}
+            <div style="margin-bottom:20px">
+                <label style="font-weight:700;font-size:13px;color:#374151;display:block;margin-bottom:6px">
+                    📷 {{ post.media ? 'Remplacer le média' : 'Ajouter un média' }}
+                    <span style="color:#94a3b8;font-weight:400">(optionnel)</span>
+                </label>
+                {{ form_widget(form.media, {
+                    'attr': {
+                        'accept': 'image/jpeg,image/png,image/gif,image/webp,video/mp4,video/quicktime,video/x-msvideo',
+                        'style':  'width:100%;padding:10px;border:2px solid #e2e8f0;border-radius:10px;font-size:14px'
+                    }
+                }) }}
+                <div id="edit-media-error" style="display:none;color:#ef4444;font-size:12px;margin-top:4px;padding:6px 10px;background:#fef2f2;border-radius:6px;border-left:3px solid #ef4444"></div>
+                <div id="edit-media-preview" style="display:none;margin-top:10px"></div>
+                <small style="color:#94a3b8;font-size:12px;display:block;margin-top:4px">JPG, PNG, GIF, WebP, MP4, AVI, MOV — max 10 Mo</small>
+                {{ form_errors(form.media) }}
+            </div>
+
+            {# ── Statut ── #}
+            <div style="margin-bottom:20px">
+                <label style="font-weight:700;font-size:13px;color:#374151;display:block;margin-bottom:6px">
+                    Visibilité <span style="color:#ef4444">*</span>
+                </label>
+                {{ form_widget(form.statut, {
+                    'attr': {
+                        'style': 'width:100%;padding:10px 14px;border:2px solid #e2e8f0;border-radius:10px;font-size:14px',
+                        'onchange': 'toggleEditScheduledBlock()'
+                    }
+                }) }}
+                {{ form_errors(form.statut) }}
+            </div>
+
+            {# ── ✅ Scheduled date picker ── #}
+            <div id="edit-scheduled-block" style="display:none;margin-bottom:24px;padding:18px;background:#eff6ff;border-radius:12px;border:2px solid #bfdbfe">
+                <label style="font-weight:700;font-size:13px;color:#1e40af;display:block;margin-bottom:8px">
+                    📅 Date et heure de publication programmée
+                </label>
+                {{ form_widget(form.scheduledAt, {
+                    'attr': {
+                        'id': 'edit-scheduled-at-input',
+                        'style': 'width:100%;padding:10px 14px;border:2px solid #bfdbfe;border-radius:10px;font-size:14px;background:#fff;color:#1e40af'
+                    }
+                }) }}
+                <small style="color:#3b82f6;font-size:12px;margin-top:6px;display:block">
+                    ⏰ Le post sera automatiquement publié à cette date et heure.
+                </small>
+                <div id="edit-scheduled-error" style="display:none;color:#ef4444;font-size:12px;margin-top:4px;padding:6px 10px;background:#fef2f2;border-radius:6px;border-left:3px solid #ef4444"></div>
+            </div>
+
+            <div class="d-flex" style="gap:12px">
+                <button type="button" onclick="validateEditAndSubmit()"
+                        style="padding:11px 28px;border-radius:8px;border:none;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;font-weight:700;font-size:15px;cursor:pointer">
+                    💾 Enregistrer
+                </button>
+                <a href="{{ path('blog_post_show', {'id': post.idPost}) }}"
+                   style="padding:11px 22px;border-radius:8px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-size:14px;font-weight:600;text-decoration:none;display:inline-flex;align-items:center">
+                    Annuler
+                </a>
+            </div>
+
+        {{ form_end(form) }}
+    </div>
+</div>
+</div>
+</div>
+
+<script>
+var CONTENU_ID = '{{ form.contenu.vars.id }}';
+var MEDIA_ID   = '{{ form.media.vars.id }}';
+var STATUT_ID  = '{{ form.statut.vars.id }}';
+
+function showEditPopup(message) {
+    document.getElementById('edit-popup-msg').textContent = message;
+    document.getElementById('edit-popup').style.display = 'flex';
+}
+
+function toggleEditScheduledBlock() {
+    var statutEl = document.getElementById(STATUT_ID);
+    var block    = document.getElementById('edit-scheduled-block');
+    if (!statutEl || !block) return;
+    block.style.display = statutEl.value === 'scheduled' ? 'block' : 'none';
+}
+
+function getEditScheduledInput() {
+    return document.getElementById('edit-scheduled-at-input')
+        || document.querySelector('#edit-scheduled-block input[name$="[scheduledAt]"]');
+}
+
+function validateEditAndSubmit() {
+    var taEl = document.getElementById(CONTENU_ID);
+    var val  = taEl ? taEl.value.trim() : '';
+
+    if (!val) {
+        if (taEl) taEl.style.borderColor = '#ef4444';
+        showEditPopup('Le contenu est obligatoire.');
+        if (taEl) taEl.focus();
+        return;
+    }
+    if (val.length < 5) {
+        if (taEl) taEl.style.borderColor = '#ef4444';
+        showEditPopup('Le contenu doit contenir au moins 5 caractères.');
+        if (taEl) taEl.focus();
+        return;
+    }
+    if (val.length > 2000) {
+        if (taEl) taEl.style.borderColor = '#ef4444';
+        showEditPopup('Le contenu ne peut pas dépasser 2000 caractères.');
+        if (taEl) taEl.focus();
+        return;
+    }
+
+    // ✅ Scheduled date validation
+    var statutEl = document.getElementById(STATUT_ID);
+    if (statutEl && statutEl.value === 'scheduled') {
+        var dateInput = getEditScheduledInput();
+        var errDiv    = document.getElementById('edit-scheduled-error');
+        if (!dateInput || !dateInput.value) {
+            if (errDiv) { errDiv.textContent = 'Veuillez choisir une date et heure.'; errDiv.style.display = 'block'; }
+            showEditPopup('Une date de publication est requise pour le mode programmé.');
+            return;
+        }
+        if (new Date(dateInput.value) <= new Date()) {
+            if (errDiv) { errDiv.textContent = 'La date doit être dans le futur.'; errDiv.style.display = 'block'; }
+            showEditPopup('La date programmée doit être dans le futur.');
+            return;
+        }
+    }
+
+    document.getElementById('edit-post-form').submit();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Close popup on backdrop click
+    var popup = document.getElementById('edit-popup');
+    if (popup) popup.addEventListener('click', function(e) { if (e.target === this) this.style.display = 'none'; });
+
+    // Character counter
+    var ta  = document.getElementById(CONTENU_ID);
+    var ctr = document.getElementById('edit-counter');
+    if (ta && ctr) {
+        ctr.textContent = ta.value.length + ' / 2000';
+        ta.addEventListener('input', function() {
+            var len = this.value.length;
+            ctr.textContent = len + ' / 2000';
+            ctr.style.color = len > 1800 ? '#ef4444' : '#94a3b8';
+            this.style.borderColor = '#e2e8f0';
+        });
+    }
+
+    // Media preview
+    var mediaInput = document.getElementById(MEDIA_ID);
+    var preview    = document.getElementById('edit-media-preview');
+    var mediaErr   = document.getElementById('edit-media-error');
+    if (mediaInput) {
+        mediaInput.addEventListener('change', function() {
+            if (preview) { preview.innerHTML = ''; preview.style.display = 'none'; }
+            if (mediaErr) mediaErr.style.display = 'none';
+            mediaInput.style.borderColor = '#e2e8f0';
+            if (!this.files || !this.files.length) return;
+            var file = this.files[0];
+            var ext  = file.name.toLowerCase().split('.').pop();
+            var ok   = ['jpg','jpeg','png','gif','webp','mp4','avi','mov'].includes(ext);
+            if (!ok) {
+                mediaInput.style.borderColor = '#ef4444';
+                if (mediaErr) { mediaErr.textContent = 'Type non autorisé.'; mediaErr.style.display = 'block'; }
+                return;
+            }
+            if (file.size > 10 * 1024 * 1024) {
+                mediaInput.style.borderColor = '#ef4444';
+                if (mediaErr) { mediaErr.textContent = 'Fichier trop volumineux (max 10 Mo).'; mediaErr.style.display = 'block'; }
+                return;
+            }
+            mediaInput.style.borderColor = '#10b981';
+            var url = URL.createObjectURL(file);
+            if (preview) {
+                preview.innerHTML = ['mp4','avi','mov'].includes(ext)
+                    ? '<video controls style="max-width:100%;max-height:200px;border-radius:8px"><source src="' + url + '"></video>'
+                    : '<img src="' + url + '" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:cover">';
+                preview.style.display = 'block';
+            }
+        });
+    }
+
+    // ✅ Initialize scheduled block visibility on page load
+    toggleEditScheduledBlock();
+    var statutEl = document.getElementById(STATUT_ID);
+    if (statutEl) statutEl.addEventListener('change', toggleEditScheduledBlock);
+
+    var dateInput = getEditScheduledInput();
+    var errDiv = document.getElementById('edit-scheduled-error');
+    if (dateInput) {
+        dateInput.addEventListener('change', function() {
+            this.style.borderColor = '#bfdbfe';
+            if (errDiv) errDiv.style.display = 'none';
+        });
+        dateInput.addEventListener('input', function() {
+            this.style.borderColor = '#bfdbfe';
+            if (errDiv) errDiv.style.display = 'none';
+        });
+    }
+});
+</script>
+
+{% endblock %}
