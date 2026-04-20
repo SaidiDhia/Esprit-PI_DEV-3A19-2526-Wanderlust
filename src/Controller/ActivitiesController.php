@@ -44,11 +44,24 @@ class ActivitiesController extends AbstractController
     #[Route('/', name: 'app_activities_index', methods: ['GET'])]
     public function index(Request $request, ActivitiesRepository $activitiesRepository, PaginatorInterface $paginator): Response
     {
-        $query = $activitiesRepository->createQueryBuilder('a')
-            ->where('a.status = :acceptedStatus')
-            ->setParameter('acceptedStatus', StatusActiviteEnum::ACCEPTE)
-            ->orderBy('a.id', 'DESC')
-            ->getQuery();
+        $currentUser = $this->getUser();
+
+        $qb = $activitiesRepository->createQueryBuilder('a')
+            ->orderBy('a.id', 'DESC');
+
+        if ($this->isGranted('ROLE_ADMIN')) {
+            // Admin can review all statuses directly from the activities list.
+        } elseif ($currentUser instanceof User) {
+            // Public feed shows accepted activities, plus the current user's own submissions.
+            $qb->where('a.status = :acceptedStatus OR a.createdBy = :currentUser')
+                ->setParameter('acceptedStatus', StatusActiviteEnum::ACCEPTE)
+                ->setParameter('currentUser', $currentUser);
+        } else {
+            $qb->where('a.status = :acceptedStatus')
+                ->setParameter('acceptedStatus', StatusActiviteEnum::ACCEPTE);
+        }
+
+        $query = $qb->getQuery();
 
         $pagination = $paginator->paginate(
             $query,

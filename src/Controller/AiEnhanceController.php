@@ -18,15 +18,26 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 #[Route('/api/ai')]
 class AiEnhanceController extends AbstractController
 {
+    private string $groqApiKey;
+    /** @var string[] */
+    private array $visionApiKeys = [];
+
     public function __construct(
         private readonly GeminiService $gemini,
         private readonly HttpClientInterface $httpClient,
-        private readonly string $groqApiKey,
-        private readonly string $googleVisionApiKey,
         private readonly EventsRepository $eventsRepo,
         private readonly ActivitiesRepository $activitiesRepo,
         private readonly ReservationsRepository $reservationsRepo,
-    ) {}
+    ) {
+        // Keep these keys optional so missing env vars never break controller instantiation.
+        $this->groqApiKey = trim((string) ($_ENV['GROQ_API_KEY'] ?? getenv('GROQ_API_KEY') ?: ''));
+
+        $this->visionApiKeys = $this->collectVisionApiKeys([
+            (string) ($_ENV['GOOGLE_VISION_API_KEY'] ?? getenv('GOOGLE_VISION_API_KEY') ?: ''),
+            (string) ($_ENV['GEMINI_API_KEY1'] ?? getenv('GEMINI_API_KEY1') ?: ''),
+            (string) ($_ENV['GEMINI_API_KEY'] ?? getenv('GEMINI_API_KEY') ?: ''),
+        ]);
+    }
 
     // ──────────────────────────────────────────────────────────────────────────
     //  Modération d'image — Analyse sécurité (violence / contenu adulte / enfants)
@@ -36,28 +47,38 @@ class AiEnhanceController extends AbstractController
     #[Route('/moderate-image', name: 'api_ai_moderate_image', methods: ['POST'])]
     public function moderateImage(Request $request): JsonResponse
     {
-        // ── Récupérer l'image ────────────────────────────────────────────
-        $imageBase64 = null;
-        $mimeType    = 'image/jpeg';
+        try {
+            // ── Récupérer l'image ────────────────────────────────────────────
+            $imageBase64 = null;
+            $mimeType = 'image/jpeg';
 
-        // Cas 1 : fichier uploadé (multipart)
-        $uploadedFile = $request->files->get('image');
-        if ($uploadedFile) {
-            $mimeType    = $uploadedFile->getMimeType() ?? 'image/jpeg';
-            $imageBase64 = base64_encode(file_get_contents($uploadedFile->getPathname()));
-        } else {
-            // Cas 2 : JSON { imageBase64, mimeType }
-            $data        = json_decode($request->getContent(), true);
-            $imageBase64 = $data['imageBase64'] ?? null;
-            $mimeType    = $data['mimeType']    ?? 'image/jpeg';
-        }
+            // Cas 1 : fichier uploadé (multipart)
+            $uploadedFile = $request->files->get('image');
+            if ($uploadedFile) {
+                $mimeType = $this->resolveUploadedImageMimeType($uploadedFile);
+                $rawImage = @file_get_contents($uploadedFile->getPathname());
+                if (!is_string($rawImage) || $rawImage === '') {
+                    return $this->json(['error' => 'Impossible de lire le fichier image telecharge.'], 400);
+                }
 
-        if (!$imageBase64) {
-            return $this->json(['error' => 'Aucune image fournie.'], 400);
-        }
+                $imageBase64 = base64_encode($rawImage);
+            } else {
+                // Cas 2 : JSON { imageBase64, mimeType }
+                $data = json_decode($request->getContent(), true);
+                if (is_array($data)) {
+                    $imageBase64 = isset($data['imageBase64']) ? (string) $data['imageBase64'] : null;
+                    $mimeType = isset($data['mimeType']) && is_string($data['mimeType']) && $data['mimeType'] !== ''
+                        ? $data['mimeType']
+                        : 'image/jpeg';
+                }
+            }
 
-        // ── Prompt d'analyse de modération ──────────────────────────────
-        $prompt = <<<PROMPT
+            if (!is_string($imageBase64) || trim($imageBase64) === '') {
+                return $this->json(['error' => 'Aucune image fournie.'], 400);
+            }
+
+            // ── Prompt d'analyse de modération ──────────────────────────────
+            $prompt = <<<PROMPT
 Analyse cette image pour une plateforme de tourisme familiale.
 Réponds UNIQUEMENT avec ce JSON sur UNE SEULE LIGNE, sans markdown :
 {"violent":false,"adultContent":false,"suitableForKids":true,"safe":true,"confidence":95,"reason":"courte raison en francais max 20 mots"}
@@ -71,10 +92,9 @@ Critères :
 - reason: max 20 mots en français
 PROMPT;
 
-        // ── Appel Gemini Vision (gemini-1.5-flash) ───────────────────────
-        try {
-            if (empty($this->googleVisionApiKey)) {
-                throw new \RuntimeException('Clé Google Vision API non configurée (GOOGLE_VISION_API_KEY).');
+            // ── Appel Gemini Vision (gemini-1.5-flash) ───────────────────────
+            if ($this->visionApiKeys === []) {
+                throw new \RuntimeException('Clé API Gemini Vision non configurée.');
             }
 
             // Essayer plusieurs modèles (fallback si quota dépassé)
@@ -82,43 +102,46 @@ PROMPT;
             $lastError = null;
             $responseData = null;
 
-            foreach ($models as $model) {
-                try {
-                    $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . $this->googleVisionApiKey;
+            foreach ($this->visionApiKeys as $apiKey) {
+                foreach ($models as $model) {
+                    try {
+                        $apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent?key=" . $apiKey;
 
-                    $response = $this->httpClient->request('POST', $apiUrl, [
-                        'headers' => ['Content-Type' => 'application/json'],
-                        'json'    => [
-                            'contents' => [[
-                                'parts' => [
-                                    ['text' => $prompt],
-                                    ['inline_data' => [
-                                        'mime_type' => $mimeType,
-                                        'data'      => $imageBase64,
-                                    ]],
-                                ]
-                            ]],
-                            'generationConfig' => [
-                                'temperature'     => 0.1,
-                                'maxOutputTokens' => 512,  // Assez pour tout le JSON
+                        $response = $this->httpClient->request('POST', $apiUrl, [
+                            'headers' => ['Content-Type' => 'application/json'],
+                            'json'    => [
+                                'contents' => [[
+                                    'parts' => [
+                                        ['text' => $prompt],
+                                        ['inline_data' => [
+                                            'mime_type' => $mimeType,
+                                            'data'      => $imageBase64,
+                                        ]],
+                                    ]
+                                ]],
+                                'generationConfig' => [
+                                    'temperature'     => 0.1,
+                                    'maxOutputTokens' => 512,  // Assez pour tout le JSON
+                                ],
                             ],
-                        ],
-                    ]);
+                        ]);
 
-                    $statusCode = $response->getStatusCode();
-                    if ($statusCode === 429) {
-                        $lastError = "Quota dépassé pour {$model}, tentative suivante…";
-                        continue; // Essayer le modèle suivant
-                    }
+                        $statusCode = $response->getStatusCode();
+                        if ($statusCode === 429) {
+                            $lastError = "Quota dépassé pour {$model}, tentative suivante…";
+                            continue; // Essayer le modèle suivant
+                        }
 
-                    $responseData = $response->toArray();
-                    break; // Succès
-                } catch (\Throwable $e) {
-                    if (str_contains($e->getMessage(), '429')) {
-                        $lastError = $e->getMessage();
-                        continue;
+                        $responseData = $response->toArray();
+                        break 2; // Succès
+                    } catch (\Throwable $e) {
+                        if (str_contains($e->getMessage(), '429') || str_contains($e->getMessage(), '403')) {
+                            $lastError = $e->getMessage();
+                            continue;
+                        }
+
+                        throw $e;
                     }
-                    throw $e;
                 }
             }
 
@@ -194,17 +217,20 @@ PROMPT;
             ]);
 
         } catch (\Throwable $e) {
-            $msg = $e->getMessage();
+            $msg = $this->sanitizeExternalErrorMessage($e->getMessage());
             // Déterminer le type d'erreur
             if (str_contains($msg, '429') || str_contains($msg, 'Too Many')) {
                 $status = 'quota';
                 $reason = '⏳ Quota API dépassé. Réessayez dans 1 minute.';
+            } elseif (str_contains($msg, '403') || str_contains(mb_strtolower($msg), 'forbidden')) {
+                $status = 'unavailable';
+                $reason = '⚠️ Analyse IA indisponible pour le moment (clé API Google Vision non autorisée).';
             } elseif (str_contains($msg, '400')) {
                 $status = 'error';
                 $reason = '⚠️ Image non lisible par l\'IA (format non supporté).';
             } else {
                 $status = 'error';
-                $reason = '⚠️ Service d\'analyse indisponible : ' . mb_substr($msg, 0, 120);
+                $reason = '⚠️ Service d\'analyse indisponible. Réessayez plus tard.';
             }
             return $this->json([
                 'status'         => $status,
@@ -218,6 +244,77 @@ PROMPT;
         }
     }
 
+    private function sanitizeExternalErrorMessage(string $message): string
+    {
+        $sanitized = preg_replace('/([?&]key=)[^&\s\"]+/i', '$1[REDACTED]', $message);
+        return is_string($sanitized) ? $sanitized : $message;
+    }
+
+    /**
+     * @param string[] $rawKeys
+     * @return string[]
+     */
+    private function collectVisionApiKeys(array $rawKeys): array
+    {
+        $keys = [];
+        foreach ($rawKeys as $rawKey) {
+            $trimmed = trim($rawKey);
+            if ($trimmed === '') {
+                continue;
+            }
+
+            if (!in_array($trimmed, $keys, true)) {
+                $keys[] = $trimmed;
+            }
+        }
+
+        return $keys;
+    }
+
+    private function resolveUploadedImageMimeType(object $uploadedFile): string
+    {
+        // 1) Try server-side MIME guesser (requires php_fileinfo in many setups).
+        try {
+            if (method_exists($uploadedFile, 'getMimeType')) {
+                $serverMime = (string) $uploadedFile->getMimeType();
+                if ($serverMime !== '' && str_starts_with($serverMime, 'image/')) {
+                    return $serverMime;
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        // 2) Fallback to browser-provided MIME type.
+        try {
+            if (method_exists($uploadedFile, 'getClientMimeType')) {
+                $clientMime = (string) $uploadedFile->getClientMimeType();
+                if ($clientMime !== '' && str_starts_with($clientMime, 'image/')) {
+                    return $clientMime;
+                }
+            }
+        } catch (\Throwable) {
+        }
+
+        // 3) Final fallback based on extension.
+        $extension = '';
+        try {
+            if (method_exists($uploadedFile, 'getClientOriginalExtension')) {
+                $extension = strtolower((string) $uploadedFile->getClientOriginalExtension());
+            }
+        } catch (\Throwable) {
+        }
+
+        return match ($extension) {
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp',
+            'bmp' => 'image/bmp',
+            'svg' => 'image/svg+xml',
+            'jpg', 'jpeg' => 'image/jpeg',
+            default => 'image/jpeg',
+        };
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     //  Description d'activité
     // ──────────────────────────────────────────────────────────────────────────
@@ -225,6 +322,9 @@ PROMPT;
     public function enhanceActivityDescription(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
+        if (!is_array($data)) {
+            return $this->json(['error' => 'Corps de requete JSON invalide.'], 400);
+        }
 
         $titre     = trim($data['titre']        ?? '');
         $type      = trim($data['type_activite'] ?? '');

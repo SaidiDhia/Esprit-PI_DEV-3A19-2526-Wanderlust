@@ -11,7 +11,7 @@ class GeminiService
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        #[Autowire('%env(string:GEMINI_API_KEY)%')]
+        #[Autowire('%env(string:GEMINI_API_KEY1)%')]
         private readonly string $apiKey,
         private readonly string $backupApiKey = '',
     ) {
@@ -149,5 +149,61 @@ class GeminiService
         $emojis = array_values(array_filter(explode(' ', trim($response)), static fn ($emoji) => trim($emoji) !== ''));
 
         return array_slice($emojis, 0, 3);
+    }
+
+    public function enhanceActivityDescription(string $title, string $type, string $category): string
+    {
+        $safeTitle = trim($title) !== '' ? trim($title) : 'Activite';
+        $safeType = trim($type) !== '' ? trim($type) : 'Aventure';
+        $safeCategory = trim($category) !== '' ? trim($category) : 'Nature';
+
+        $prompt = sprintf(
+            "Write a clear tourism activity description in French (80-140 words), persuasive but realistic.\n" .
+            "Activity title: %s\n" .
+            "Type: %s\n" .
+            "Category: %s\n" .
+            "Constraints: plain text only, no markdown, no bullet points, no emojis.",
+            $safeTitle,
+            $safeType,
+            $safeCategory
+        );
+
+        $response = trim($this->generateResponse($prompt));
+        if ($response === '' || str_starts_with($response, 'Error:')) {
+            return sprintf(
+                "%s est une activite de type %s dans la categorie %s. Cette experience vous permet de profiter d'un cadre authentique, d'un rythme adapte a tous les niveaux et d'un accompagnement securise. Que vous veniez entre amis, en famille ou en petit groupe, vous profiterez d'un moment convivial, de decouvertes locales et de souvenirs memorables.",
+                $safeTitle,
+                mb_strtolower($safeType),
+                mb_strtolower($safeCategory)
+            );
+        }
+
+        return $response;
+    }
+
+    /**
+     * @param string[] $activitiesInfo
+     */
+    public function enhanceEventEquipment(array $activitiesInfo): string
+    {
+        $cleanActivities = array_values(array_filter(array_map(
+            static fn (string $item): string => trim($item),
+            $activitiesInfo
+        ), static fn (string $item): bool => $item !== ''));
+
+        if ($cleanActivities === []) {
+            return "Chaussures confortables, bouteille d'eau, creme solaire, casquette, trousse de premiers secours.";
+        }
+
+        $prompt = "Based on the activities below, provide one concise equipment list in French. "
+            . "Return plain text only, comma-separated items, no markdown, no numbering.\n\n"
+            . implode("\n", $cleanActivities);
+
+        $response = trim($this->generateResponse($prompt));
+        if ($response === '' || str_starts_with($response, 'Error:')) {
+            return "Chaussures confortables, bouteille d'eau, creme solaire, casquette, lunettes de soleil, veste legere, trousse de premiers secours.";
+        }
+
+        return $response;
     }
 }

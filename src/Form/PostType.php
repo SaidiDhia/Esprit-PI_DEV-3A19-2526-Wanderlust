@@ -9,7 +9,7 @@ use Symfony\Component\Form\Extension\Core\Type\FileType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
-use Symfony\Component\Validator\Constraints\File;
+use App\Validator\SafeFile;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
@@ -34,7 +34,7 @@ class PostType extends AbstractType
                 'required'    => false,
                 'mapped'      => false, // Prevents string→File crash on edit
                 'constraints' => [
-                    new File([
+                    new SafeFile([
                         'maxSize'          => '10M',
                         'maxSizeMessage'   => 'The file is too large (max 10MB).',
                     ]),

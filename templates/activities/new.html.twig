@@ -527,11 +527,29 @@ async function enhanceDescription() {
     try {
         const res = await fetch('/api/ai/activity-description', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
             body: JSON.stringify({ titre, type_activite: type, categorie })
         });
-        
-        const data = await res.json();
+
+        const responseText = await res.text();
+        let data = {};
+
+        try {
+            data = responseText ? JSON.parse(responseText) : {};
+        } catch (parseError) {
+            if (responseText.trim().startsWith('<')) {
+                throw new Error('Le serveur a renvoyé une page HTML au lieu de JSON (session expirée ou erreur serveur). Rechargez la page et reconnectez-vous.');
+            }
+
+            throw new Error('Réponse serveur invalide (JSON attendu).');
+        }
+
+        if (!res.ok) {
+            throw new Error(data.error || `Erreur HTTP ${res.status}`);
+        }
         
         if (data.description) {
             descArea.value = data.description;
@@ -643,7 +661,22 @@ async function previewAndModerate(file) {
                 method: 'POST',
                 body: formData,
             });
-            const data = await resp.json();
+            const responseText = await resp.text();
+            let data = {};
+
+            try {
+                data = responseText ? JSON.parse(responseText) : {};
+            } catch (parseError) {
+                if (responseText.trim().startsWith('<')) {
+                    throw new Error('Le serveur a renvoye une page HTML au lieu de JSON.');
+                }
+
+                throw new Error('Reponse JSON invalide du service de moderation.');
+            }
+
+            if (!resp.ok) {
+                throw new Error(data.error || `Erreur HTTP ${resp.status}`);
+            }
 
             if (modLoading) modLoading.style.display = 'none';
 
@@ -747,6 +780,23 @@ async function previewAndModerate(file) {
                 if (modUnsafe) modUnsafe.style.display = 'none';
                 if (modLoading) modLoading.style.display = 'none';
 
+            } else if (status === 'unavailable') {
+                // ⚠️ Service externe indisponible (ex: clé API non autorisée)
+                if (previewImg) previewImg.style.border = '2.5px solid #94a3b8';
+                if (modError) {
+                    modError.style.display = 'block';
+                    modError.style.background = '#eff6ff';
+                    modError.style.border = '1.5px solid #60a5fa';
+                    modError.style.color = '#1e3a8a';
+                    modError.innerHTML = `⚠️ <strong>Analyse IA indisponible.</strong><br>
+                        ${data.reason || 'Le service de moderation est temporairement indisponible.'}<br>
+                        Vous pouvez continuer, mais l'image sera a verifier manuellement.`;
+                }
+
+                if (modSafe) modSafe.style.display = 'none';
+                if (modUnsafe) modUnsafe.style.display = 'none';
+                if (modLoading) modLoading.style.display = 'none';
+
             } else {
                 // ❌ Erreur API
                 if (previewImg) previewImg.style.border = '2.5px solid #94a3b8';
@@ -756,8 +806,7 @@ async function previewAndModerate(file) {
                     modError.style.border = '1.5px solid #94a3b8';
                     modError.style.color = '#475569';
                     modError.innerHTML = `❌ <strong>Analyse impossible.</strong><br>
-                        ${data.reason || 'Service temporairement indisponible.'}<br>
-                        <small style="opacity:0.7">${data.debug || ''}</small>
+                        ${data.reason || 'Service temporairement indisponible.'}
                         <br><button type="button" onclick="document.getElementById('removeImage').click()"
                             style="margin-top:8px;background:#64748b;color:#fff;border:none;
                             border-radius:20px;padding:5px 14px;font-size:0.78rem;cursor:pointer;">

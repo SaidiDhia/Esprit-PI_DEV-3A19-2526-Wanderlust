@@ -16,7 +16,7 @@ class AIController extends AbstractController
     public function __construct(HttpClientInterface $httpClient)
     {
         $this->httpClient = $httpClient;
-        $this->geminiApiKey = $_ENV['GEMINI_API_KEY'] ?? '';
+        $this->geminiApiKey = $_ENV['GEMINI_API_KEY2'] ?? '';
     }
 
     #[Route('/api/ai/activity-description', name: 'api_ai_activity_description', methods: ['POST'])]

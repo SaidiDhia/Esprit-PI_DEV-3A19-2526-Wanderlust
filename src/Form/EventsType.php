@@ -24,7 +24,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\All;
 use Symfony\Component\Validator\Constraints\Email;
-use Symfony\Component\Validator\Constraints\File;
+use App\Validator\SafeFile;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 use Symfony\Component\Validator\Constraints\Positive;
@@ -161,7 +161,7 @@ class EventsType extends AbstractType
                 'constraints' => [
                     new All([
                         'constraints' => [
-                            new File([
+                            new SafeFile([
                                 'maxSize'          => '5M',
                                 'mimeTypes'        => ['image/jpeg', 'image/png', 'image/webp'],
                                 'mimeTypesMessage' => 'Format accepté : JPG, PNG, WEBP.',

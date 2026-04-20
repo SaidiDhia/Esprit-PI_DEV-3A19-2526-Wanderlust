@@ -26,7 +26,7 @@ security:
                 failure_handler: lexik_jwt_authentication.handler.authentication_failure
 
         api:
-            pattern:   ^/api
+            pattern:   ^/api(?!/ai)
             stateless: true
             jwt: ~
 
@@ -64,6 +64,11 @@ security:
         - { path: ^/risk/review-required, roles: PUBLIC_ACCESS }
         - { path: ^/forgot-password, roles: PUBLIC_ACCESS }
         - { path: ^/reset-password, roles: PUBLIC_ACCESS }
+        - { path: ^/api/ai/activity-description, roles: PUBLIC_ACCESS }
+        - { path: ^/api/ai/moderate-image, roles: PUBLIC_ACCESS }
+        - { path: ^/api/ai/event-equipment, roles: PUBLIC_ACCESS }
+        - { path: ^/api/ai/activity-equipment, roles: PUBLIC_ACCESS }
+        - { path: ^/api/ai, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/api,       roles: IS_AUTHENTICATED_FULLY }
 

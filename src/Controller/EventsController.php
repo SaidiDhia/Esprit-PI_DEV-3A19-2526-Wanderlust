@@ -54,16 +54,30 @@ final class EventsController extends AbstractController
         $user = $this->getUser();
         $canManage = $user && in_array('ROLE_ADMIN', $user->getRoles());
         
-        $query = $eventsRepository->createQueryBuilder('e')
+        $queryBuilder = $eventsRepository->createQueryBuilder('e')
             ->leftJoin('e.activities', 'a')
-            ->addSelect('a')
-            ->where('e.status = :acceptedStatus')
-            ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE)
-            ->orderBy('e.dateCreation', 'DESC')
-            ->getQuery();
+            ->addSelect('a');
+
+        // Admin sees all events
+        if ($canManage) {
+            $queryBuilder->orderBy('e.dateCreation', 'DESC');
+        } else {
+            // Authenticated users see: accepted events + their own events (any status)
+            // Anonymous users see: only accepted events
+            if ($user instanceof User) {
+                $queryBuilder
+                    ->where('e.status = :acceptedStatus OR e.createdBy = :currentUser')
+                    ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE)
+                    ->setParameter('currentUser', $user);
+            } else {
+                $queryBuilder->where('e.status = :acceptedStatus')
+                    ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE);
+            }
+            $queryBuilder->orderBy('e.dateCreation', 'DESC');
+        }
 
         $pagination = $paginator->paginate(
-            $query,
+            $queryBuilder->getQuery(),
             $request->query->getInt('page', 1),
             6 // Limite par page demandée par l'utilisateur
         );
@@ -439,7 +453,8 @@ final class EventsController extends AbstractController
         }
 
         $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
-        if (!in_array($file->getMimeType(), $allowedMimes)) {
+        $resolvedMime = $this->resolveUploadedMimeType($file);
+        if (!in_array($resolvedMime, $allowedMimes, true)) {
             return null;
         }
 
@@ -450,7 +465,14 @@ final class EventsController extends AbstractController
         // ── Nom du fichier ─────────────────────────────────────────
         $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
         $safeName     = $slugger->slug($originalName);
-        $extension    = $file->getClientOriginalExtension() ?: 'jpg';
+        $extension    = strtolower((string) $file->getClientOriginalExtension());
+        if ($extension === '') {
+            $extension = match ($resolvedMime) {
+                'image/png' => 'png',
+                'image/webp' => 'webp',
+                default => 'jpg',
+            };
+        }
         $newFilename  = $safeName . '-' . uniqid() . '.' . $extension;
 
         // ── Dossier de destination ─────────────────────────────────
@@ -499,5 +521,29 @@ final class EventsController extends AbstractController
                 error_log('DeleteImages - ERREUR: Fichier non trouvé ou dossier non accessible: ' . $imagePath);
             }
         }
+    }
+
+    private function resolveUploadedMimeType(UploadedFile $file): string
+    {
+        try {
+            $serverMime = (string) $file->getMimeType();
+            if ($serverMime !== '' && str_starts_with($serverMime, 'image/')) {
+                return $serverMime;
+            }
+        } catch (\Throwable) {
+        }
+
+        $clientMime = (string) $file->getClientMimeType();
+        if ($clientMime !== '' && str_starts_with($clientMime, 'image/')) {
+            return $clientMime;
+        }
+
+        $clientExtension = strtolower((string) $file->getClientOriginalExtension());
+        return match ($clientExtension) {
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'jpg', 'jpeg' => 'image/jpeg',
+            default => 'image/jpeg',
+        };
     }
 }
