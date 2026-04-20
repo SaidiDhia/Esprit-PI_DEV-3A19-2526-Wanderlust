@@ -158,6 +158,25 @@ class AdminController extends AbstractController
 
         $topSenders = $conn->executeQuery("\n            SELECT u.full_name, u.email, COUNT(m.id) as message_count\n            FROM users u\n            JOIN message m ON u.id = m.sender_id\n            GROUP BY u.id, u.full_name, u.email\n            ORDER BY message_count DESC\n            LIMIT 5\n        ")->fetchAllAssociative();
 
+        $adminMessagingConversations = $conn->executeQuery(
+            "\n                SELECT
+                    c.id,
+                    c.name,
+                    c.type,
+                    c.last_activity,
+                    u.full_name AS creator_name,
+                    COUNT(DISTINCT cu.user_id) AS participant_count,
+                    COUNT(DISTINCT m.id) AS message_count
+                FROM conversation c
+                LEFT JOIN conversation_user cu ON cu.conversation_id = c.id AND cu.is_active = 1
+                LEFT JOIN conversation_user creator ON creator.conversation_id = c.id AND creator.role = 'CREATOR'
+                LEFT JOIN users u ON u.id = creator.user_id
+                LEFT JOIN message m ON m.conversation_id = c.id
+                GROUP BY c.id, c.name, c.type, c.last_activity, u.full_name
+                ORDER BY c.last_activity DESC, c.id DESC
+            "
+        )->fetchAllAssociative();
+
         $recentActivity = $conn->executeQuery("\n            SELECT m.*, u.full_name as sender_name, c.name as conversation_name\n            FROM message m\n            JOIN users u ON m.sender_id = u.id\n            JOIN conversation c ON m.conversation_id = c.id\n            ORDER BY m.created_at DESC\n            LIMIT 10\n        ")->fetchAllAssociative();
 
         $systemActivityFeed = [];
@@ -726,6 +745,7 @@ class AdminController extends AbstractController
             'messagesPerDayChart' => $messagesPerDayChart,
             'topConversations' => $topConversations,
             'topSenders' => $topSenders,
+            'adminMessagingConversations' => $adminMessagingConversations,
             'recentActivity' => $recentActivity,
             'systemActivityFeed' => $systemActivityFeed,
             'highRiskRecentAlerts' => $highRiskRecentAlerts,
@@ -840,6 +860,35 @@ class AdminController extends AbstractController
         } catch (\Throwable $e) {
             throw $this->createNotFoundException(sprintf('Error generating PDF: %s', $e->getMessage()));
         }
+    }
+
+    #[Route('/admin/dashboard/messaging/conversations/{id}/delete', name: 'app_admin_messaging_conversation_delete', methods: ['POST'])]
+    public function deleteMessagingConversationFromDashboard(Request $request, int $id, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_messaging_conversation_delete_' . $id, (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid delete token.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'messaging']);
+        }
+
+        $conn = $entityManager->getConnection();
+        $exists = $conn->executeQuery(
+            'SELECT id FROM conversation WHERE id = :id',
+            ['id' => $id]
+        )->fetchOne();
+
+        if ($exists === false) {
+            $this->addFlash('error', 'Conversation not found.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'messaging']);
+        }
+
+        $conn->executeStatement('DELETE FROM message WHERE conversation_id = :id', ['id' => $id]);
+        $conn->executeStatement('DELETE FROM conversation_user WHERE conversation_id = :id', ['id' => $id]);
+        $conn->executeStatement('DELETE FROM conversation WHERE id = :id', ['id' => $id]);
+
+        $this->addFlash('success', 'Conversation deleted.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'messaging']);
     }
 
     #[Route('/admin/dashboard/activities/{id}/status', name: 'app_admin_activity_status', methods: ['POST'])]

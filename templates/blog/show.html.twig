@@ -1,530 +1,510 @@
 {% extends 'base.html.twig' %}
 
-{% block body %}
+{% block content %}
 
-{# ── Toast notifications ── #}
-<div id="toast-container" class="toast-container"></div>
-{% for type, messages in app.flashes %}
-    {% for message in messages %}
-        <div class="wl-toast-data" data-type="{{ type }}" data-message="{{ message }}"></div>
-    {% endfor %}
-{% endfor %}
-
-<div class="row justify-content-center">
-    <div class="col-md-8">
-
-        {# ── Post card ── #}
-        <div class="card-post p-4 mb-4">
-            <div class="d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                    <div class="d-flex align-items-center gap-2 mb-2">
-                        <div class="user-avatar-sm">{{ post.user.email|first|upper }}</div>
-                        <div>
-                            <strong class="d-block" style="font-size:14px">{{ post.user.fullName ?? post.user.email }}</strong>
-                            <small class="text-muted">{{ post.dateCreation|date('d M Y · H:i') }}</small>
-                        </div>
-                    </div>
-                    <p class="mt-2 mb-0 post-content">{{ post.contenu }}</p>
-                </div>
-                <span class="badge-status ms-3">
-                    {{ post.statut == 'private' ? '🔒 Privé' : '🌐 Public' }}
-                </span>
+{# ── Universal popup ── #}
+<div id="validation-popup" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.5);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:18px;max-width:420px;width:92%;box-shadow:0 24px 64px rgba(0,0,0,.22);overflow:hidden">
+        <div id="popup-header" style="padding:22px 24px 16px;display:flex;align-items:center;gap:14px">
+            <div id="popup-icon" style="width:42px;height:42px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">⚠</div>
+            <div>
+                <div id="popup-title" style="color:#fff;font-weight:700;font-size:16px">Erreur</div>
+                <div id="popup-subtitle" style="color:rgba(255,255,255,.8);font-size:12px;margin-top:2px">Veuillez corriger les champs</div>
             </div>
+        </div>
+        <div style="padding:4px 24px 16px">
+            <ul id="popup-errors" style="margin:0;padding:0 0 0 18px;color:#374151;font-size:14px;line-height:1.8"></ul>
+        </div>
+        <div style="padding:0 24px 20px;text-align:right">
+            <button onclick="closePopup()" id="popup-btn"
+                    style="padding:9px 24px;border-radius:8px;border:none;color:#fff;font-weight:700;font-size:14px;cursor:pointer">
+                OK
+            </button>
+        </div>
+    </div>
+</div>
 
-            {# ── Media ── #}
-            {% if post.media %}
-                <div class="mt-3">
-                    {% if post.media matches '/\\.(mp4|avi|mov|mkv)$/i' %}
-                        <video controls class="media-display">
-                            <source src="{{ asset('uploads/' ~ post.media) }}">
-                        </video>
-                    {% else %}
-                        <img src="{{ asset('uploads/' ~ post.media) }}"
-                             class="media-display" alt="Media">
-                    {% endif %}
+{# Toast container #}
+<div id="toast-container" style="position:fixed;top:80px;right:24px;z-index:9998;display:flex;flex-direction:column;gap:10px;max-width:360px"></div>
+
+{% set flashErrors   = app.flashes('error') %}
+{% set flashSuccess  = app.flashes('success') %}
+{% set flashWarnings = app.flashes('warning') %}
+
+<div class="container" style="padding-top:30px;padding-bottom:60px">
+<div class="row justify-content-center">
+<div class="col-md-8">
+
+    {# ── ✅ Back to blog button ── #}
+    <div style="margin-bottom:16px">
+        <a href="{{ path('app_blog') }}"
+           style="display:inline-flex;align-items:center;gap:6px;color:#64748b;font-size:13px;font-weight:600;text-decoration:none;padding:7px 16px;border-radius:20px;border:1px solid #e2e8f0;background:#fff;transition:all .2s"
+           onmouseover="this.style.background='#f8fafc';this.style.borderColor='#cbd5e1'"
+           onmouseout="this.style.background='#fff';this.style.borderColor='#e2e8f0'">
+            ← Retour au blog
+        </a>
+    </div>
+
+    {# ── Post card ── #}
+    <div style="background:#fff;border-radius:16px;box-shadow:0 2px 20px rgba(0,0,0,.07);padding:28px;margin-bottom:24px">
+
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex align-items-center" style="gap:12px">
+                <div style="width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                    {{ post.user.email|first|upper }}
                 </div>
+                <div>
+                    <strong style="font-size:15px;display:block">{{ post.user.fullName ?? post.user.email }}</strong>
+                    <small style="color:#94a3b8">{{ post.dateCreation|date('d M Y · H:i') }}</small>
+                </div>
+            </div>
+            <span style="background:{{ post.statut == 'private' ? '#fef3c7' : (post.statut == 'scheduled' ? '#fef3c7' : '#eff6ff') }};color:{{ post.statut == 'private' ? '#92400e' : (post.statut == 'scheduled' ? '#92400e' : '#1e40af') }};border:1px solid {{ post.statut == 'private' ? '#fde68a' : (post.statut == 'scheduled' ? '#fde68a' : '#bfdbfe') }};border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;white-space:nowrap">
+                {% if post.statut == 'private' %}🔒 Privé
+                {% elseif post.statut == 'scheduled' %}📅 Programmé — {{ post.scheduledAt ? post.scheduledAt|date('d/m/Y H:i') : '' }}
+                {% else %}🌐 Public{% endif %}
+            </span>
+        </div>
+
+        <p id="post-content-text" style="font-size:15px;line-height:1.7;color:#374151;margin-bottom:16px">{{ post.contenu }}</p>
+
+        {% if post.media %}
+            <div style="margin-bottom:16px">
+                {% if post.media matches '/\\.(mp4|avi|mov|mkv)$/i' %}
+                    <video controls style="width:100%;max-height:420px;border-radius:10px;object-fit:cover">
+                        <source src="{{ asset('uploads/' ~ post.media) }}">
+                    </video>
+                {% else %}
+                    <img src="{{ asset('uploads/' ~ post.media) }}"
+                         style="width:100%;max-height:420px;border-radius:10px;object-fit:cover" alt="Media">
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <hr style="margin:16px 0;border-color:#f1f5f9">
+
+        {# ── Actions bar ── #}
+        <div class="d-flex align-items-center flex-wrap" style="gap:10px">
+
+            <button type="button"
+                    class="reaction-post-btn {{ userReaction ? 'reacted' : '' }}"
+                    data-url="{{ path('blog_react', {'id': post.idPost, 'type': 'LIKE'}) }}"
+                    style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;border:2px solid {{ userReaction ? '#fda4af' : '#e5e7eb' }};background:{{ userReaction ? '#fff1f2' : '#fff' }};cursor:pointer;font-size:14px;font-weight:600;color:{{ userReaction ? '#e11d48' : '#6b7280' }};transition:all .2s">
+                <span>♥</span>
+                <span class="reaction-count">{{ reactionsCount }}</span>
+            </button>
+
+            <span style="font-size:14px;color:#6b7280">
+                💬 {{ post.commentaires|length }} commentaire{{ post.commentaires|length != 1 ? 's' }}
+            </span>
+
+            {% if currentUser %}
+                <button type="button" id="save-btn"
+                        data-url="{{ path('blog_post_save', {'id': post.idPost}) }}"
+                        style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;border:2px solid {{ isSaved ? '#bae6fd' : '#e5e7eb' }};background:{{ isSaved ? '#f0f9ff' : '#fff' }};cursor:pointer;font-size:13px;font-weight:600;color:{{ isSaved ? '#0369a1' : '#6b7280' }};transition:all .2s">
+                    {{ isSaved ? '🗂 Sauvegardé' : '🔖 Sauvegarder' }}
+                </button>
             {% endif %}
 
-            <hr class="my-3">
+            {# ── ✅ Translate button — shows direction after clicking ── #}
+            <button type="button" id="translate-btn"
+                    data-url="{{ path('blog_post_translate', {'id': post.idPost}) }}"
+                    style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:20px;border:2px solid #e5e7eb;background:#fff;cursor:pointer;font-size:13px;font-weight:600;color:#6b7280;transition:all .2s">
+                🌐 Traduire
+            </button>
 
-            {# ── Actions bar ── #}
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-
-                <button
-                    type="button"
-                    class="react-btn reaction-post-btn {{ userReaction ? 'reacted' : '' }}"
-                    data-url="{{ path('blog_react', {'id': post.idPost, 'type': 'LIKE'}) }}"
-                    title="{{ userReaction ? 'Retirer la réaction' : 'J\'aime' }}">
-                    <span class="heart-icon">♥</span>
-                    <span class="reaction-count">{{ reactionsCount }}</span>
+            {% if currentUser and (currentUser.id == post.user.id or (app.user and app.user.isAdmin)) %}
+                <a href="{{ path('blog_post_edit', {'id': post.idPost}) }}"
+                   style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:8px;background:#f0f9ff;color:#0369a1;font-size:13px;font-weight:600;text-decoration:none">
+                    ✏ Modifier
+                </a>
+                <button type="button"
+                        onclick="confirmDelete('{{ path('blog_post_delete', {'id': post.idPost}) }}','{{ csrf_token('delete' ~ post.idPost) }}','Supprimer ce post définitivement ?')"
+                        style="display:inline-flex;align-items:center;gap:5px;padding:6px 14px;border-radius:8px;background:#fff1f2;color:#be123c;font-size:13px;font-weight:600;border:none;cursor:pointer">
+                    🗑 Supprimer
                 </button>
+            {% endif %}
 
-                <span class="comment-count-badge">
-                    💬 {{ post.commentaires|length }} commentaire{{ post.commentaires|length != 1 ? 's' }}
-                </span>
+        </div>
+    </div>
 
-                {# ── Owner / Admin actions ── #}
-                {% if currentUser and (currentUser.id == post.user.id or app.session.get('is_admin')) %}
-                    <a href="{{ path('blog_post_edit', {'id': post.idPost}) }}"
-                       class="btn-action btn-action-edit">✏ Modifier</a>
-                    <button type="button"
-                            class="btn-action btn-action-delete"
-                            onclick="confirmDelete('{{ path('blog_post_delete', {'id': post.idPost}) }}', '{{ csrf_token('delete' ~ post.idPost) }}', 'Supprimer ce post définitivement ?')">
-                        🗑 Supprimer
-                    </button>
+    {# ── New comment form ── #}
+    <div style="background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);margin-bottom:20px">
+        <h5 style="font-weight:700;font-size:15px;margin-bottom:14px;color:#1e293b">💬 Laisser un commentaire</h5>
+        {{ form_start(commentForm, {'attr': {'id': 'main-comment-form', 'novalidate': 'novalidate'}}) }}
+            <div style="position:relative">
+                {{ form_widget(commentForm.contenu, {
+                    'attr': {
+                        'placeholder': 'Partagez votre avis...',
+                        'rows': 3,
+                        'maxlength': 500,
+                        'style': 'width:100%;padding:12px 14px 28px;border:2px solid #e2e8f0;border-radius:10px;font-size:14px;font-family:inherit;resize:vertical;transition:border-color .2s'
+                    }
+                }) }}
+                <span id="main-comment-counter" style="position:absolute;bottom:8px;right:10px;font-size:11px;color:#94a3b8;pointer-events:none">0 / 500</span>
+            </div>
+            <div class="d-flex justify-content-end mt-2">
+                <button type="button" onclick="validateComment(COMMENT_FIELD_ID, 'main-comment-form')"
+                        class="primary-btn" style="border:none;padding:9px 22px;font-size:14px">
+                    ✉ Publier
+                </button>
+            </div>
+        {{ form_end(commentForm) }}
+    </div>
+
+    {# ── Comments list ── #}
+    <div>
+        <h5 style="font-weight:700;font-size:15px;margin-bottom:14px;color:#1e293b">
+            {{ comments|length }} Commentaire{{ comments|length != 1 ? 's' }}
+        </h5>
+
+        {% for comment in comments %}
+            <div style="background:#f8fafc;border-radius:12px;padding:14px 16px;border:1px solid #e2e8f0;margin-bottom:12px"
+                 id="comment-{{ comment.idCommentaire }}">
+
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+                    <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                        {{ comment.user.email|first|upper }}
+                    </div>
+                    <div>
+                        <strong style="font-size:13px">{{ comment.user.fullName ?? comment.user.email }}</strong>
+                        <small style="color:#94a3b8;margin-left:8px">{{ comment.date|date('d M Y · H:i') }}</small>
+                    </div>
+                </div>
+
+                <div id="body-{{ comment.idCommentaire }}">
+                    <p style="margin:0;font-size:14px;color:#374151">{{ comment.contenu }}</p>
+                </div>
+
+                {% if currentUser and currentUser.id == comment.user.id %}
+                <div class="d-none" id="edit-{{ comment.idCommentaire }}" style="padding:8px 0">
+                    <form method="post" action="{{ path('blog_comment_edit', {'id': comment.idCommentaire}) }}"
+                          id="edit-form-{{ comment.idCommentaire }}">
+                        <div style="position:relative">
+                            <textarea name="contenu" rows="2" maxlength="500"
+                                      id="edit-textarea-{{ comment.idCommentaire }}"
+                                      data-counter="edit-counter-{{ comment.idCommentaire }}"
+                                      style="width:100%;padding:8px 12px 24px;border:2px solid #3b82f6;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical">{{ comment.contenu }}</textarea>
+                            <span id="edit-counter-{{ comment.idCommentaire }}"
+                                  style="position:absolute;bottom:6px;right:8px;font-size:11px;color:#94a3b8">{{ comment.contenu|length }} / 500</span>
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button"
+                                    onclick="validateEditComment('edit-textarea-{{ comment.idCommentaire }}', 'edit-form-{{ comment.idCommentaire }}')"
+                                    class="primary-btn" style="border:none;padding:6px 14px;font-size:12px">
+                                💾 Enregistrer
+                            </button>
+                            <button type="button" onclick="cancelEdit({{ comment.idCommentaire }})"
+                                    style="padding:6px 12px;border-radius:8px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;cursor:pointer">
+                                Annuler
+                            </button>
+                        </div>
+                    </form>
+                </div>
                 {% endif %}
 
+                <div class="d-flex align-items-center mt-2" style="gap:12px">
+                    <button type="button" class="react-comment-btn"
+                            data-url="{{ path('blog_comment_react', {'id': comment.idCommentaire, 'type': 'LIKE'}) }}"
+                            style="background:none;border:none;cursor:pointer;font-size:13px;color:#94a3b8;padding:2px 6px;border-radius:6px">
+                        ♥ <span class="comment-reaction-count">{{ comment.reactions|length }}</span>
+                    </button>
+                    {% if currentUser %}
+                    <button type="button" onclick="toggleReply({{ comment.idCommentaire }})"
+                            style="background:none;border:none;cursor:pointer;font-size:12px;color:#64748b;font-weight:600;padding:2px 6px;border-radius:6px">
+                        ↩ Répondre
+                    </button>
+                    {% endif %}
+                    {% if currentUser and currentUser.id == comment.user.id %}
+                        <button type="button" onclick="toggleEdit({{ comment.idCommentaire }})"
+                                style="background:none;border:none;cursor:pointer;font-size:12px;color:#64748b;font-weight:600;padding:2px 6px;border-radius:6px">
+                            ✏ Modifier
+                        </button>
+                        <button type="button"
+                                onclick="confirmDelete('{{ path('blog_comment_delete', {'id': comment.idCommentaire}) }}','{{ csrf_token('delete_comment' ~ comment.idCommentaire) }}','Supprimer ce commentaire ?')"
+                                style="background:none;border:none;cursor:pointer;font-size:13px;color:#cbd5e1;padding:2px 6px;border-radius:6px">
+                            🗑
+                        </button>
+                    {% endif %}
+                </div>
+
+                {% if currentUser %}
+                <div id="reply-{{ comment.idCommentaire }}" style="display:none;margin-top:10px">
+                    <form method="post" action="{{ path('blog_comment_reply', {'id': comment.idCommentaire}) }}"
+                          id="reply-form-{{ comment.idCommentaire }}"
+                          style="background:#fff;border-radius:10px;padding:12px">
+                        <div style="position:relative">
+                            <textarea name="contenu" rows="2" maxlength="500"
+                                      id="reply-textarea-{{ comment.idCommentaire }}"
+                                      placeholder="Votre réponse..."
+                                      data-counter="reply-counter-{{ comment.idCommentaire }}"
+                                      style="width:100%;padding:8px 12px 24px;border:2px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;resize:vertical"></textarea>
+                            <span id="reply-counter-{{ comment.idCommentaire }}"
+                                  style="position:absolute;bottom:6px;right:8px;font-size:11px;color:#94a3b8">0 / 500</span>
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                            <button type="button"
+                                    onclick="validateReply('reply-textarea-{{ comment.idCommentaire }}', 'reply-form-{{ comment.idCommentaire }}')"
+                                    class="primary-btn" style="border:none;padding:6px 14px;font-size:12px">
+                                ↩ Répondre
+                            </button>
+                            <button type="button" onclick="toggleReply({{ comment.idCommentaire }})"
+                                    style="padding:6px 12px;border-radius:8px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-size:12px;cursor:pointer">
+                                Annuler
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {% endif %}
+
+                {% for reply in comment.replies %}
+                    <div style="background:#f1f5f9;border-radius:10px;padding:10px 14px;border:1px solid #e2e8f0;margin-top:10px;margin-left:40px"
+                         id="comment-{{ reply.idCommentaire }}">
+
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+                            <div style="width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;font-weight:700;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                                {{ reply.user.email|first|upper }}
+                            </div>
+                            <div>
+                                <strong style="font-size:12px">{{ reply.user.fullName ?? reply.user.email }}</strong>
+                                <small style="color:#94a3b8;margin-left:6px">{{ reply.date|date('d M Y · H:i') }}</small>
+                            </div>
+                        </div>
+
+                        <div id="body-{{ reply.idCommentaire }}">
+                            <p style="margin:0;font-size:13px;color:#374151">{{ reply.contenu }}</p>
+                        </div>
+
+                        {% if currentUser and currentUser.id == reply.user.id %}
+                        <div class="d-none" id="edit-{{ reply.idCommentaire }}" style="padding:6px 0">
+                            <form method="post" action="{{ path('blog_comment_edit', {'id': reply.idCommentaire}) }}"
+                                  id="edit-form-{{ reply.idCommentaire }}">
+                                <div style="position:relative">
+                                    <textarea name="contenu" rows="2" maxlength="500"
+                                              id="edit-textarea-{{ reply.idCommentaire }}"
+                                              data-counter="edit-counter-{{ reply.idCommentaire }}"
+                                              style="width:100%;padding:7px 10px 22px;border:2px solid #3b82f6;border-radius:8px;font-size:12px;font-family:inherit;resize:vertical">{{ reply.contenu }}</textarea>
+                                    <span id="edit-counter-{{ reply.idCommentaire }}"
+                                          style="position:absolute;bottom:5px;right:7px;font-size:11px;color:#94a3b8">{{ reply.contenu|length }} / 500</span>
+                                </div>
+                                <div class="d-flex gap-2 mt-1">
+                                    <button type="button"
+                                            onclick="validateEditComment('edit-textarea-{{ reply.idCommentaire }}', 'edit-form-{{ reply.idCommentaire }}')"
+                                            class="primary-btn" style="border:none;padding:5px 12px;font-size:11px">
+                                        💾 Enregistrer
+                                    </button>
+                                    <button type="button" onclick="cancelEdit({{ reply.idCommentaire }})"
+                                            style="padding:5px 10px;border-radius:8px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-size:11px;cursor:pointer">
+                                        Annuler
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                        <div class="d-flex align-items-center mt-1" style="gap:10px">
+                            <button type="button" class="react-comment-btn"
+                                    data-url="{{ path('blog_comment_react', {'id': reply.idCommentaire, 'type': 'LIKE'}) }}"
+                                    style="background:none;border:none;cursor:pointer;font-size:12px;color:#94a3b8;padding:2px 4px;border-radius:6px">
+                                ♥ <span class="comment-reaction-count">{{ reply.reactions|length }}</span>
+                            </button>
+                            {% if currentUser %}
+                            <button type="button" onclick="toggleNestedReply({{ reply.idCommentaire }})"
+                                    style="background:none;border:none;cursor:pointer;font-size:11px;color:#64748b;font-weight:600;padding:2px 4px;border-radius:6px">
+                                ↩ Répondre
+                            </button>
+                            {% endif %}
+                            {% if currentUser and currentUser.id == reply.user.id %}
+                                <button type="button" onclick="toggleEdit({{ reply.idCommentaire }})"
+                                        style="background:none;border:none;cursor:pointer;font-size:11px;color:#64748b;font-weight:600;padding:2px 4px;border-radius:6px">
+                                    ✏ Modifier
+                                </button>
+                                <button type="button"
+                                        onclick="confirmDelete('{{ path('blog_comment_delete', {'id': reply.idCommentaire}) }}','{{ csrf_token('delete_comment' ~ reply.idCommentaire) }}','Supprimer cette réponse ?')"
+                                        style="background:none;border:none;cursor:pointer;font-size:12px;color:#cbd5e1;padding:2px 4px;border-radius:6px">
+                                    🗑
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        {% if currentUser %}
+                        <div id="nested-reply-{{ reply.idCommentaire }}" style="display:none;margin-top:8px">
+                            <form method="post"
+                                  action="{{ path('blog_comment_reply', {'id': comment.idCommentaire}) }}"
+                                  id="nested-reply-form-{{ reply.idCommentaire }}"
+                                  style="background:#fff;border-radius:8px;padding:10px">
+                                <div style="position:relative">
+                                    <textarea name="contenu" rows="2" maxlength="500"
+                                              id="nested-reply-textarea-{{ reply.idCommentaire }}"
+                                              data-counter="nested-reply-counter-{{ reply.idCommentaire }}"
+                                              placeholder="Répondre à {{ reply.user.fullName ?? reply.user.email }}..."
+                                              style="width:100%;padding:7px 10px 22px;border:2px solid #e2e8f0;border-radius:8px;font-size:12px;font-family:inherit;resize:vertical"></textarea>
+                                    <span id="nested-reply-counter-{{ reply.idCommentaire }}"
+                                          style="position:absolute;bottom:5px;right:7px;font-size:11px;color:#94a3b8">0 / 500</span>
+                                </div>
+                                <div class="d-flex gap-2 mt-1">
+                                    <button type="button"
+                                            onclick="validateReply('nested-reply-textarea-{{ reply.idCommentaire }}', 'nested-reply-form-{{ reply.idCommentaire }}')"
+                                            class="primary-btn" style="border:none;padding:5px 12px;font-size:11px">
+                                        ↩ Répondre
+                                    </button>
+                                    <button type="button" onclick="toggleNestedReply({{ reply.idCommentaire }})"
+                                            style="padding:5px 10px;border-radius:8px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-size:11px;cursor:pointer">
+                                        Annuler
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                        {% endif %}
+
+                    </div>
+                {% endfor %}
+
+            </div>
+        {% else %}
+            <div style="text-align:center;padding:40px;color:#94a3b8">
+                <span style="font-size:2.5rem">💬</span>
+                <p style="margin-top:12px">Aucun commentaire. Soyez le premier !</p>
+            </div>
+        {% endfor %}
+    </div>
+
+</div>
+</div>
+</div>
+
+{# ── Delete confirm modal ── #}
+<div id="confirm-modal" style="display:none;position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.45);align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:16px;padding:0;max-width:380px;width:92%;box-shadow:0 20px 60px rgba(0,0,0,.2);overflow:hidden">
+        <div style="background:linear-gradient(135deg,#dc2626,#ef4444);padding:20px 22px 14px;display:flex;align-items:center;gap:12px">
+            <div style="font-size:26px">🗑</div>
+            <div>
+                <div style="color:#fff;font-weight:700;font-size:15px">Confirmer la suppression</div>
+                <div style="color:rgba(255,255,255,.8);font-size:12px">Cette action est irréversible</div>
             </div>
         </div>
-
-        {# ── New comment form ── #}
-        <div class="comment-section-card mb-4">
-            <h5 class="section-title">💬 Laisser un commentaire</h5>
-            {{ form_start(commentForm, {'attr': {'class': 'comment-form-wrapper', 'novalidate': 'novalidate'}}) }}
-                <div class="textarea-wrapper">
-                    {{ form_widget(commentForm.contenu, {
-                        'attr': {
-                            'placeholder': 'Partagez votre avis...',
-                            'class': 'wl-textarea',
-                            'rows': 3,
-                            'maxlength': 500,
-                            'id': 'main-comment-textarea'
-                        }
-                    }) }}
-                    <span class="char-counter" id="main-comment-counter">0 / 500</span>
-                </div>
-                {{ form_errors(commentForm.contenu) }}
-                <div class="d-flex justify-content-end mt-2">
-                    <button type="submit" class="btn-wl-primary">
-                        <span>✉ Publier</span>
-                    </button>
-                </div>
-            {{ form_end(commentForm) }}
+        <div style="padding:18px 22px">
+            <p id="confirm-modal-text" style="margin:0;color:#374151;font-size:14px;line-height:1.6">Êtes-vous sûr ?</p>
         </div>
-
-        {# ── Comments list ── #}
-        <div class="comments-list">
-            <h5 class="section-title">{{ comments|length }} Commentaire{{ comments|length != 1 ? 's' }}</h5>
-
-            {% for comment in comments %}
-                <div class="comment-card mb-3" id="comment-{{ comment.idCommentaire }}">
-
-                    <div class="comment-header">
-                        <div class="user-avatar-sm">{{ comment.user.email|first|upper }}</div>
-                        <div>
-                            <strong>{{ comment.user.fullName ?? comment.user.email }}</strong>
-                            <small class="text-muted ms-2">{{ comment.date|date('d M Y · H:i') }}</small>
-                        </div>
-                    </div>
-
-                    {# ── Comment content (static view) ── #}
-                    <div class="comment-body" id="body-{{ comment.idCommentaire }}">
-                        <p class="mb-1">{{ comment.contenu }}</p>
-                    </div>
-
-                    {# ── Inline edit form (hidden by default) ── #}
-                    {% if currentUser and currentUser.id == comment.user.id %}
-                    <div class="edit-form-wrapper d-none" id="edit-{{ comment.idCommentaire }}">
-                        <form method="post" action="{{ path('blog_comment_edit', {'id': comment.idCommentaire}) }}">
-                            <div class="textarea-wrapper">
-                                <textarea name="contenu"
-                                          class="wl-textarea"
-                                          rows="2"
-                                          maxlength="500"
-                                          data-counter="edit-counter-{{ comment.idCommentaire }}">{{ comment.contenu }}</textarea>
-                                <span class="char-counter" id="edit-counter-{{ comment.idCommentaire }}">{{ comment.contenu|length }} / 500</span>
-                            </div>
-                            <div class="d-flex gap-2 mt-2">
-                                <button type="submit" class="btn-wl-primary btn-sm-wl">💾 Enregistrer</button>
-                                <button type="button" class="btn-wl-ghost btn-sm-wl"
-                                        onclick="cancelEdit({{ comment.idCommentaire }})">Annuler</button>
-                            </div>
-                        </form>
-                    </div>
-                    {% endif %}
-
-                    {# ── Comment actions ── #}
-                    <div class="comment-actions d-flex gap-2 align-items-center mt-2">
-                        <button
-                            type="button"
-                            class="react-comment-btn {{ comment.reactions|length > 0 ? 'has-reactions' : '' }}"
-                            data-url="{{ path('blog_comment_react', {'id': comment.idCommentaire, 'type': 'LIKE'}) }}">
-                            ♥ <span class="comment-reaction-count">{{ comment.reactions|length }}</span>
-                        </button>
-
-                        {# FIX: pure JS toggle — no Bootstrap collapse dependency #}
-                        <button type="button"
-                                class="btn-reply-toggle"
-                                onclick="toggleReply({{ comment.idCommentaire }})">
-                            ↩ Répondre
-                        </button>
-
-                        {% if currentUser and currentUser.id == comment.user.id %}
-                            <button type="button"
-                                    class="btn-edit-comment"
-                                    onclick="toggleEdit({{ comment.idCommentaire }})">✏ Modifier</button>
-                            <button type="button"
-                                    class="btn-delete-comment"
-                                    onclick="confirmDelete('{{ path('blog_comment_delete', {'id': comment.idCommentaire}) }}', '{{ csrf_token('delete_comment' ~ comment.idCommentaire) }}', 'Supprimer ce commentaire ?')">
-                                🗑
-                            </button>
-                        {% endif %}
-                    </div>
-
-                    {# ── Reply form (hidden by default, toggled with pure JS) ── #}
-                    <div class="reply-collapse mt-2" id="reply-{{ comment.idCommentaire }}" style="display:none">
-                        <form method="post" action="{{ path('blog_comment_reply', {'id': comment.idCommentaire}) }}"
-                              class="reply-form">
-                            <div class="textarea-wrapper">
-                                <textarea name="contenu" rows="2"
-                                          class="wl-textarea wl-textarea-sm"
-                                          placeholder="Votre réponse..."
-                                          maxlength="500"
-                                          data-counter="reply-counter-{{ comment.idCommentaire }}"></textarea>
-                                <span class="char-counter" id="reply-counter-{{ comment.idCommentaire }}">0 / 500</span>
-                            </div>
-                            <div class="d-flex gap-2 mt-2">
-                                <button type="submit" class="btn-wl-primary btn-sm-wl">↩ Répondre</button>
-                                <button type="button" class="btn-wl-ghost btn-sm-wl"
-                                        onclick="toggleReply({{ comment.idCommentaire }})">Annuler</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    {# ── Nested replies ── #}
-                    {% for reply in comment.replies %}
-                        <div class="reply-card mt-2 ms-4" id="comment-{{ reply.idCommentaire }}">
-                            <div class="comment-header">
-                                <div class="user-avatar-sm user-avatar-xs">{{ reply.user.email|first|upper }}</div>
-                                <div>
-                                    <strong style="font-size:13px">{{ reply.user.fullName ?? reply.user.email }}</strong>
-                                    <small class="text-muted ms-1">{{ reply.date|date('d M Y · H:i') }}</small>
-                                </div>
-                            </div>
-
-                            <div class="comment-body" id="body-{{ reply.idCommentaire }}">
-                                <p class="mb-1" style="font-size:13px">{{ reply.contenu }}</p>
-                            </div>
-
-                            {% if currentUser and currentUser.id == reply.user.id %}
-                            <div class="edit-form-wrapper d-none" id="edit-{{ reply.idCommentaire }}">
-                                <form method="post" action="{{ path('blog_comment_edit', {'id': reply.idCommentaire}) }}">
-                                    <div class="textarea-wrapper">
-                                        <textarea name="contenu"
-                                                  class="wl-textarea wl-textarea-sm"
-                                                  rows="2"
-                                                  maxlength="500"
-                                                  data-counter="edit-counter-{{ reply.idCommentaire }}">{{ reply.contenu }}</textarea>
-                                        <span class="char-counter" id="edit-counter-{{ reply.idCommentaire }}">{{ reply.contenu|length }} / 500</span>
-                                    </div>
-                                    <div class="d-flex gap-2 mt-1">
-                                        <button type="submit" class="btn-wl-primary btn-sm-wl">💾 Enregistrer</button>
-                                        <button type="button" class="btn-wl-ghost btn-sm-wl"
-                                                onclick="cancelEdit({{ reply.idCommentaire }})">Annuler</button>
-                                    </div>
-                                </form>
-                            </div>
-                            {% endif %}
-
-                            <div class="comment-actions d-flex gap-2 align-items-center mt-2">
-                                <button
-                                    type="button"
-                                    class="react-comment-btn"
-                                    data-url="{{ path('blog_comment_react', {'id': reply.idCommentaire, 'type': 'LIKE'}) }}">
-                                    ♥ <span class="comment-reaction-count">{{ reply.reactions|length }}</span>
-                                </button>
-                                {% if currentUser and currentUser.id == reply.user.id %}
-                                    <button type="button"
-                                            class="btn-edit-comment"
-                                            onclick="toggleEdit({{ reply.idCommentaire }})">✏ Modifier</button>
-                                    <button type="button"
-                                            class="btn-delete-comment"
-                                            onclick="confirmDelete('{{ path('blog_comment_delete', {'id': reply.idCommentaire}) }}', '{{ csrf_token('delete_comment' ~ reply.idCommentaire) }}', 'Supprimer cette réponse ?')">
-                                        🗑
-                                    </button>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endfor %}
-
-                </div>
-            {% else %}
-                <div class="empty-comments">
-                    <span style="font-size:2rem">💬</span>
-                    <p>Aucun commentaire. Soyez le premier !</p>
-                </div>
-            {% endfor %}
-        </div>
-
-    </div>
-</div>
-
-{# ── Confirm Delete Modal ── #}
-<div class="wl-modal-overlay d-none" id="confirm-modal">
-    <div class="wl-modal">
-        <div class="wl-modal-icon">🗑</div>
-        <h5 class="wl-modal-title" id="confirm-modal-title">Confirmer la suppression</h5>
-        <p class="wl-modal-text" id="confirm-modal-text">Êtes-vous sûr ?</p>
-        <div class="wl-modal-actions">
-            <button type="button" class="btn-wl-ghost" onclick="closeConfirmModal()">Annuler</button>
-            <button type="button" class="btn-wl-danger" id="confirm-modal-ok">Supprimer</button>
+        <div style="padding:0 22px 18px;display:flex;gap:10px;justify-content:flex-end">
+            <button type="button" onclick="closeConfirmModal()"
+                    style="padding:8px 18px;border-radius:8px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-weight:600;font-size:13px;cursor:pointer">
+                Annuler
+            </button>
+            <button type="button" id="confirm-modal-ok"
+                    style="padding:8px 18px;border-radius:8px;border:none;background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;font-weight:700;font-size:13px;cursor:pointer">
+                Supprimer
+            </button>
         </div>
     </div>
 </div>
-
-<style>
-/* ── Toasts ─────────────────────────────────── */
-.toast-container {
-    position: fixed; top: 24px; right: 24px; z-index: 9999;
-    display: flex; flex-direction: column; gap: 10px; max-width: 360px;
-}
-.wl-toast {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 14px 18px; border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.14);
-    font-size: 14px; font-weight: 500;
-    animation: toastIn .35s cubic-bezier(.22,1,.36,1) forwards;
-    background: white; border-left: 4px solid;
-}
-.wl-toast.toast-success { border-color: #10b981; }
-.wl-toast.toast-error   { border-color: #ef4444; }
-.wl-toast.toast-info    { border-color: var(--blue-primary, #1d4ed8); }
-.wl-toast-icon { font-size: 18px; }
-.wl-toast-msg  { flex: 1; }
-.wl-toast-close {
-    background: none; border: none; cursor: pointer;
-    color: #9ca3af; font-size: 16px; padding: 0; line-height: 1;
-}
-@keyframes toastIn {
-    from { opacity: 0; transform: translateX(30px); }
-    to   { opacity: 1; transform: translateX(0); }
-}
-@keyframes toastOut {
-    from { opacity: 1; transform: translateX(0); }
-    to   { opacity: 0; transform: translateX(30px); }
-}
-
-/* ── Post styles ───────────────────────────── */
-.card-post { background: white; border-radius: 16px; box-shadow: 0 2px 20px rgba(0,0,0,0.07); }
-.post-content { font-size: 15px; line-height: 1.65; }
-.media-display { width: 100%; max-height: 420px; object-fit: cover; border-radius: 10px; }
-.badge-status {
-    background: #f0f9ff; color: #0369a1;
-    border: 1px solid #bae6fd; border-radius: 20px;
-    padding: 4px 12px; font-size: 12px; font-weight: 600; white-space: nowrap;
-}
-.user-avatar-sm {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-    color: white; font-weight: 700; font-size: 14px;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-}
-.user-avatar-xs { width: 28px; height: 28px; font-size: 11px; }
-.comment-header { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
-
-/* ── Reaction button ───────────────────────── */
-.reaction-post-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 16px; border-radius: 20px; border: 2px solid #e5e7eb;
-    background: white; cursor: pointer; font-size: 14px; font-weight: 600;
-    color: #6b7280; transition: all .2s ease;
-}
-.reaction-post-btn:hover, .reaction-post-btn.reacted {
-    background: #fff1f2; border-color: #fda4af; color: #e11d48;
-}
-.reaction-post-btn.reacted .heart-icon { animation: heartPop .3s ease; }
-@keyframes heartPop {
-    0%   { transform: scale(1); }
-    50%  { transform: scale(1.4); }
-    100% { transform: scale(1); }
-}
-.comment-count-badge { font-size: 14px; color: #6b7280; }
-
-/* ── Action buttons ────────────────────────── */
-.btn-action {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 6px 14px; border-radius: 8px; font-size: 13px;
-    font-weight: 600; cursor: pointer; border: none; transition: all .18s ease;
-}
-.btn-action-edit { background: #f0f9ff; color: #0369a1; text-decoration: none; }
-.btn-action-edit:hover { background: #e0f2fe; color: #0284c7; }
-.btn-action-delete { background: #fff1f2; color: #be123c; }
-.btn-action-delete:hover { background: #ffe4e6; }
-
-/* ── Comment section ───────────────────────── */
-.comment-section-card {
-    background: white; border-radius: 16px;
-    padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.06);
-}
-.comment-card { background: #f8fafc; border-radius: 12px; padding: 14px 16px; border: 1px solid #e2e8f0; }
-.reply-card   { background: #f1f5f9; border-radius: 10px; padding: 10px 14px; border: 1px solid #e2e8f0; }
-.section-title { font-weight: 700; font-size: 15px; margin-bottom: 14px; color: #1e293b; }
-
-/* ── WL Textarea ───────────────────────────── */
-.textarea-wrapper { position: relative; }
-.wl-textarea {
-    width: 100%; padding: 12px 14px;
-    border: 2px solid #e2e8f0; border-radius: 10px;
-    font-size: 14px; font-family: inherit;
-    resize: vertical; transition: border-color .2s; background: white;
-}
-.wl-textarea:focus {
-    outline: none; border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59,130,246,.12);
-}
-.wl-textarea-sm { padding: 8px 12px; font-size: 13px; }
-.char-counter {
-    position: absolute; bottom: 8px; right: 10px;
-    font-size: 11px; color: #94a3b8; pointer-events: none;
-}
-
-/* ── Buttons ───────────────────────────────── */
-.btn-wl-primary {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 20px; border-radius: 8px; border: none;
-    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
-    color: white; font-weight: 600; font-size: 14px; cursor: pointer; transition: all .2s;
-}
-.btn-wl-primary:hover {
-    background: linear-gradient(135deg, #1e40af, #2563eb);
-    transform: translateY(-1px); box-shadow: 0 4px 12px rgba(29,78,216,.3);
-}
-.btn-wl-ghost {
-    display: inline-flex; align-items: center;
-    padding: 7px 16px; border-radius: 8px; border: 2px solid #e2e8f0;
-    background: white; color: #64748b; font-weight: 600; font-size: 13px;
-    cursor: pointer; transition: all .18s;
-}
-.btn-wl-ghost:hover { border-color: #cbd5e1; background: #f8fafc; }
-.btn-wl-danger {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 20px; border-radius: 8px; border: none;
-    background: linear-gradient(135deg, #dc2626, #ef4444);
-    color: white; font-weight: 600; font-size: 14px; cursor: pointer; transition: all .2s;
-}
-.btn-wl-danger:hover { background: linear-gradient(135deg, #b91c1c, #dc2626); }
-.btn-sm-wl { padding: 6px 12px; font-size: 12px; }
-
-/* ── Comment action buttons ────────────────── */
-.react-comment-btn {
-    background: none; border: none; cursor: pointer;
-    font-size: 13px; color: #94a3b8; padding: 2px 6px;
-    border-radius: 6px; transition: all .18s;
-}
-.react-comment-btn:hover, .react-comment-btn.reacted { color: #e11d48; }
-.btn-reply-toggle {
-    background: none; border: none; cursor: pointer;
-    font-size: 12px; color: #64748b; font-weight: 600;
-    padding: 2px 6px; border-radius: 6px; transition: color .18s;
-}
-.btn-reply-toggle:hover { color: #1d4ed8; }
-.btn-edit-comment {
-    background: none; border: none; cursor: pointer;
-    font-size: 12px; color: #64748b; font-weight: 600;
-    padding: 2px 6px; border-radius: 6px; transition: color .18s;
-}
-.btn-edit-comment:hover { color: #0369a1; }
-.btn-delete-comment {
-    background: none; border: none; cursor: pointer;
-    font-size: 13px; color: #cbd5e1; padding: 2px 6px;
-    border-radius: 6px; transition: color .18s;
-}
-.btn-delete-comment:hover { color: #e11d48; }
-
-/* ── Empty state ───────────────────────────── */
-.empty-comments { text-align: center; padding: 40px; color: #94a3b8; }
-
-/* ── Edit form ─────────────────────────────── */
-.edit-form-wrapper { padding: 10px 0; }
-
-/* ── Reply form ───────────────────────────── */
-.reply-form { background: white; border-radius: 10px; padding: 12px; }
-
-/* ── Confirm Modal ─────────────────────────── */
-.wl-modal-overlay {
-    position: fixed; inset: 0; z-index: 9999;
-    background: rgba(0,0,0,.45);
-    display: flex; align-items: center; justify-content: center;
-    animation: fadeIn .2s ease;
-}
-.wl-modal-overlay.d-none { display: none !important; }
-.wl-modal {
-    background: white; border-radius: 16px; padding: 32px 28px;
-    max-width: 380px; width: 90%; text-align: center;
-    box-shadow: 0 20px 60px rgba(0,0,0,.2); animation: slideUp .25s ease;
-}
-.wl-modal-icon { font-size: 2.4rem; margin-bottom: 10px; }
-.wl-modal-title { font-weight: 700; font-size: 18px; margin-bottom: 8px; }
-.wl-modal-text  { color: #64748b; font-size: 14px; margin-bottom: 22px; }
-.wl-modal-actions { display: flex; gap: 10px; justify-content: center; }
-@keyframes slideUp {
-    from { transform: translateY(20px); opacity: 0; }
-    to   { transform: translateY(0); opacity: 1; }
-}
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to   { opacity: 1; }
-}
-</style>
 
 <script>
-// ─── Toast system ─────────────────────────────────────────────────────────────
-function showToast(type, message) {
-    const icons = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
-    const container = document.getElementById('toast-container');
-    const toast = document.createElement('div');
-    toast.className = `wl-toast toast-${type === 'error' ? 'error' : type === 'success' ? 'success' : 'info'}`;
-    toast.innerHTML = `
-        <span class="wl-toast-icon">${icons[type] || 'ℹ️'}</span>
-        <span class="wl-toast-msg">${message}</span>
-        <button class="wl-toast-close" onclick="dismissToast(this.parentElement)">×</button>`;
-    container.appendChild(toast);
-    setTimeout(() => dismissToast(toast), 4500);
-}
-function dismissToast(toast) {
-    if (!toast || !toast.parentElement) return;
-    toast.style.animation = 'toastOut .3s ease forwards';
-    setTimeout(() => toast.remove(), 300);
-}
-document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.wl-toast-data').forEach(el => {
-        showToast(el.dataset.type, el.dataset.message);
-        el.remove();
+var COMMENT_FIELD_ID = '{{ commentForm.contenu.vars.id }}';
+
+// ── Popup ─────────────────────────────────────────────────────────────────────
+function closePopup() { document.getElementById('validation-popup').style.display = 'none'; }
+
+function showPopup(errors, title, subtitle, headerColor, iconEmoji, btnColor) {
+    var ul = document.getElementById('popup-errors');
+    ul.innerHTML = '';
+    (Array.isArray(errors) ? errors : [errors]).forEach(function(e) {
+        var li = document.createElement('li');
+        li.textContent = e;
+        li.style.marginBottom = '4px';
+        ul.appendChild(li);
     });
+    document.getElementById('popup-title').textContent    = title    || 'Erreur';
+    document.getElementById('popup-subtitle').textContent = subtitle || '';
+    document.getElementById('popup-icon').textContent     = iconEmoji || '⚠';
+    document.getElementById('popup-header').style.background = headerColor || 'linear-gradient(135deg,#dc2626,#ef4444)';
+    document.getElementById('popup-btn').style.background    = btnColor    || 'linear-gradient(135deg,#dc2626,#ef4444)';
+    document.getElementById('validation-popup').style.display = 'flex';
+}
+
+document.getElementById('validation-popup').addEventListener('click', function(e) {
+    if (e.target === this) closePopup();
 });
 
-// ─── Confirm delete modal ─────────────────────────────────────────────────────
-let _deleteAction = null;
-let _deleteToken  = null;
+document.addEventListener('DOMContentLoaded', function() {
+    {% if flashErrors|length > 0 %}
+    var flashErrors = {{ flashErrors|json_encode|raw }};
+    var isSpam = flashErrors.some(function(m) { return m.indexOf('Trop de commentaires') !== -1; });
+    if (isSpam) {
+        showPopup(flashErrors, 'Anti-spam activé', 'Vous postez trop vite !',
+            'linear-gradient(135deg,#d97706,#f59e0b)', '⏱', 'linear-gradient(135deg,#d97706,#f59e0b)');
+    } else {
+        showPopup(flashErrors, 'Erreur', 'Veuillez corriger les problèmes suivants',
+            'linear-gradient(135deg,#dc2626,#ef4444)', '⚠', 'linear-gradient(135deg,#dc2626,#ef4444)');
+    }
+    {% endif %}
+    {% if flashSuccess|length > 0 %}
+    var flashSuccess = {{ flashSuccess|json_encode|raw }};
+    flashSuccess.forEach(function(msg) { showToast('success', msg); });
+    {% endif %}
+});
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(type, message) {
+    var icons     = { success: '✅', error: '❌', info: 'ℹ️', warning: '⚠️' };
+    var container = document.getElementById('toast-container');
+    var toast     = document.createElement('div');
+    toast.style.cssText = 'display:flex;align-items:flex-start;gap:12px;padding:14px 18px;border-radius:12px;'
+        + 'box-shadow:0 8px 32px rgba(0,0,0,.14);font-size:14px;font-weight:500;background:#fff;border-left:4px solid '
+        + (type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#1d4ed8');
+    toast.innerHTML = '<span style="font-size:18px">' + (icons[type] || 'ℹ️') + '</span>'
+        + '<span style="flex:1">' + message + '</span>'
+        + '<button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;color:#9ca3af;font-size:16px;padding:0;line-height:1">×</button>';
+    container.appendChild(toast);
+    setTimeout(function() { if (toast.parentElement) toast.remove(); }, 4500);
+}
+
+// ── Comment validation ────────────────────────────────────────────────────────
+function validateComment(textareaId, formId) {
+    var ta  = document.getElementById(textareaId);
+    var val = ta ? ta.value.trim() : '';
+    if (!val) {
+        if (ta) ta.style.borderColor = '#ef4444';
+        showPopup(['Le commentaire ne peut pas être vide.'], 'Commentaire vide', 'Écrivez quelque chose avant de publier');
+        return;
+    }
+    if (val.length < 2) {
+        if (ta) ta.style.borderColor = '#ef4444';
+        showPopup(['Le commentaire doit contenir au moins 2 caractères.'], 'Trop court', 'Minimum 2 caractères requis');
+        return;
+    }
+    if (val.length > 500) {
+        if (ta) ta.style.borderColor = '#ef4444';
+        showPopup(['Le commentaire ne peut pas dépasser 500 caractères.'], 'Trop long', 'Maximum 500 caractères autorisés');
+        return;
+    }
+    if (ta) ta.style.borderColor = '#e2e8f0';
+    document.getElementById(formId).submit();
+}
+function validateEditComment(textareaId, formId) { validateComment(textareaId, formId); }
+function validateReply(textareaId, formId)        { validateComment(textareaId, formId); }
+
+// ── Delete modal ──────────────────────────────────────────────────────────────
+var _deleteAction = null, _deleteToken = null;
 function confirmDelete(url, token, message) {
-    _deleteAction = url;
-    _deleteToken  = token;
-    document.getElementById('confirm-modal-text').textContent = message || 'Cette action est irréversible.';
-    document.getElementById('confirm-modal').classList.remove('d-none');
+    _deleteAction = url; _deleteToken = token;
+    document.getElementById('confirm-modal-text').textContent = message;
+    document.getElementById('confirm-modal').style.display = 'flex';
 }
 function closeConfirmModal() {
-    document.getElementById('confirm-modal').classList.add('d-none');
-    _deleteAction = null;
-    _deleteToken  = null;
+    document.getElementById('confirm-modal').style.display = 'none';
+    _deleteAction = _deleteToken = null;
 }
-document.getElementById('confirm-modal-ok').addEventListener('click', function () {
+document.getElementById('confirm-modal-ok').addEventListener('click', function() {
     if (!_deleteAction) return;
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = _deleteAction;
-    const tokenInput = document.createElement('input');
-    tokenInput.type  = 'hidden';
-    tokenInput.name  = '_token';
-    tokenInput.value = _deleteToken;
-    form.appendChild(tokenInput);
-    document.body.appendChild(form);
-    form.submit();
+    var f = document.createElement('form'); f.method = 'POST'; f.action = _deleteAction;
+    var i = document.createElement('input'); i.type = 'hidden'; i.name = '_token'; i.value = _deleteToken;
+    f.appendChild(i); document.body.appendChild(f); f.submit();
 });
-document.getElementById('confirm-modal').addEventListener('click', function (e) {
+document.getElementById('confirm-modal').addEventListener('click', function(e) {
     if (e.target === this) closeConfirmModal();
 });
 
-// ─── Comment inline edit ──────────────────────────────────────────────────────
+// ── Edit / reply helpers ──────────────────────────────────────────────────────
 function toggleEdit(id) {
     document.getElementById('body-' + id).classList.toggle('d-none');
     document.getElementById('edit-' + id).classList.toggle('d-none');
@@ -533,98 +513,180 @@ function cancelEdit(id) {
     document.getElementById('body-' + id).classList.remove('d-none');
     document.getElementById('edit-' + id).classList.add('d-none');
 }
-
-// ─── Reply toggle (pure JS — no Bootstrap collapse needed) ───────────────────
-function toggleReply(commentId) {
-    const el = document.getElementById('reply-' + commentId);
+function toggleReply(id) {
+    var el = document.getElementById('reply-' + id);
     if (!el) return;
-    const isHidden = el.style.display === 'none' || el.style.display === '';
-    el.style.display = isHidden ? 'block' : 'none';
-    if (isHidden) {
-        const ta = el.querySelector('textarea');
-        if (ta) { ta.focus(); }
-    }
+    var showing = el.style.display !== 'none';
+    el.style.display = showing ? 'none' : 'block';
+    if (!showing) { var ta = el.querySelector('textarea'); if (ta) ta.focus(); }
+}
+function toggleNestedReply(id) {
+    var el = document.getElementById('nested-reply-' + id);
+    if (!el) return;
+    var showing = el.style.display !== 'none';
+    el.style.display = showing ? 'none' : 'block';
+    if (!showing) { var ta = el.querySelector('textarea'); if (ta) ta.focus(); }
 }
 
-// ─── Character counters ───────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function () {
-    const mainTA      = document.getElementById('main-comment-textarea');
-    const mainCounter = document.getElementById('main-comment-counter');
-    if (mainTA && mainCounter) {
-        mainTA.addEventListener('input', function () {
-            mainCounter.textContent = this.value.length + ' / 500';
-            mainCounter.style.color = this.value.length > 450 ? '#ef4444' : '#94a3b8';
+// ── Character counters ────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    var mainTA  = document.getElementById(COMMENT_FIELD_ID);
+    var mainCtr = document.getElementById('main-comment-counter');
+    if (mainTA && mainCtr) {
+        mainCtr.textContent = mainTA.value.length + ' / 500';
+        mainTA.addEventListener('input', function() {
+            mainCtr.textContent = this.value.length + ' / 500';
+            mainCtr.style.color = this.value.length > 450 ? '#ef4444' : '#94a3b8';
+            if (this.value.trim().length >= 2) this.style.borderColor = '#10b981';
         });
     }
-    document.querySelectorAll('textarea[data-counter]').forEach(ta => {
-        const counter = document.getElementById(ta.dataset.counter);
-        if (!counter) return;
-        counter.textContent = ta.value.length + ' / 500';
-        ta.addEventListener('input', function () {
-            counter.textContent = this.value.length + ' / 500';
-            counter.style.color = this.value.length > 450 ? '#ef4444' : '#94a3b8';
+    document.querySelectorAll('textarea[data-counter]').forEach(function(ta) {
+        var ctr = document.getElementById(ta.dataset.counter);
+        if (!ctr) return;
+        ctr.textContent = ta.value.length + ' / 500';
+        ta.addEventListener('input', function() {
+            ctr.textContent = this.value.length + ' / 500';
+            ctr.style.color = this.value.length > 450 ? '#ef4444' : '#94a3b8';
         });
     });
 });
 
-// ─── Reaction system ──────────────────────────────────────────────────────────
-// Use a Set to track in-flight requests and block double-fire
-const _reactingUrls = new Set();
-
-document.body.addEventListener('click', function (e) {
-    const btn = e.target.closest('.reaction-post-btn, .react-comment-btn');
+// ── Reactions ─────────────────────────────────────────────────────────────────
+var _reactingUrls = new Set();
+document.body.addEventListener('click', function(e) {
+    var btn = e.target.closest('.reaction-post-btn, .react-comment-btn');
     if (!btn) return;
     e.preventDefault();
-
-    const url = btn.dataset.url;
-    if (!url) return;
-    if (_reactingUrls.has(url)) return; // already in-flight, ignore
+    var url = btn.dataset.url;
+    if (!url || _reactingUrls.has(url)) return;
     _reactingUrls.add(url);
     btn.style.opacity = '0.6';
-
-    fetch(url, {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest',
-            'Content-Type': 'application/json'
+    fetch(url, { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/json' } })
+    .then(function(r) {
+        if (r.status === 401) throw new Error('Connectez-vous pour réagir');
+        if (!r.ok) throw new Error('Erreur serveur ' + r.status);
+        return r.json();
+    })
+    .then(function(data) {
+        if (data.error && data.count === undefined) { showToast('error', data.error); return; }
+        var isPost    = btn.classList.contains('reaction-post-btn');
+        var countSpan = btn.querySelector(isPost ? '.reaction-count' : '.comment-reaction-count');
+        if (countSpan) countSpan.textContent = data.count;
+        btn.classList.toggle('reacted', !!data.added);
+        if (isPost) {
+            btn.style.background  = data.added ? '#fff1f2' : '#fff';
+            btn.style.borderColor = data.added ? '#fda4af' : '#e5e7eb';
+            btn.style.color       = data.added ? '#e11d48' : '#6b7280';
+        } else {
+            btn.style.color      = data.added ? '#e11d48' : '';
+            btn.style.fontWeight = data.added ? '700' : '';
         }
     })
-    .then(response => {
-        if (response.status === 401) throw new Error('Connectez-vous pour réagir');
-        if (!response.ok) throw new Error('Erreur serveur ' + response.status);
-        return response.json();
-    })
-    .then(data => {
-        if (data.error && data.count === undefined) {
-            showToast('error', data.error);
+    .catch(function(err) { showToast('error', err.message); })
+    .finally(function() { _reactingUrls.delete(url); btn.style.opacity = '1'; });
+});
+
+// ── Save button ───────────────────────────────────────────────────────────────
+var saveBtn = document.getElementById('save-btn');
+if (saveBtn) {
+    saveBtn.addEventListener('click', function() {
+        var self = this;
+        fetch(this.dataset.url, { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) { showToast('error', data.error); return; }
+            self.textContent       = data.saved ? '🗂 Sauvegardé' : '🔖 Sauvegarder';
+            self.style.background  = data.saved ? '#f0f9ff' : '#fff';
+            self.style.borderColor = data.saved ? '#bae6fd' : '#e5e7eb';
+            self.style.color       = data.saved ? '#0369a1' : '#6b7280';
+            showToast('success', data.message);
+        })
+        .catch(function() { showToast('error', 'Erreur réseau'); });
+    });
+}
+
+// ── ✅ Translate button — shows FR→EN or EN→FR direction ──────────────────────
+var translateBtn  = document.getElementById('translate-btn');
+var postContentEl = document.getElementById('post-content-text');
+var originalText  = postContentEl ? postContentEl.textContent : '';
+var cachedTranslation = null;
+var isTranslated  = false;
+
+if (translateBtn && postContentEl) {
+    translateBtn.addEventListener('click', function () {
+        // Toggle back to original
+        if (isTranslated) {
+            postContentEl.style.opacity = '0';
+            setTimeout(function () {
+                postContentEl.textContent = originalText;
+                postContentEl.style.transition = 'opacity .3s';
+                postContentEl.style.opacity = '1';
+            }, 150);
+            translateBtn.innerHTML     = '🌐 Traduire';
+            translateBtn.style.color       = '#6b7280';
+            translateBtn.style.borderColor = '#e5e7eb';
+            translateBtn.style.background  = '#fff';
+            isTranslated = false;
             return;
         }
 
-        const isPostBtn  = btn.classList.contains('reaction-post-btn');
-        const countSpan  = btn.querySelector(isPostBtn ? '.reaction-count' : '.comment-reaction-count');
-        if (countSpan) countSpan.textContent = data.count;
-
-        btn.classList.toggle('reacted', !!data.added);
-
-        if (!isPostBtn) {
-            btn.style.color      = data.added ? '#e11d48' : '';
-            btn.style.fontWeight = data.added ? '700' : '';
-
-            // Micro +1 / -1 animation
-            const flash = document.createElement('span');
-            flash.textContent = data.added ? ' +1' : ' -1';
-            flash.style.cssText = 'font-size:11px;color:' + (data.added ? '#e11d48' : '#94a3b8') + ';transition:opacity 1s;pointer-events:none';
-            btn.appendChild(flash);
-            setTimeout(() => { flash.style.opacity = '0'; }, 600);
-            setTimeout(() => { flash.remove(); }, 1000);
+        // Use cached result
+        if (cachedTranslation) {
+            postContentEl.style.opacity = '0';
+            setTimeout(function () {
+                postContentEl.textContent = cachedTranslation;
+                postContentEl.style.transition = 'opacity .3s';
+                postContentEl.style.opacity = '1';
+            }, 150);
+            isTranslated = true;
+            return;
         }
-    })
-    .catch(err => showToast('error', err.message))
-    .finally(() => {
-        _reactingUrls.delete(url);
-        btn.style.opacity = '1';
+
+        // Fetch from server
+        translateBtn.innerHTML = '⏳ Traduction…';
+        translateBtn.disabled  = true;
+
+        fetch(translateBtn.dataset.url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            translateBtn.disabled = false;
+            if (!data.success) {
+                translateBtn.innerHTML = '🌐 Traduire';
+                showToast('error', 'Traduction échouée. Réessayez.');
+                return;
+            }
+            cachedTranslation = data.translatedText;
+
+            // ✅ Show direction clearly: FR→EN or EN→FR
+            var arrow = data.sourceLang === 'fr' ? 'FR → EN' : 'EN → FR';
+            var flag  = data.sourceLang === 'fr' ? '🇫🇷→🇬🇧' : '🇬🇧→🇫🇷';
+
+            postContentEl.style.opacity = '0';
+            setTimeout(function () {
+                postContentEl.textContent = cachedTranslation;
+                postContentEl.style.transition = 'opacity .3s';
+                postContentEl.style.opacity = '1';
+            }, 150);
+
+            translateBtn.innerHTML     = '↩ ' + arrow + ' (original)';
+            translateBtn.style.color       = '#0369a1';
+            translateBtn.style.borderColor = '#bae6fd';
+            translateBtn.style.background  = '#f0f9ff';
+            isTranslated = true;
+
+            showToast('success', flag + ' Traduit avec succès');
+        })
+        .catch(function () {
+            translateBtn.disabled  = false;
+            translateBtn.innerHTML = '🌐 Traduire';
+            showToast('error', 'Erreur réseau');
+        });
     });
-});
+}
 </script>
+
 {% endblock %}

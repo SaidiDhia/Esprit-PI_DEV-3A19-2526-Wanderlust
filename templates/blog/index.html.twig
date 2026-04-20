@@ -1,55 +1,200 @@
 {% extends 'base.html.twig' %}
 
 {% block content %}
-<div class="bg-primary/5 border-b border-border py-12 px-4">
-    <div class="container mx-auto text-center">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4 text-primary text-3xl">📝</div>
-        <h1 class="text-3xl md:text-5xl font-heading font-bold text-foreground mb-4">Travel Blog</h1>
-        <p class="text-muted-foreground max-w-2xl mx-auto">Stories, tips, and guides from travelers who've been there and done that.</p>
+<div style="background:linear-gradient(rgba(0,0,0,0.5),rgba(0,0,0,0.5)),url('{{ asset('adventure/img/slider2.jpg') }}') center/cover no-repeat;padding:100px 0 60px;color:#fff;text-align:center;">
+    <div class="container">
+        <h1 style="font-size:2.8rem;font-weight:700;margin-bottom:12px">Travel Blog</h1>
+        <p style="font-size:1.1rem;opacity:0.85;max-width:550px;margin:0 auto 24px">Stories, tips and guides from real travelers.</p>
+        {% if app.user %}
+            <a href="{{ path('blog_post_new') }}" class="primary-btn" style="text-decoration:none;padding:12px 30px;font-size:14px">
+                ✍ Write a Post
+            </a>
+        {% endif %}
     </div>
 </div>
 
-<div class="container mx-auto px-4 py-12">
-    {% if posts|length == 0 %}
-        <div class="text-center py-16">
-            <p class="text-muted-foreground text-lg mb-6">No posts yet. Be the first to share your story!</p>
-            <a href="{{ path('blog_post_new') }}" class="bg-primary hover:bg-primary/90 text-white font-bold px-6 py-3 rounded-xl transition-all inline-block">
-                📝 Write Your First Post
-            </a>
+<div class="container" style="padding:50px 15px">
+
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ type == 'error' ? 'danger' : type }} alert-dismissible" role="alert">
+                {{ message }}
+                <button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 style="margin:0;color:#0f172a;font-weight:700">📄 Publications</h4>
+        {% if currentUser %}
+            <div>
+                <a href="{{ path('blog_saved') }}" style="font-size:13px;margin-left:16px;color:#0369a1;text-decoration:none;font-weight:600">
+                    🗂 Mes sauvegardés
+                </a>
+                <a href="{{ path('blog_notifications') }}" style="font-size:13px;margin-left:12px;color:#0369a1;text-decoration:none;font-weight:600">
+                    🔔 Notifications
+                    {% if unreadCount > 0 %}
+                        <span style="background:#ef4444;color:#fff;border-radius:50%;padding:1px 6px;font-size:11px">{{ unreadCount }}</span>
+                    {% endif %}
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if pagination.totalItemCount == 0 %}
+        <div style="text-align:center;padding:60px;color:#94a3b8">
+            <div style="font-size:3rem;margin-bottom:12px">📝</div>
+            <p style="font-size:1.1rem">Aucune publication pour le moment.</p>
+            {% if app.user %}
+                <a href="{{ path('blog_post_new') }}" class="primary-btn" style="text-decoration:none;padding:10px 24px;margin-top:12px;display:inline-block">
+                    ✍ Créer le premier post
+                </a>
+            {% endif %}
         </div>
     {% else %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {% for post in posts %}
-            <a href="{{ path('blog_post_show', {'id': post.idPost}) }}" class="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-lg transition-all">
-                <div class="relative h-48 overflow-hidden bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-                    {% if post.media %}
-                        <img src="{{ asset('uploads/' ~ post.media) }}" alt="Post image" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300">
-                    {% else %}
-                        <div class="text-6xl">📖</div>
-                    {% endif %}
-                </div>
-                <div class="p-6">
-                    <div class="flex items-start justify-between mb-3">
-                        <span class="inline-block px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">
-                            {{ post.statut == 'private' ? '🔒 Private' : '🌐 Public' }}
-                        </span>
+        <div class="row">
+            {% for post in pagination %}
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div style="background:#fff;border-radius:14px;box-shadow:0 2px 16px rgba(0,0,0,.07);overflow:hidden;height:100%;display:flex;flex-direction:column">
+
+                    {# Media thumbnail #}
+                    <div style="height:180px;overflow:hidden;background:linear-gradient(135deg,#1d4ed8,#3b82f6);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                        {% if post.media %}
+                            {% if post.media matches '/\\.(mp4|avi|mov|mkv)$/i' %}
+                                <video style="width:100%;height:100%;object-fit:cover" muted>
+                                    <source src="{{ asset('uploads/' ~ post.media) }}">
+                                </video>
+                            {% else %}
+                                <img src="{{ asset('uploads/' ~ post.media) }}" alt="" style="width:100%;height:100%;object-fit:cover">
+                            {% endif %}
+                        {% else %}
+                            <span style="font-size:3rem">📖</span>
+                        {% endif %}
                     </div>
-                    <h3 class="font-heading font-bold text-lg text-foreground mb-2 line-clamp-2 group-hover:text-primary transition-colors">
-                        {{ post.contenu|slice(0, 50) }}{% if post.contenu|length > 50 %}...{% endif %}
-                    </h3>
-                    <p class="text-sm text-muted-foreground mb-4 line-clamp-2">
-                        {{ post.contenu|slice(0, 150) }}{% if post.contenu|length > 150 %}...{% endif %}
-                    </p>
-                    <div class="flex items-center justify-between pt-4 border-t border-border/50">
-                        <div class="text-xs text-muted-foreground">
-                            <span class="font-semibold">{{ post.user.fullName }}</span> • {{ post.dateCreation|date('M d, Y') }}
+
+                    <div style="padding:18px;flex:1;display:flex;flex-direction:column">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+
+                            {# ✅ Status badge — includes scheduled with countdown #}
+                            {% if post.statut == 'scheduled' %}
+                                <span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">
+                                    📅 {{ post.scheduledAt ? post.scheduledAt|date('d/m H:i') : 'Programmé' }}
+                                </span>
+                            {% elseif post.statut == 'private' %}
+                                <span style="background:#fef3c7;color:#92400e;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">
+                                    🔒 Privé
+                                </span>
+                            {% else %}
+                                <span style="background:#eff6ff;color:#1e40af;border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700">
+                                    🌐 Public
+                                </span>
+                            {% endif %}
+
+                            {% if currentUser %}
+                                <button type="button"
+                                        class="save-toggle-btn"
+                                        data-url="{{ path('blog_post_save', {'id': post.idPost}) }}"
+                                        data-saved="{{ post.idPost in savedIds ? '1' : '0' }}"
+                                        style="background:none;border:none;cursor:pointer;font-size:16px;padding:0"
+                                        title="{{ post.idPost in savedIds ? 'Retirer des sauvegardés' : 'Sauvegarder' }}">
+                                    {{ post.idPost in savedIds ? '🗂' : '🔖' }}
+                                </button>
+                            {% endif %}
                         </div>
-                        <svg class="w-4 h-4 text-primary group-hover:translate-x-1 transition-transform" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>
+
+                        <p style="font-size:14px;color:#374151;line-height:1.55;flex:1">
+                            {{ post.contenu|slice(0, 120) }}{% if post.contenu|length > 120 %}…{% endif %}
+                        </p>
+
+                        <div style="margin-top:12px;padding-top:12px;border-top:1px solid #f1f5f9;display:flex;justify-content:space-between;align-items:center">
+                            <small style="color:#94a3b8">
+                                <strong>{{ post.user.fullName ?? post.user.email }}</strong>
+                                &bull; {{ post.dateCreation|date('d M Y') }}
+                            </small>
+                            <a href="{{ path('blog_post_show', {'id': post.idPost}) }}"
+                               style="background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;text-decoration:none">
+                                Lire →
+                            </a>
+                        </div>
                     </div>
                 </div>
-            </a>
+            </div>
             {% endfor %}
+        </div>
+
+        {# ✅ Improved pagination #}
+        <div class="d-flex justify-content-center mt-4">
+            <div class="wanderlust-pagination">
+                {{ knp_pagination_render(pagination) }}
+            </div>
         </div>
     {% endif %}
 </div>
+
+<style>
+.wanderlust-pagination .pagination {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.wanderlust-pagination .page-item .page-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border: 2px solid #e2e8f0;
+    background: #fff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all .2s;
+}
+.wanderlust-pagination .page-item .page-link:hover {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1d4ed8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59,130,246,.15);
+}
+.wanderlust-pagination .page-item.active .page-link {
+    background: linear-gradient(135deg, #1d4ed8, #3b82f6);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(59,130,246,.4);
+}
+.wanderlust-pagination .page-item.disabled .page-link {
+    opacity: 0.38;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+</style>
+
+<script>
+document.querySelectorAll('.save-toggle-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        var url  = this.dataset.url;
+        var self = this;
+        fetch(url, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) { alert(data.error); return; }
+            self.dataset.saved = data.saved ? '1' : '0';
+            self.textContent   = data.saved ? '🗂' : '🔖';
+            self.title         = data.saved ? 'Retirer des sauvegardés' : 'Sauvegarder';
+        })
+        .catch(function() { alert('Erreur réseau'); });
+    });
+});
+</script>
 {% endblock %}
