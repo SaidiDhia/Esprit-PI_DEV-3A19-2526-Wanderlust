@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice #{{ facture.id_facture }} — WanderLust</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: #fff;
+            color: #1a1a2e;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .invoice-wrap {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px;
+            background: white;
+        }
+
+        /* ── Header ─────────────────────────────────────────── */
+        .inv-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 40px;
+            padding-bottom: 24px;
+            border-bottom: 3px solid #1D4ED8;
+        }
+
+        .inv-brand { display: flex; align-items: center; gap: 14px; }
+        .inv-brand-icon {
+            width: 52px; height: 52px;
+            background: linear-gradient(135deg, #1D4ED8, #3B82F6);
+            border-radius: 14px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 26px;
+        }
+        .inv-brand-name {
+            font-size: 26px; font-weight: 800;
+            color: #1D4ED8; letter-spacing: -0.5px;
+        }
+        .inv-brand-tagline { font-size: 12px; color: #6B7280; margin-top: 2px; }
+
+        .inv-meta { text-align: right; }
+        .inv-label {
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.15em; text-transform: uppercase;
+            color: #6B7280; margin-bottom: 4px;
+        }
+        .inv-number {
+            font-size: 28px; font-weight: 900;
+            color: #1D4ED8; line-height: 1;
+        }
+        .inv-date { font-size: 13px; color: #6B7280; margin-top: 6px; }
+
+        /* ── Status Banner ───────────────────────────────────── */
+        .inv-status-bar {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        .inv-status-pill {
+            padding: 6px 18px;
+            border-radius: 30px;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+        }
+        .status-confirmed { background: #D1FAE5; color: #065F46; }
+        .status-pending   { background: #FEF3C7; color: #92400E; }
+        .status-cancelled { background: #FEE2E2; color: #991B1B; }
+        .payment-pill { background: #EFF6FF; color: #1D4ED8; }
+
+        /* ── Two columns ─────────────────────────────────────── */
+        .inv-parties {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 36px;
+        }
+
+        .inv-party-box {
+            background: #F9FAFB;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #E5E7EB;
+        }
+        .inv-party-title {
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.12em; text-transform: uppercase;
+            color: #6B7280; margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+        .inv-party-name { font-size: 15px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+        .inv-party-line { font-size: 13px; color: #6B7280; margin-bottom: 2px; }
+
+        /* ── Items Table ─────────────────────────────────────── */
+        .inv-table-wrap {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #E5E7EB;
+            margin-bottom: 28px;
+        }
+
+        .inv-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .inv-table thead tr {
+            background: linear-gradient(135deg, #1D4ED8, #1e3a8a);
+            color: white;
+        }
+
+        .inv-table thead th {
+            padding: 13px 16px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        .inv-table thead th:last-child { text-align: right; }
+
+        .inv-table tbody tr {
+            border-bottom: 1px solid #F3F4F6;
+        }
+        .inv-table tbody tr:last-child { border-bottom: none; }
+        .inv-table tbody tr:nth-child(even) { background: #FAFAFA; }
+
+        .inv-table tbody td {
+            padding: 14px 16px;
+            vertical-align: middle;
+        }
+
+        .item-img {
+            width: 44px; height: 44px;
+            border-radius: 8px;
+            object-fit: cover;
+            background: #E5E7EB;
+            margin-right: 12px;
+            vertical-align: middle;
+            display: inline-block;
+        }
+        .item-name { font-weight: 600; color: #111827; }
+        .item-qty  { text-align: center; color: #6B7280; font-weight: 600; }
+        .item-price { text-align: right; color: #6B7280; }
+        .item-total { text-align: right; font-weight: 700; color: #1D4ED8; }
+
+        /* ── Totals ──────────────────────────────────────────── */
+        .inv-totals {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 36px;
+        }
+        .inv-totals-box {
+            background: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            padding: 20px 28px;
+            min-width: 280px;
+        }
+        .inv-total-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            font-size: 13px;
+            color: #6B7280;
+            border-bottom: 1px solid #F3F4F6;
+        }
+        .inv-total-row:last-child { border-bottom: none; }
+        .inv-total-row.grand {
+            padding-top: 12px;
+            margin-top: 4px;
+            border-top: 2px solid #1D4ED8;
+            font-size: 16px;
+            font-weight: 800;
+            color: #1D4ED8;
+        }
+
+        /* ── Footer ──────────────────────────────────────────── */
+        .inv-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 24px;
+            border-top: 1px solid #E5E7EB;
+        }
+        .inv-footer-brand { font-size: 13px; color: #6B7280; }
+        .inv-footer-brand strong { color: #1D4ED8; }
+        .inv-footer-page { font-size: 12px; color: #9CA3AF; }
+
+        .inv-thankyou {
+            text-align: center;
+            margin: 24px 0 8px;
+            font-size: 14px;
+            color: #6B7280;
+        }
+        .inv-thankyou strong { color: #1D4ED8; font-size: 16px; }
+
+        /* ── Print Button ────────────────────────────────────── */
+        .print-bar {
+            background: #1D4ED8;
+            color: white;
+            padding: 16px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 999;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+        }
+        .print-bar-title { font-size: 15px; font-weight: 700; }
+        .print-bar-btns  { display: flex; gap: 12px; }
+        .btn-print {
+            background: white;
+            color: #1D4ED8;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-print:hover { background: #EFF6FF; transform: translateY(-1px); }
+        .btn-back {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            text-decoration: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-back:hover { background: rgba(255,255,255,0.25); }
+
+        /* Push content below fixed bar when shown */
+        .invoice-wrap { margin-top: 70px; }
+
+        /* ── Print Media ─────────────────────────────────────── */
+        @media print {
+            .print-bar { display: none !important; }
+            .invoice-wrap { margin-top: 0 !important; padding: 20px; }
+            body { background: white !important; }
+            @page { margin: 15mm; size: A4; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Fixed print bar (hidden on print) -->
+<div class="print-bar">
+    <span class="print-bar-title">📄 Invoice #{{ facture.id_facture }} — Preview</span>
+    <div class="print-bar-btns">
+        <a href="{{ path('app_marketplace_order_detail', {id: facture.id_facture}) }}" class="btn-back">← Back</a>
+        <button class="btn-print" onclick="window.print()">🖨️ Download / Print PDF</button>
+    </div>
+</div>
+
+<div class="invoice-wrap">
+
+    <!-- Header -->
+    <div class="inv-header">
+        <div class="inv-brand">
+            <div class="inv-brand-icon">🌿</div>
+            <div>
+                <div class="inv-brand-name">WanderLust</div>
+                <div class="inv-brand-tagline">Outdoor Marketplace — Tunisia</div>
+            </div>
+        </div>
+        <div class="inv-meta">
+            <div class="inv-label">Invoice</div>
+            <div class="inv-number">#{{ facture.id_facture }}</div>
+            <div class="inv-date">📅 {{ facture.date_facture|date('d F Y') }}</div>
+        </div>
+    </div>
+
+    <!-- Status pills -->
+    <div class="inv-status-bar">
+        <span class="inv-status-pill {% if facture.delivery_status == 'confirmed' %}status-confirmed{% elseif facture.delivery_status == 'cancelled' %}status-cancelled{% else %}status-pending{% endif %}">
+            {% if facture.delivery_status == 'confirmed' %}✅ Confirmed
+            {% elseif facture.delivery_status == 'cancelled' %}❌ Cancelled
+            {% else %}⏳ Pending Delivery{% endif %}
+        </span>
+        <span class="inv-status-pill payment-pill">
+            {{ facture.payment_method == 'online' ? '💳 Online Payment' : '💵 Cash on Delivery' }}
+        </span>
+    </div>
+
+    <!-- From / To -->
+    <div class="inv-parties">
+        <div class="inv-party-box">
+            <div class="inv-party-title">From</div>
+            <div class="inv-party-name">🌿 WanderLust Marketplace</div>
+            <div class="inv-party-line">📍 Tunis, Tunisia</div>
+            <div class="inv-party-line">📞 (+216) 71 862 710</div>
+            <div class="inv-party-line">🌐 wanderlust.tn</div>
+        </div>
+
+        <div class="inv-party-box">
+            <div class="inv-party-title">Bill To</div>
+            {% if address %}
+                <div class="inv-party-name">{{ address.full_name }}</div>
+                <div class="inv-party-line">📞 {{ address.phone }}</div>
+                {% if address.email %}<div class="inv-party-line">✉️ {{ address.email }}</div>{% endif %}
+                <div class="inv-party-line">📍 {{ address.address }}</div>
+                <div class="inv-party-line">{{ address.city }}{% if address.postal_code %}, {{ address.postal_code }}{% endif %}</div>
+                {% if address.notes %}<div class="inv-party-line" style="color:#9CA3AF; margin-top:4px;">📝 {{ address.notes }}</div>{% endif %}
+            {% else %}
+                <div class="inv-party-line" style="color:#9CA3AF;">No delivery address on file</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Items Table -->
+    <div class="inv-table-wrap">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th style="text-align:center;">Qty</th>
+                    <th style="text-align:right;">Unit Price</th>
+                    <th style="text-align:right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                <tr>
+                    <td>
+                        {% if item.product_image %}
+                            <img src="{{ item.product_image }}" class="item-img"
+                                 onerror="this.style.display='none'">
+                        {% endif %}
+                        <span class="item-name">{{ item.product_title }}</span>
+                    </td>
+                    <td class="item-qty">{{ item.quantity }}</td>
+                    <td class="item-price">{{ item.price|number_format(2) }} TND</td>
+                    <td class="item-total">{{ (item.price * item.quantity)|number_format(2) }} TND</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Totals -->
+    <div class="inv-totals">
+        <div class="inv-totals-box">
+            <div class="inv-total-row">
+                <span>Subtotal</span>
+                <span>{{ facture.total_price|number_format(2) }} TND</span>
+            </div>
+            <div class="inv-total-row">
+                <span>Shipping</span>
+                <span style="color:#059669;">Free</span>
+            </div>
+            <div class="inv-total-row">
+                <span>Tax (0%)</span>
+                <span>0.00 TND</span>
+            </div>
+            <div class="inv-total-row grand">
+                <span>Total Due</span>
+                <span>{{ facture.total_price|number_format(2) }} TND</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thank you note -->
+    <div class="inv-thankyou">
+        <strong>Thank you for your order! 🎉</strong><br>
+        {% if facture.delivery_status == 'pending' %}
+            Your order is being prepared. You'll be notified when it ships.
+        {% elseif facture.delivery_status == 'confirmed' %}
+            Your order has been confirmed and delivered. Enjoy your purchase!
+        {% else %}
+            This order has been cancelled. Contact support if you need help.
+        {% endif %}
+    </div>
+
+    <!-- Footer -->
+    <div class="inv-footer">
+        <div class="inv-footer-brand">
+            Generated by <strong>WanderLust</strong> Marketplace &nbsp;·&nbsp; wanderlust.tn
+        </div>
+        <div class="inv-footer-page">
+            Invoice #{{ facture.id_facture }} &nbsp;·&nbsp; {{ facture.date_facture|date('d/m/Y') }}
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Auto-trigger print dialog if ?print=1 is in the URL
+if (window.location.search.includes('print=1')) {
+    window.onload = () => setTimeout(() => window.print(), 500);
+}
+</script>
+
+</body>
+</html>
