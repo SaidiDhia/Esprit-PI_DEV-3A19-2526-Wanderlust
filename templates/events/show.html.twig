@@ -258,12 +258,29 @@
                     <!-- Share Section -->
                     <div class="text-center">
                         <h6 class="text-muted mb-3"><i class="fa fa-share-alt me-2"></i>Partager cet événement</h6>
+                        <div class="mb-3">
+                            <textarea
+                                id="share-message"
+                                class="form-control"
+                                rows="3"
+                                maxlength="280"
+                                style="resize:none;"
+                                placeholder="Ajoutez un message personnalisé..."></textarea>
+                            <small class="text-muted d-block mt-2" id="share-preview"></small>
+                        </div>
                         <div class="d-flex justify-content-center mb-2" style="gap: 10px;">
                             <button class="btn btn-primary share-btn rounded-circle" data-network="facebook" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center;" title="Partager sur Facebook"><i class="fa fa-facebook-f"></i></button>
                             <button class="btn btn-info share-btn rounded-circle" data-network="twitter" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; color:white; background-color: #1da1f2; border-color: #1da1f2;" title="Partager sur X (Twitter)"><i class="fa fa-twitter"></i></button>
                             <button class="btn btn-success share-btn rounded-circle" data-network="whatsapp" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center; background-color: #25d366; border-color: #25d366;" title="Envoyer sur WhatsApp"><i class="fa fa-whatsapp"></i></button>
+                            <button class="btn btn-danger share-btn rounded-circle" data-network="email" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center;" title="Partager par email"><i class="fa fa-envelope"></i></button>
+                            <button class="btn btn-dark share-btn rounded-circle" data-network="native" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center;" title="Partager via votre appareil"><i class="fa fa-mobile"></i></button>
                             <button class="btn btn-secondary share-btn rounded-circle" data-network="copy" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center;" title="Copier le lien"><i class="fa fa-link"></i></button>
+                            <button class="btn btn-warning share-btn rounded-circle" data-network="pdf-copy" style="width:40px; height:40px; padding:0; display:flex; align-items:center; justify-content:center;" title="Copier le lien PDF"><i class="fa fa-file-pdf-o"></i></button>
                         </div>
+                        <a class="btn btn-outline-dark btn-sm mt-2" href="{{ path('app_events_details_pdf', {'id': event.id}) }}" target="_blank" rel="noopener">
+                            <i class="fa fa-download me-1"></i> Telecharger les details en PDF
+                        </a>
+                        <small class="text-success d-none" id="share-feedback"></small>
                         <small class="text-muted"><span id="share-count-display">{{ event.shareCount|default(0) }}</span> partages</small>
                     </div>
                 </div>
@@ -379,23 +396,120 @@
         // Logique de partage & AJAX
         const shareBtns = document.querySelectorAll('.share-btn');
         const shareCountDisplay = document.getElementById('share-count-display');
+        const shareMessageInput = document.getElementById('share-message');
+        const sharePreview = document.getElementById('share-preview');
+        const shareFeedback = document.getElementById('share-feedback');
         const shareUrlInput = "{{ url('app_events_show', {'id': event.id}) }}";
-        const shareText = "Découvrez cet événement incroyable : {{ event.lieu }} !";
+        const pdfShareUrl = "{{ url('app_events_details_pdf', {'id': event.id}) }}";
+        const shareDefaultText = "Je recommande cet événement : {{ event.lieu }}";
+        const eventTitle = "{{ event.lieu|e('js') }}";
+        const eventDate = "{{ event.dateDebut ? event.dateDebut|date('d/m/Y H:i') : '' }}";
+        const eventPrice = "{{ event.prix|number_format(2, '.', '') }} TND";
+
+        function buildShareText() {
+            const userMessage = (shareMessageInput?.value || '').trim();
+            const baseMessage = userMessage !== '' ? userMessage : shareDefaultText;
+            return `${baseMessage}\n\n- ${eventTitle}\n- Date: ${eventDate}\n- Prix: ${eventPrice}\n${shareUrlInput}`;
+        }
+
+        function buildPdfShareText() {
+            const userMessage = (shareMessageInput?.value || '').trim();
+            const baseMessage = userMessage !== '' ? userMessage : shareDefaultText;
+            return `${baseMessage}\n\nFiche PDF de l'evenement:\n${pdfShareUrl}`;
+        }
+
+        function showShareFeedback(message, isError = false) {
+            if (!shareFeedback) {
+                return;
+            }
+
+            shareFeedback.classList.remove('d-none', 'text-success', 'text-danger');
+            shareFeedback.classList.add(isError ? 'text-danger' : 'text-success');
+            shareFeedback.textContent = message;
+
+            window.setTimeout(() => {
+                shareFeedback.classList.add('d-none');
+            }, 2200);
+        }
+
+        if (sharePreview) {
+            sharePreview.textContent = 'Aperçu: ' + buildShareText().replace(/\n/g, ' ');
+        }
+
+        if (shareMessageInput && sharePreview) {
+            shareMessageInput.addEventListener('input', () => {
+                sharePreview.textContent = 'Aperçu: ' + buildShareText().replace(/\n/g, ' ');
+            });
+        }
+
+        async function incrementShareCount() {
+            try {
+                const response = await fetch("{{ path('app_events_share', {'id': event.id}) }}", {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+
+                const data = await response.json();
+                if (data.success && shareCountDisplay) {
+                    shareCountDisplay.textContent = data.count;
+                }
+            } catch (err) {
+                console.error('Erreur incrémentation partage:', err);
+            }
+        }
 
         shareBtns.forEach(btn => {
-            btn.addEventListener('click', function(e) {
+            btn.addEventListener('click', async function(e) {
                 e.preventDefault();
                 const network = this.dataset.network;
                 let finalUrl = '';
+                const shareText = buildShareText();
+                const pdfShareText = buildPdfShareText();
+                let shareConfirmed = false;
 
                 if (network === 'facebook') {
                     finalUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrlInput)}`;
+                    shareConfirmed = true;
                 } else if (network === 'twitter') {
                     finalUrl = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrlInput)}&text=${encodeURIComponent(shareText)}`;
+                    shareConfirmed = true;
                 } else if (network === 'whatsapp') {
-                    finalUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + shareUrlInput)}`;
+                    finalUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText)}`;
+                    shareConfirmed = true;
+                } else if (network === 'email') {
+                    finalUrl = `mailto:?subject=${encodeURIComponent('Invitation: ' + eventTitle)}&body=${encodeURIComponent(shareText)}`;
+                    shareConfirmed = true;
+                } else if (network === 'native') {
+                    if (navigator.share) {
+                        try {
+                            await navigator.share({
+                                title: eventTitle,
+                                text: shareText,
+                                url: shareUrlInput,
+                            });
+                            shareConfirmed = true;
+                        } catch {
+                            showShareFeedback('Partage annulé.', true);
+                        }
+                    } else {
+                        showShareFeedback('Partage natif non disponible sur cet appareil.', true);
+                    }
                 } else if (network === 'copy') {
-                    navigator.clipboard.writeText(shareUrlInput).then(() => alert("Lien copié dans le presse-papier !"));
+                    try {
+                        await navigator.clipboard.writeText(shareText);
+                        showShareFeedback('Message de partage copié.');
+                        shareConfirmed = true;
+                    } catch {
+                        showShareFeedback('Impossible de copier le message.', true);
+                    }
+                } else if (network === 'pdf-copy') {
+                    try {
+                        await navigator.clipboard.writeText(pdfShareText);
+                        showShareFeedback('Lien PDF copié.');
+                        shareConfirmed = true;
+                    } catch {
+                        showShareFeedback('Impossible de copier le lien PDF.', true);
+                    }
                 }
 
                 // Ouvrir le popup si URL existe (pas pour COPY)
@@ -403,18 +517,11 @@
                     window.open(finalUrl, '_blank', 'width=600,height=400');
                 }
 
-                // Incrémenter en base de données de manière asynchrone (AJAX)
-                fetch("{{ path('app_events_share', {'id': event.id}) }}", {
-                    method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        shareCountDisplay.textContent = data.count; // Met à jour le compteur en temps réel !
-                    }
-                })
-                .catch(err => console.error('Erreur incrémentation partage:', err));
+                if (!shareConfirmed) {
+                    return;
+                }
+
+                await incrementShareCount();
             });
         });
     })();

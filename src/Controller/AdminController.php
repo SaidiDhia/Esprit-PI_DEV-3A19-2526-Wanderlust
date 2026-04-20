@@ -11,6 +11,7 @@ use App\Entity\Reservations;
 use App\Entity\User;
 use App\Enum\RoleEnum;
 use App\Enum\StatusActiviteEnum;
+use App\Enum\StatusEventEnum;
 use App\Enum\TFAMethod;
 use App\Repository\UserRepository;
 use Doctrine\DBAL\Connection;
@@ -78,9 +79,25 @@ class AdminController extends AbstractController
     {
         $this->denyAccessUnlessGranted('ROLE_ADMIN');
 
-        $section = (string) $request->query->get('section', 'users');
+        $requestedSection = (string) $request->query->get('section', 'users');
+        $experienceFocus = 'all';
+
+        if (in_array($requestedSection, ['activities', 'events', 'reservations'], true)) {
+            $section = 'experiences';
+            $experienceFocus = $requestedSection;
+        } else {
+            $section = $requestedSection;
+        }
+
         if (!in_array($section, ['users', 'messaging', 'booking', 'experiences', 'marketplace', 'risk', 'activity_logs', 'activity_feed'], true)) {
             $section = 'users';
+        }
+
+        if ($section === 'experiences' && $experienceFocus === 'all') {
+            $experienceFocus = strtolower(trim((string) $request->query->get('experience', 'all')));
+            if (!in_array($experienceFocus, ['all', 'activities', 'events', 'reservations'], true)) {
+                $experienceFocus = 'all';
+            }
         }
 
         $q = trim((string) $request->query->get('q', ''));
@@ -430,7 +447,7 @@ class AdminController extends AbstractController
 
         try {
             $experienceStats['totalEvents'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM events')->fetchOne();
-            $experienceStats['pendingEvents'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM events WHERE statut = 'en_attente'")->fetchOne();
+            $experienceStats['pendingEvents'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM events WHERE status = 'en_attente'")->fetchOne();
             $experienceStats['activeEvents'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM events WHERE date_fin >= NOW()')->fetchOne();
             $experienceStats['endedEvents'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM events WHERE date_fin < NOW()')->fetchOne();
         } catch (\Throwable) {
@@ -461,7 +478,7 @@ class AdminController extends AbstractController
 
         try {
             $experienceEvents = $conn->executeQuery(
-                "SELECT e.id, e.lieu, e.statut, e.date_debut, e.date_fin, e.date_creation,
+                "SELECT e.id, e.lieu, e.status AS statut, e.date_debut, e.date_fin, e.date_creation,
                         e.places_disponibles, e.capacite_max,
                         COALESCE(u.full_name, e.organisateur, 'Unknown organizer') AS organizer_name
                  FROM events e
@@ -723,6 +740,7 @@ class AdminController extends AbstractController
             'experienceReservations' => $experienceReservations,
             'experienceReservationTrend' => $experienceReservationTrend,
             'experienceStatusMixChartData' => $experienceStatusMixChartData,
+            'experienceFocus' => $experienceFocus,
             'marketplaceStats' => $marketplaceStats,
             'marketplaceRecentOrders' => $marketplaceRecentOrders,
             'marketplaceTopProducts' => $marketplaceTopProducts,
@@ -798,13 +816,13 @@ class AdminController extends AbstractController
             return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
         }
 
-        $status = mb_strtolower(trim((string) $request->request->get('status', '')));
-        if (!in_array($status, ['en_attente', 'accepte', 'refuse', 'termine'], true)) {
+        $status = StatusEventEnum::tryFrom(mb_strtolower(trim((string) $request->request->get('status', ''))));
+        if (!$status instanceof StatusEventEnum) {
             $this->addFlash('error', 'Invalid event status value.');
             return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
         }
 
-        $event->setStatut($status);
+        $event->setStatus($status);
         $entityManager->flush();
 
         $this->addFlash('success', 'Event status updated successfully.');

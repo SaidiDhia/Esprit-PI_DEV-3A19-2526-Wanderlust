@@ -111,6 +111,48 @@
                 border: 1px solid hsl(0 0% 100% / 0.12);
             }
 
+            .wl-swal-popup {
+                border-radius: 22px !important;
+                padding: 22px 20px 16px !important;
+            }
+
+            .wl-swal-title {
+                font-family: 'Plus Jakarta Sans', 'Inter', sans-serif !important;
+                font-size: 30px !important;
+                line-height: 1.12 !important;
+                color: #0f375b !important;
+                margin-top: 6px !important;
+                margin-bottom: 10px !important;
+            }
+
+            .wl-swal-text {
+                color: #4b5563 !important;
+                font-size: 14px !important;
+                line-height: 1.45 !important;
+            }
+
+            .wl-swal-confirm {
+                border-radius: 9999px !important;
+                padding: 11px 20px !important;
+                background: #0f375b !important;
+                color: #fff !important;
+                font-weight: 700 !important;
+                min-width: 215px;
+            }
+
+            .wl-swal-cancel {
+                border-radius: 9999px !important;
+                padding: 11px 20px !important;
+                background: #e5e7eb !important;
+                color: #111827 !important;
+                font-weight: 600 !important;
+                min-width: 215px;
+            }
+
+            .wl-swal-close {
+                color: #94a3b8 !important;
+            }
+
             .module-page-title {
                 color: #fff;
                 font-size: clamp(2.3rem, 5vw, 4rem);
@@ -140,6 +182,9 @@
             <a href="{{ path('app_booking') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Stays</a>
             <a href="{{ path('app_activities_index') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Activities</a>
             <a href="{{ path('app_events_index') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Events</a>
+            {% if app.user %}
+                <a href="{{ path('app_reservations_index') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Reservations</a>
+            {% endif %}
             <a href="{{ path('app_messaging') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Chat</a>
             <a href="{{ path('app_blog') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Stories</a>
             <a href="{{ path('app_marketplace') }}" class="text-sm font-medium text-white/80 hover:text-white transition-colors">Marketplace</a>
@@ -298,6 +343,173 @@
 <script src="{{ asset('adventure/js/jquery.nice-select.min.js') }}"></script>
 <script src="{{ asset('adventure/js/jquery.magnific-popup.min.js') }}"></script>
 <script src="{{ asset('adventure/js/main.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    (function () {
+        if (typeof Swal === 'undefined') {
+            return;
+        }
+
+        function moduleActionFromPath() {
+            var path = (window.location.pathname || '').toLowerCase();
+            if (path.indexOf('/activities') !== -1) {
+                return { label: 'Voir mes activités', url: '{{ path('app_activities_index') }}' };
+            }
+            if (path.indexOf('/events') !== -1) {
+                return { label: 'Voir mes événements', url: '{{ path('app_events_index') }}' };
+            }
+            if (path.indexOf('/reservations') !== -1) {
+                return { label: 'Voir mes réservations', url: '{{ path('app_reservations_index') }}' };
+            }
+            return null;
+        }
+
+        function showSuccessPopup(message) {
+            var action = moduleActionFromPath();
+            var title = (message || '').trim();
+            var text = 'Votre action a été publiée et est maintenant visible par la communauté.';
+
+            if (!title) {
+                title = 'Opération réalisée avec succès !';
+            }
+
+            if ((window.location.pathname || '').toLowerCase().indexOf('/reservations') !== -1) {
+                text = 'Votre réservation est bien enregistrée.';
+            } else if ((window.location.pathname || '').toLowerCase().indexOf('/events') !== -1) {
+                text = 'Votre événement a été pris en compte avec succès.';
+            }
+
+            Swal.fire({
+                icon: 'success',
+                iconColor: '#16a34a',
+                title: title,
+                text: text,
+                showCloseButton: true,
+                showCancelButton: true,
+                confirmButtonText: action ? action.label : 'Continuer',
+                cancelButtonText: 'Fermer',
+                allowOutsideClick: true,
+                allowEscapeKey: true,
+                buttonsStyling: false,
+                customClass: {
+                    popup: 'wl-swal-popup',
+                    title: 'wl-swal-title',
+                    htmlContainer: 'wl-swal-text',
+                    confirmButton: 'wl-swal-confirm',
+                    cancelButton: 'wl-swal-cancel',
+                    closeButton: 'wl-swal-close'
+                }
+            }).then(function (result) {
+                if (result.isConfirmed && action) {
+                    window.location.href = action.url;
+                }
+            });
+        }
+
+        function collectAndReplaceSuccessFlashes() {
+            var selectors = [
+                '.alert.alert-success',
+                '.flash-success',
+                '.flash.flash-success'
+            ];
+
+            var seen = {};
+            var messages = [];
+
+            selectors.forEach(function (selector) {
+                document.querySelectorAll(selector).forEach(function (el) {
+                    var msg = (el.textContent || '').trim();
+                    if (!msg) {
+                        return;
+                    }
+
+                    if (!seen[msg]) {
+                        seen[msg] = true;
+                        messages.push(msg);
+                    }
+
+                    el.style.display = 'none';
+                });
+            });
+
+            if (messages.length > 0) {
+                showSuccessPopup(messages[0]);
+            }
+        }
+
+        function isDeleteForm(form) {
+            var action = ((form.getAttribute('action') || '') + ' ' + (form.id || '')).toLowerCase();
+            var text = (form.textContent || '').toLowerCase();
+
+            return action.indexOf('delete') !== -1 ||
+                action.indexOf('supprim') !== -1 ||
+                text.indexOf('delete') !== -1 ||
+                text.indexOf('supprim') !== -1 ||
+                text.indexOf('corbeille') !== -1;
+        }
+
+        function neutralizeNativeDeleteConfirms() {
+            document.querySelectorAll('form[onsubmit]').forEach(function (form) {
+                var onsubmitValue = (form.getAttribute('onsubmit') || '').toLowerCase();
+                if (onsubmitValue.indexOf('confirm(') !== -1) {
+                    form.removeAttribute('onsubmit');
+                }
+            });
+        }
+
+        document.addEventListener('submit', function (event) {
+            var form = event.target;
+            if (!(form instanceof HTMLFormElement)) {
+                return;
+            }
+
+            if (form.dataset.wlDeleteConfirmed === '1') {
+                form.dataset.wlDeleteConfirmed = '0';
+                return;
+            }
+
+            if (!isDeleteForm(form)) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+
+            Swal.fire({
+                icon: 'warning',
+                title: '⚠️ Attention : Êtes-vous sûr ? ',
+                text: 'Cette action est irréversible.',
+                showCloseButton: true,
+                showCancelButton: true,
+                confirmButtonText: 'Oui, continuer',
+                cancelButtonText: 'Annuler',
+                allowOutsideClick: true,
+                allowEscapeKey: true,
+                buttonsStyling: false,
+                customClass: {
+                    popup: 'wl-swal-popup',
+                    title: 'wl-swal-title',
+                    htmlContainer: 'wl-swal-text',
+                    confirmButton: 'wl-swal-confirm',
+                    cancelButton: 'wl-swal-cancel',
+                    closeButton: 'wl-swal-close'
+                }
+            }).then(function (result) {
+                if (!result.isConfirmed) {
+                    return;
+                }
+
+                form.dataset.wlDeleteConfirmed = '1';
+                form.submit();
+            });
+        }, true);
+
+        neutralizeNativeDeleteConfirms();
+        collectAndReplaceSuccessFlashes();
+    })();
+</script>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";

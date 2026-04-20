@@ -141,8 +141,13 @@ class ReservationsController extends AbstractController
     //  SHOW
     // ─────────────────────────────────────────────────────────────────
     #[Route('/{id}', name: 'app_reservations_show', methods: ['GET'])]
-    public function show(Reservations $reservation): Response
+    public function show(?Reservations $reservation): Response
     {
+        if (!$reservation instanceof Reservations) {
+            $this->addFlash('error', 'Réservation introuvable.');
+            return $this->redirectToRoute('app_reservations_index');
+        }
+
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $this->denyUnlessReservationOwner($reservation);
 
@@ -158,9 +163,14 @@ class ReservationsController extends AbstractController
     #[Route('/{id}/edit', name: 'app_reservations_edit', methods: ['GET', 'POST'])]
     public function edit(
         Request $request,
-        Reservations $reservation,
+        ?Reservations $reservation,
         EntityManagerInterface $em
     ): Response {
+        if (!$reservation instanceof Reservations) {
+            $this->addFlash('error', 'Réservation introuvable.');
+            return $this->redirectToRoute('app_reservations_index');
+        }
+
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $this->denyUnlessReservationOwner($reservation);
 
@@ -205,9 +215,14 @@ class ReservationsController extends AbstractController
     #[Route('/{id}', name: 'app_reservations_delete', methods: ['POST'])]
     public function delete(
         Request $request,
-        Reservations $reservation,
+        ?Reservations $reservation,
         EntityManagerInterface $em
     ): Response {
+        if (!$reservation instanceof Reservations) {
+            $this->addFlash('error', 'Réservation introuvable.');
+            return $this->redirectToRoute('app_reservations_index');
+        }
+
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $this->denyUnlessReservationOwner($reservation);
 
@@ -232,8 +247,13 @@ class ReservationsController extends AbstractController
     // ─────────────────────────────────────────────────────────────────
     #[Route('/{id}/confirm', name: 'app_reservations_confirm', methods: ['POST'])]
     public function confirm(
-        Request $request, Reservations $reservation, EntityManagerInterface $em
+        Request $request, ?Reservations $reservation, EntityManagerInterface $em
     ): Response {
+        if (!$reservation instanceof Reservations) {
+            $this->addFlash('error', 'Réservation introuvable.');
+            return $this->redirectToRoute('app_reservations_index');
+        }
+
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $this->denyUnlessReservationOwner($reservation);
 
@@ -247,8 +267,13 @@ class ReservationsController extends AbstractController
 
     #[Route('/{id}/cancel', name: 'app_reservations_cancel', methods: ['POST'])]
     public function cancel(
-        Request $request, Reservations $reservation, EntityManagerInterface $em
+        Request $request, ?Reservations $reservation, EntityManagerInterface $em
     ): Response {
+        if (!$reservation instanceof Reservations) {
+            $this->addFlash('error', 'Réservation introuvable.');
+            return $this->redirectToRoute('app_reservations_index');
+        }
+
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $this->denyUnlessReservationOwner($reservation);
 

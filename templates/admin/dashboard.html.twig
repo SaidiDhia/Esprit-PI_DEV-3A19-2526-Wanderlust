@@ -149,7 +149,24 @@
                         {% endif %}
                     </a>
                     <a href="{{ path('app_booking') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Booking</a>
-                    <a href="{{ path('app_activities_index') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Activities</a>
+                    <a href="{{ path('app_admin_dashboard', { section: 'activities' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'experiences' and experienceFocus == 'activities' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
+                        <span>Activities</span>
+                        {% if activeSection == 'experiences' and experienceFocus == 'activities' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
+                        {% endif %}
+                    </a>
+                    <a href="{{ path('app_admin_dashboard', { section: 'events' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'experiences' and experienceFocus == 'events' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
+                        <span>Events</span>
+                        {% if activeSection == 'experiences' and experienceFocus == 'events' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
+                        {% endif %}
+                    </a>
+                    <a href="{{ path('app_admin_dashboard', { section: 'reservations' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'experiences' and experienceFocus == 'reservations' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
+                        <span>Reservations</span>
+                        {% if activeSection == 'experiences' and experienceFocus == 'reservations' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
+                        {% endif %}
+                    </a>
                     <a href="{{ path('app_blog') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Blog</a>
                     <a href="{{ path('app_admin_dashboard', { section: 'messaging' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'messaging' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
                         <span>Messaging</span>
@@ -1286,15 +1303,13 @@
                 </div>
 
                 <div id="experiences-analytics" class="{{ activeSection == 'experiences' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6 space-y-6">
+                    {% set expFocus = experienceFocus|default('all') %}
                     <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
                         <div>
-                            <h2 class="text-xl font-heading font-bold text-foreground">Activities, Events & Reservations</h2>
+                            <h2 class="text-xl font-heading font-bold text-foreground">
+                                {% if expFocus == 'activities' %}Activities Dashboard{% elseif expFocus == 'events' %}Events Dashboard{% elseif expFocus == 'reservations' %}Reservations Dashboard{% else %}Activities, Events & Reservations{% endif %}
+                            </h2>
                             <p class="text-sm text-muted-foreground">Central moderation and CRUD operations for travel experiences modules.</p>
-                        </div>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <a href="{{ path('app_activities_new') }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">New Activity</a>
-                            <a href="{{ path('app_events_new') }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">New Event</a>
-                            <a href="{{ path('app_events_index') }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">Create Reservation</a>
                         </div>
                     </div>
 
@@ -1342,7 +1357,7 @@
                         </div>
                     </div>
 
-                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4 {{ expFocus in ['all', 'activities'] ? '' : 'hidden' }}">
                         <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Latest Activities (Admin CRUD)</h3>
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[1080px] border-collapse">
@@ -1367,9 +1382,9 @@
                                                 <form method="post" action="{{ path('app_admin_activity_status', { id: item.id }) }}" class="flex items-center gap-2">
                                                     <input type="hidden" name="_token" value="{{ csrf_token('admin_activity_status_' ~ item.id) }}">
                                                     <select name="status" class="rounded-lg border border-border bg-background px-2 py-1 text-xs">
-                                                        <option value="en_attente" {% if item.status == 'en_attente' %}selected{% endif %}>Pending</option>
-                                                        <option value="accepte" {% if item.status == 'accepte' %}selected{% endif %}>Accepted</option>
-                                                        <option value="refuse" {% if item.status == 'refuse' %}selected{% endif %}>Refused</option>
+                                                        <option value="en_attente" {% if item.status == 'en_attente' %}selected{% endif %}>En attente</option>
+                                                        <option value="accepte" {% if item.status == 'accepte' %}selected{% endif %}>Accepte</option>
+                                                        <option value="refuse" {% if item.status == 'refuse' %}selected{% endif %}>Refuse</option>
                                                     </select>
                                                     <button type="submit" class="rounded-lg bg-primary/10 px-2 py-1 font-semibold text-primary hover:bg-primary/20">Update</button>
                                                 </form>
@@ -1390,7 +1405,7 @@
                         </div>
                     </div>
 
-                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4 {{ expFocus in ['all', 'events'] ? '' : 'hidden' }}">
                         <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Latest Events (Admin CRUD)</h3>
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[1120px] border-collapse">
@@ -1418,10 +1433,10 @@
                                                 <form method="post" action="{{ path('app_admin_event_status', { id: item.id }) }}" class="flex items-center gap-2">
                                                     <input type="hidden" name="_token" value="{{ csrf_token('admin_event_status_' ~ item.id) }}">
                                                     <select name="status" class="rounded-lg border border-border bg-background px-2 py-1 text-xs">
-                                                        <option value="en_attente" {% if item.statut == 'en_attente' %}selected{% endif %}>Pending</option>
-                                                        <option value="accepte" {% if item.statut == 'accepte' %}selected{% endif %}>Accepted</option>
-                                                        <option value="refuse" {% if item.statut == 'refuse' %}selected{% endif %}>Refused</option>
-                                                        <option value="termine" {% if item.statut == 'termine' %}selected{% endif %}>Ended</option>
+                                                        <option value="en_attente" {% if item.statut == 'en_attente' %}selected{% endif %}>En attente</option>
+                                                        <option value="accepte" {% if item.statut == 'accepte' %}selected{% endif %}>Accepte</option>
+                                                        <option value="refuse" {% if item.statut == 'refuse' %}selected{% endif %}>Refuse</option>
+                                                        <option value="termine" {% if item.statut == 'termine' %}selected{% endif %}>Termine</option>
                                                     </select>
                                                     <button type="submit" class="rounded-lg bg-primary/10 px-2 py-1 font-semibold text-primary hover:bg-primary/20">Update</button>
                                                 </form>
@@ -1442,7 +1457,7 @@
                         </div>
                     </div>
 
-                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4 {{ expFocus in ['all', 'reservations'] ? '' : 'hidden' }}">
                         <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Latest Reservations (Admin CRUD)</h3>
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[1120px] border-collapse">
@@ -1470,9 +1485,9 @@
                                                 <form method="post" action="{{ path('app_admin_reservation_status', { id: item.id }) }}" class="flex items-center gap-2">
                                                     <input type="hidden" name="_token" value="{{ csrf_token('admin_reservation_status_' ~ item.id) }}">
                                                     <select name="status" class="rounded-lg border border-border bg-background px-2 py-1 text-xs">
-                                                        <option value="en_attente" {% if item.statut == 'en_attente' %}selected{% endif %}>Pending</option>
-                                                        <option value="confirmee" {% if item.statut == 'confirmee' %}selected{% endif %}>Confirmed</option>
-                                                        <option value="annulee" {% if item.statut == 'annulee' %}selected{% endif %}>Cancelled</option>
+                                                        <option value="en_attente" {% if item.statut == 'en_attente' %}selected{% endif %}>En attente</option>
+                                                        <option value="confirmee" {% if item.statut == 'confirmee' %}selected{% endif %}>Accepte</option>
+                                                        <option value="annulee" {% if item.statut == 'annulee' %}selected{% endif %}>Refuse</option>
                                                     </select>
                                                     <button type="submit" class="rounded-lg bg-primary/10 px-2 py-1 font-semibold text-primary hover:bg-primary/20">Update</button>
                                                 </form>

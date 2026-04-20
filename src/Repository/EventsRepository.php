@@ -4,6 +4,7 @@
 namespace App\Repository;
 
 use App\Entity\Events;
+use App\Enum\StatusEventEnum;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -302,8 +303,10 @@ class EventsRepository extends ServiceEntityRepository
             ->leftJoin('e.activities', 'a')
             ->addSelect('a')
             ->where('e.dateDebut >= :now')
+            ->andWhere('e.status = :acceptedStatus')
             ->andWhere('e.placesDisponibles > 0')
-            ->setParameter('now', new \DateTime());
+            ->setParameter('now', new \DateTime())
+            ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE);
 
         if ($category) {
             // Filtre via la catégorie des activités associées à l'event
@@ -336,8 +339,10 @@ class EventsRepository extends ServiceEntityRepository
             ->leftJoin('e.activities', 'a')
             ->addSelect('a')
             ->where('e.dateDebut >= :now')
+            ->andWhere('e.status = :acceptedStatus')
             ->andWhere('e.placesDisponibles > 0')
-            ->setParameter('now', new \DateTime());
+            ->setParameter('now', new \DateTime())
+            ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE);
 
         if ($childrenFriendly) {
             if ($minAge !== null) {
@@ -377,8 +382,10 @@ class EventsRepository extends ServiceEntityRepository
             ->leftJoin('e.activities', 'a')
             ->addSelect('a')
             ->where('e.dateDebut >= :now')
+            ->andWhere('e.status = :acceptedStatus')
             ->andWhere('e.placesDisponibles > 0')
-            ->setParameter('now', new \DateTime());
+            ->setParameter('now', new \DateTime())
+            ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE);
 
         if ($city) {
             // Recherche insensible à la casse par nom de ville dans le champ lieu
@@ -407,8 +414,10 @@ class EventsRepository extends ServiceEntityRepository
             ->leftJoin('e.activities', 'a')
             ->addSelect('a')
             ->where('e.dateDebut >= :now')
+            ->andWhere('e.status = :acceptedStatus')
             ->andWhere('e.placesDisponibles > 0')
-            ->setParameter('now', new \DateTime());
+            ->setParameter('now', new \DateTime())
+            ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE);
 
         if ($participantCount !== null && $participantCount > 0) {
             $qb->andWhere('e.placesDisponibles >= :participants')

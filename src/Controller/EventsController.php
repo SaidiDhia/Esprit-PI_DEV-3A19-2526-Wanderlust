@@ -5,9 +5,12 @@ namespace App\Controller;
 use App\Entity\Events;
 use App\Entity\EventImages;
 use App\Entity\User;
+use App\Enum\StatusEventEnum;
 use App\Form\EventsType;
 use App\Repository\EventsRepository;
 use App\Repository\ActivitiesRepository;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -54,6 +57,8 @@ final class EventsController extends AbstractController
         $query = $eventsRepository->createQueryBuilder('e')
             ->leftJoin('e.activities', 'a')
             ->addSelect('a')
+            ->where('e.status = :acceptedStatus')
+            ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE)
             ->orderBy('e.dateCreation', 'DESC')
             ->getQuery();
 
@@ -213,9 +218,47 @@ final class EventsController extends AbstractController
     #[Route('/{id}', name: 'app_events_show', methods: ['GET'])]
     public function show(Events $event): Response
     {
+        $currentUser = $this->getUser();
+        $isOwner = $currentUser instanceof User && $event->getCreatedBy()?->getId() === $currentUser->getId();
+
+        if (!$event->isAccepted() && !$isOwner && !$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createNotFoundException('Event not found.');
+        }
+
         return $this->render('events/show.html.twig', [
             'event' => $event,
         ]);
+    }
+
+    #[Route('/{id}/details-pdf', name: 'app_events_details_pdf', methods: ['GET'])]
+    public function detailsPdf(Events $event): Response
+    {
+        $currentUser = $this->getUser();
+        $isOwner = $currentUser instanceof User && $event->getCreatedBy()?->getId() === $currentUser->getId();
+
+        if (!$event->isAccepted() && !$isOwner && !$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createNotFoundException('Event not found.');
+        }
+
+        $html = $this->renderView('events/details_pdf.html.twig', [
+            'event' => $event,
+        ]);
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $options->setDefaultFont('DejaVu Sans');
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $filename = sprintf('event-details-%d.pdf', (int) $event->getId());
+        $response = new Response($dompdf->output());
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->headers->set('Content-Disposition', sprintf('attachment; filename="%s"', $filename));
+
+        return $response;
     }
 
     // ─────────────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Activities;
 use App\Entity\User;
+use App\Enum\StatusActiviteEnum;
 use App\Form\ActivitiesType;
 use App\Repository\ActivitiesRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -44,6 +45,8 @@ class ActivitiesController extends AbstractController
     public function index(Request $request, ActivitiesRepository $activitiesRepository, PaginatorInterface $paginator): Response
     {
         $query = $activitiesRepository->createQueryBuilder('a')
+            ->where('a.status = :acceptedStatus')
+            ->setParameter('acceptedStatus', StatusActiviteEnum::ACCEPTE)
             ->orderBy('a.id', 'DESC')
             ->getQuery();
 
@@ -191,6 +194,13 @@ class ActivitiesController extends AbstractController
     #[Route('/{id}', name: 'app_activities_show', methods: ['GET'])]
     public function show(Activities $activity): Response
     {
+        $currentUser = $this->getUser();
+        $isOwner = $currentUser instanceof User && $activity->getCreatedBy()?->getId() === $currentUser->getId();
+
+        if (!$activity->isAccepted() && !$isOwner && !$this->isGranted('ROLE_ADMIN')) {
+            throw $this->createNotFoundException('Activity not found.');
+        }
+
         return $this->render('activities/show.html.twig', [
             'activity' => $activity,
         ]);
