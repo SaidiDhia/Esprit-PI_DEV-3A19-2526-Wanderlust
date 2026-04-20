@@ -145,6 +145,7 @@ class UserRiskAssessmentService
             return [
                 'anomaly_score' => (float) ($row['anomaly_score'] ?? 0.0),
                 'bot_behavior_score' => (float) ($row['bot_behavior_score'] ?? 0.0),
+                'marketplace_fraud_score' => (float) ($row['marketplace_fraud_score'] ?? 0.0),
             ];
         } catch (\Throwable) {
             return [];
@@ -165,12 +166,14 @@ class UserRiskAssessmentService
             'anomaly_score' => 70.0,
             'bot_behavior_score' => 70.0,
             'cancellation_abuse_score' => 60.0,
+            'marketplace_fraud_score' => 65.0,
         ];
 
         $labels = [
             'anomaly_score' => 'Potential anomaly behavior detected',
             'bot_behavior_score' => 'Potential bot-like behavior detected',
             'cancellation_abuse_score' => 'Potential booking cancellation abuse detected',
+            'marketplace_fraud_score' => 'Potential fake or suspicious marketplace behavior detected',
         ];
 
         $triggered = [];

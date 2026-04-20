@@ -170,6 +170,7 @@ class AdminController extends AbstractController
                                                 CASE
                                                     WHEN module = 'moderation' AND action = 'high_risk_content_hidden' THEN 100
                                                     WHEN module = 'moderation' AND action = 'toxic_message_detected' THEN 96
+                                                    WHEN module = 'moderation' AND action = 'marketplace_fake_product_detected' THEN 95
                                                         WHEN LOWER(COALESCE(content, '')) REGEXP 'hop(?:e|ing)?\\s+(?:you|u)\\s+(?:die|dead|death|get cancer)|wish\\s+(?:you|u)\\s+(?:die|dead|death|get cancer)' THEN 98
                                                         WHEN LOWER(COALESCE(content, '')) REGEXP 'kys|kill|suicide|death|die|get cancer|cancer' THEN 92
                                                         WHEN LOWER(COALESCE(content, '')) REGEXP 'threat|violent|abuse|harass|attack' THEN 84
@@ -180,6 +181,7 @@ class AdminController extends AbstractController
                    AND (
                         (module = 'moderation' AND action = 'high_risk_content_hidden')
                                                 OR (module = 'moderation' AND action = 'toxic_message_detected')
+                                           OR (module = 'moderation' AND action = 'marketplace_fake_product_detected')
                                                 OR LOWER(COALESCE(content, '')) REGEXP 'die|death|kys|kill|suicide|cancer|threat|violent|abuse|harass|attack'
                    )
                                  ORDER BY severity_score DESC, created_at DESC
