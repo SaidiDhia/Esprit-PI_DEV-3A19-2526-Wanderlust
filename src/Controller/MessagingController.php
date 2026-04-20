@@ -557,17 +557,17 @@ public function index(Request $request, EntityManagerInterface $em): Response
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('id', $id);
         $stmt->executeStatement();
-        
+
         $sql = "DELETE FROM conversation_user WHERE conversation_id = :id";
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('id', $id);
         $stmt->executeStatement();
-        
+
         $sql = "DELETE FROM conversation WHERE id = :id";
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('id', $id);
         $stmt->executeStatement();
-        
+
         $this->addFlash('success', 'Conversation deleted!');
         return $this->redirectToRoute('app_messaging');
     }

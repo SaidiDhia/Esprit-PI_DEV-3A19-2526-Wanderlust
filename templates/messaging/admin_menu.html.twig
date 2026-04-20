@@ -130,6 +130,52 @@
             background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
             border: 1px solid rgba(148, 163, 184, 0.16);
         }
+
+        .msg-admin-conv-table-wrap {
+            overflow: auto;
+            border-radius: 14px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            background: #ffffff;
+        }
+
+        .msg-admin-conv-table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 760px;
+        }
+
+        .msg-admin-conv-table th,
+        .msg-admin-conv-table td {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.16);
+            text-align: left;
+            font-size: 14px;
+            color: var(--msg-text);
+            vertical-align: middle;
+        }
+
+        .msg-admin-conv-table thead th {
+            background: #f8fafc;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--msg-muted);
+            white-space: nowrap;
+        }
+
+        .msg-admin-conv-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .msg-admin-empty {
+            margin: 0;
+            padding: 24px;
+            text-align: center;
+            color: var(--msg-muted);
+        }
     </style>
 {% endblock %}
 
@@ -144,6 +190,13 @@
 </div>
 
 <div class="page-content msg-fade-in msg-admin-section">
+    {% for message in app.flashes('success') %}
+        <div class="alert alert-success" role="alert">{{ message }}</div>
+    {% endfor %}
+    {% for message in app.flashes('error') %}
+        <div class="alert alert-danger" role="alert">{{ message }}</div>
+    {% endfor %}
+
     <div class="msg-admin-headline">
         <div>
             <h2 class="msg-admin-title">Your Conversations</h2>
@@ -229,6 +282,58 @@
             </div>
         </div>
         
+    </div>
+
+    <div class="msg-admin-card msg-card-hover" style="margin-top: 30px; padding: 28px;">
+        <div class="msg-admin-headline" style="margin-bottom: 16px;">
+            <div>
+                <h3 class="msg-admin-title" style="font-size: 1.8rem;">Conversation Management</h3>
+                <p class="msg-admin-note" style="max-width: 100%; margin: 8px 0 0;">Create conversations or delete any existing thread directly from this admin dashboard.</p>
+            </div>
+            <a href="{{ path('messaging_conversation_new') }}" class="msg-btn msg-btn-primary msg-btn-sm">+ Create Conversation</a>
+        </div>
+
+        {% if adminConversations is empty %}
+            <p class="msg-admin-empty">No conversations found yet.</p>
+        {% else %}
+            <div class="msg-admin-conv-table-wrap">
+                <table class="msg-admin-conv-table">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Creator</th>
+                        <th>Participants</th>
+                        <th>Messages</th>
+                        <th>Last Activity</th>
+                        <th>Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for conv in adminConversations %}
+                        <tr>
+                            <td>#{{ conv.id }}</td>
+                            <td>{{ conv.name ?: 'Conversation #' ~ conv.id }}</td>
+                            <td>{{ conv.type }}</td>
+                            <td>{{ conv.creator_name ?: 'Unknown' }}</td>
+                            <td>{{ conv.participant_count }}</td>
+                            <td>{{ conv.message_count }}</td>
+                            <td>{{ conv.last_activity ? conv.last_activity|date('Y-m-d H:i') : 'N/A' }}</td>
+                            <td>
+                                <div class="msg-admin-conv-actions">
+                                    <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="msg-btn msg-btn-sm">Open</a>
+                                    <form method="POST" action="{{ path('messaging_admin_conversation_delete', {id: conv.id}) }}" onsubmit="return confirm('Delete this conversation and all messages? This action cannot be undone.');" style="display:inline;">
+                                        <button type="submit" class="msg-btn msg-btn-sm" style="background:#dc2626; border-color:#dc2626; color:#fff;">Delete</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
     </div>
     
     <!-- Quick Stats Summary -->

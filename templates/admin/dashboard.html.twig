@@ -523,6 +523,59 @@
                     </div>
 
                     <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Conversation Management</h3>
+                                <p class="text-xs text-muted-foreground">Create new conversations or delete any existing one directly from this page.</p>
+                            </div>
+                            <a href="{{ path('messaging_conversation_new') }}" class="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-primary/90">+ Create Conversation</a>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[980px] border-collapse">
+                                <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">ID</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Name</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Type</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Creator</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Participants</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Messages</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Last Activity</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for conv in adminMessagingConversations %}
+                                    <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                        <td class="py-3 pr-3 text-sm text-muted-foreground">#{{ conv.id }}</td>
+                                        <td class="py-3 pr-3 text-sm font-semibold text-foreground">{{ conv.name ?: 'Conversation #' ~ conv.id }}</td>
+                                        <td class="py-3 pr-3 text-sm text-foreground">{{ conv.type }}</td>
+                                        <td class="py-3 pr-3 text-sm text-foreground">{{ conv.creator_name ?: 'Unknown' }}</td>
+                                        <td class="py-3 pr-3 text-sm text-foreground">{{ conv.participant_count }}</td>
+                                        <td class="py-3 pr-3 text-sm text-foreground">{{ conv.message_count }}</td>
+                                        <td class="py-3 pr-3 text-sm text-muted-foreground">{{ conv.last_activity ? conv.last_activity|date('Y-m-d H:i') : 'N/A' }}</td>
+                                        <td class="py-3 pr-3 text-sm">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <a href="{{ path('messaging_conversation_show', {id: conv.id}) }}" class="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-foreground transition-colors hover:bg-secondary/50">Open</a>
+                                                <form method="post" action="{{ path('app_admin_messaging_conversation_delete', {id: conv.id}) }}" onsubmit="return confirm('Delete this conversation and all messages? This action cannot be undone.');">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('admin_messaging_conversation_delete_' ~ conv.id) }}">
+                                                    <button type="submit" class="rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-white hover:bg-destructive/90">Delete</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="8" class="py-8 text-center text-sm text-muted-foreground">No conversations found.</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
                         <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Recent Messaging Activity</h3>
                         <div class="overflow-x-auto">
                             <table class="w-full min-w-[900px] border-collapse">
