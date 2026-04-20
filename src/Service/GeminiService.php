@@ -13,7 +13,6 @@ class GeminiService
         private readonly HttpClientInterface $httpClient,
         #[Autowire('%env(string:GEMINI_API_KEY)%')]
         private readonly string $apiKey,
-        #[Autowire('%env(default::GEMINI_API_KEY_BACKUP)%')]
         private readonly string $backupApiKey = '',
     ) {
     }

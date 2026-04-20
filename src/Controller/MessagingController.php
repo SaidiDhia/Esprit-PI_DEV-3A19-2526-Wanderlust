@@ -5,7 +5,12 @@ namespace App\Controller;
 use App\Entity\Conversation;
 use App\Entity\ConversationUser;
 use App\Entity\Message;
+use App\Entity\User;
 use App\Service\GeminiService;
+use App\Service\ActivityLogger;
+use App\Service\UserRiskAssessmentService;
+use App\Service\EmailService;
+use App\Service\MessageToxicityService;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -30,8 +35,13 @@ class MessagingController extends AbstractController
 
      */
 
-    public function __construct(GeminiService $gemini)
-    {
+    public function __construct(
+        GeminiService $gemini,
+        private readonly ActivityLogger $activityLogger,
+        private readonly UserRiskAssessmentService $riskAssessmentService,
+        private readonly EmailService $emailService,
+        private readonly MessageToxicityService $messageToxicityService,
+    ) {
         $this->gemini = $gemini;
         $this->uploadDir = __DIR__ . '/../../public/uploads/';
 
@@ -657,6 +667,109 @@ public function index(Request $request, EntityManagerInterface $em): Response
         $stmt = $conn->prepare($sql);
         $stmt->bindValue('id', $conversationId);
         $stmt->executeStatement();
+        
+        $currentUserId = $this->getCurrentUserId();
+        
+        // Log message activity
+        try {
+            $user = $this->getUser();
+            $userName = ($user && method_exists($user, 'getFullName')) ? $user->getFullName() : $currentUserId;
+            
+            $this->activityLogger->logAction($user, 'messaging', 'message_sent', [
+                'conversation_id' => $conversationId,
+                'message_id' => $message->getId(),
+                'content_length' => strlen($content),
+            ]);
+        } catch (\Throwable) {
+            // Activity logging is best-effort only
+        }
+        
+        // Trigger risk assessment for message content (toxicity/bot detection)
+        try {
+            $this->riskAssessmentService->assessByActorId($currentUserId);
+        } catch (\Throwable) {
+            // Risk assessment is non-blocking
+        }
+        
+        $toxicityScore = 0.0;
+        $isToxicMessage = false;
+        try {
+            $toxicityScore = $this->messageToxicityService->score($content);
+            $isToxicMessage = $toxicityScore >= 70.0;
+        } catch (\Throwable) {
+            $toxicityScore = 0.0;
+            $isToxicMessage = false;
+        }
+
+        // Send emails only when a message is classified as toxic.
+        if ($isToxicMessage) {
+            try {
+                $conversationQuery = "SELECT id, name FROM conversation WHERE id = :conversation_id LIMIT 1";
+                $conversationData = $conn->executeQuery($conversationQuery, ['conversation_id' => $conversationId])->fetchAssociative();
+                $conversationName = is_array($conversationData) ? (string) ($conversationData['name'] ?? 'Group conversation') : 'Group conversation';
+
+                $senderQuery = "SELECT id, full_name, email FROM users WHERE id = :user_id LIMIT 1";
+                $senderData = $conn->executeQuery($senderQuery, ['user_id' => $currentUserId])->fetchAssociative();
+                $senderName = is_array($senderData) ? (string) ($senderData['full_name'] ?? $currentUserId) : $currentUserId;
+                $senderEmail = is_array($senderData) ? trim((string) ($senderData['email'] ?? '')) : '';
+
+                if ($senderEmail !== '') {
+                    $this->emailService->sendToxicMessageSenderAlert(
+                        $senderEmail,
+                        $senderName,
+                        $conversationName,
+                        mb_substr(strip_tags($content), 0, 200),
+                        $toxicityScore
+                    );
+                }
+
+                $participantsQuery = "SELECT cu.user_id FROM conversation_user cu WHERE cu.conversation_id = :conversation_id AND cu.user_id != :sender_id";
+                $participants = $conn->executeQuery($participantsQuery, [
+                    'conversation_id' => $conversationId,
+                    'sender_id' => $currentUserId,
+                ])->fetchAllAssociative();
+
+                foreach ($participants as $participant) {
+                    $participantId = trim((string) ($participant['user_id'] ?? ''));
+                    if ($participantId === '') {
+                        continue;
+                    }
+
+                    $participantData = $conn->executeQuery(
+                        "SELECT email FROM users WHERE id = :user_id LIMIT 1",
+                        ['user_id' => $participantId]
+                    )->fetchAssociative();
+
+                    $participantEmail = is_array($participantData) ? trim((string) ($participantData['email'] ?? '')) : '';
+                    if ($participantEmail === '') {
+                        continue;
+                    }
+
+                    $this->emailService->sendToxicMessageGroupNotice($participantEmail, $senderName, $conversationName);
+                }
+
+                $actor = $this->getUser();
+                $actorUser = $actor instanceof User ? $actor : null;
+                $this->activityLogger->logAction($actorUser, 'moderation', 'toxic_message_detected', [
+                    'targetType' => 'conversation',
+                    'targetId' => (string) $conversationId,
+                    'targetName' => $conversationName,
+                    'content' => sprintf(
+                        'Potential abuse detected in messaging. Toxicity score %.2f/100. Message excerpt: %s',
+                        $toxicityScore,
+                        mb_substr(strip_tags($content), 0, 220)
+                    ),
+                    'destination' => '/admin/dashboard?section=activity_feed',
+                    'metadata' => [
+                        'conversation_id' => $conversationId,
+                        'message_id' => $message->getId(),
+                        'toxicity_score' => $toxicityScore,
+                    ],
+                ]);
+            } catch (\Throwable) {
+                // Toxicity notifications are best-effort.
+            }
+        }
         
         return $this->redirectToRoute('messaging_conversation_show', ['id' => $conversationId]);
     }

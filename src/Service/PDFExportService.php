@@ -57,7 +57,7 @@ class PDFExportService
                     <td style="padding: 8px; font-size: 11px;">%s</td>
                     <td style="padding: 8px; font-size: 11px;">%s</td>
                     <td style="padding: 8px; font-size: 11px;">%s</td>
-                    <td style="padding: 8px; font-size: 10px;">%s %s</td>
+                    <td style="padding: 8px; font-size: 10px;">%s</td>
                 </tr>',
                 $module,
                 $action,
@@ -201,7 +201,7 @@ HTML;
                     <td style="padding: 8px; font-size: 11px;">%s</td>
                     <td style="padding: 8px; font-size: 11px;">%s</td>
                     <td style="padding: 8px; font-size: 11px;">%s</td>
-                    <td style="padding: 8px; font-size: 10px;">%s %s</td>
+                    <td style="padding: 8px; font-size: 10px;">%s</td>
                 </tr>',
                 $module,
                 $action,

@@ -207,6 +207,60 @@ class EmailService
         return $this->sendMail($userEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
     }
 
+    public function sendMessageNotification(string $recipientEmail, string $senderName, string $conversationName, string $messagePreview): bool
+    {
+        $subject = sprintf('New message from %s in conversation "%s"', $senderName, $conversationName);
+        $body = sprintf(
+            "Hello,\n\n"
+            . "%s sent you a message in the conversation \"%s\":\n\n"
+            . "\"%s\"\n\n"
+            . "Visit the conversation to view the full message and reply.\n\n"
+            . "Regards,\n%s",
+            $senderName,
+            $conversationName,
+            mb_substr($messagePreview, 0, 200),
+            $this->fromName,
+        );
+
+        return $this->sendMail($recipientEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
+    public function sendToxicMessageSenderAlert(string $userEmail, string $userName, string $conversationName, string $messagePreview, float $toxicityScore): bool
+    {
+        $subject = 'Moderation warning: toxic message detected';
+        $body = sprintf(
+            "Hello %s,\n\n"
+            . "Your recent message in \"%s\" was flagged as toxic by our moderation AI.\n"
+            . "Toxicity score: %.2f/100\n\n"
+            . "Message excerpt:\n\"%s\"\n\n"
+            . "Please avoid abusive language. Repeated violations may lead to restrictions.\n\n"
+            . "Regards,\n%s",
+            $userName !== '' ? $userName : $userEmail,
+            $conversationName,
+            $toxicityScore,
+            mb_substr($messagePreview, 0, 200),
+            $this->fromName,
+        );
+
+        return $this->sendMail($userEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
+    public function sendToxicMessageGroupNotice(string $recipientEmail, string $senderName, string $conversationName): bool
+    {
+        $subject = 'Safety notice: toxic message detected in your group';
+        $body = sprintf(
+            "Hello,\n\n"
+            . "%s in group \"%s\" sent a toxic message.\n"
+            . "Please report if this is abusive to you.\n\n"
+            . "Regards,\n%s",
+            $senderName,
+            $conversationName,
+            $this->fromName,
+        );
+
+        return $this->sendMail($recipientEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
     private function sendMail(string $to, string $subject, string $htmlBody): bool
     {
         $smtpResult = false;
