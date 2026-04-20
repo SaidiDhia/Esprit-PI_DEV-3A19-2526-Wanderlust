@@ -224,12 +224,17 @@
 
             <div class="space-y-6">
                 <div id="activity-feed" class="{{ activeSection == 'activity_feed' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6">
-                    <div class="mb-4 flex items-center justify-between gap-3">
+                    <div class="mb-4 flex flex-col items-start justify-between gap-3 lg:flex-row lg:items-center">
                         <div>
                             <h2 class="text-xl font-heading font-bold text-foreground">Platform Activity Feed</h2>
                             <p class="text-sm text-muted-foreground">Latest actions from booking, messaging, marketplace, and authentication modules.</p>
                         </div>
-                        <span class="rounded-full bg-secondary/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-foreground">Live Audit</span>
+                        <div class="flex gap-2">
+                            <a href="{{ path('app_admin_activity_feed_export') }}" class="inline-flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary/20">
+                                📥 Export PDF
+                            </a>
+                            <span class="rounded-full bg-secondary/30 px-3 py-1 text-xs font-bold uppercase tracking-wider text-foreground">Live Audit</span>
+                        </div>
                     </div>
 
                     <div class="space-y-3">
@@ -1039,9 +1044,16 @@
                             <h2 class="text-xl font-heading font-bold text-foreground">Activity Logs by User</h2>
                             <p class="text-sm text-muted-foreground">Select a user to inspect every tracked action, module footprint, and risk-aligned analysis.</p>
                         </div>
-                        <a href="{{ path('app_admin_dashboard', { section: 'users' }) }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">
-                            Show Users
-                        </a>
+                        <div class="flex gap-2">
+                            {% if activityFocusUserId != '' %}
+                                <a href="{{ path('app_admin_activity_export_user', { userId: activityFocusUserId }) }}" class="inline-flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-4 py-2.5 text-sm font-bold text-primary transition-colors hover:bg-primary/20">
+                                    📥 Export PDF
+                                </a>
+                            {% endif %}
+                            <a href="{{ path('app_admin_dashboard', { section: 'users' }) }}" class="inline-flex items-center gap-2 rounded-xl border border-border px-4 py-2.5 text-sm font-bold transition-colors hover:bg-secondary/50">
+                                Show Users
+                            </a>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 gap-4 xl:grid-cols-3">

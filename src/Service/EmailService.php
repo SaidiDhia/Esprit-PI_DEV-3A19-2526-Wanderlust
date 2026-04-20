@@ -101,6 +101,166 @@ class EmailService
         return $this->sendMail($user->getEmail(), $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
     }
 
+    public function sendRiskDetectionUserAlert(string $userEmail, string $userName, string $signalLabel, float $signalScore, string $recommendedAction): bool
+    {
+        $subject = 'Security alert: suspicious or scam-like activity detected';
+        $body = sprintf(
+            "Hello %s,\n\n"
+            . "Our safety systems detected %s on your account.\n"
+            . "This may indicate suspicious or scam-like behavior.\n"
+            . "Signal score: %.2f/100\n"
+            . "Recommended system action: %s\n\n"
+            . "If this was your normal activity, please reduce risky actions (for example repeated booking/cancellation loops).\n"
+            . "If this was not you, secure your account and reset your password.\n\n"
+            . "Regards,\n%s",
+            $userName !== '' ? $userName : $userEmail,
+            $signalLabel,
+            $signalScore,
+            str_replace('_', ' ', $recommendedAction),
+            $this->fromName,
+        );
+
+        return $this->sendMail($userEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
+    public function sendRiskDetectionAdminAlert(string $adminEmail, string $userName, string $userEmail, string $signalLabel, float $signalScore, string $recommendedAction): bool
+    {
+        $subject = 'Admin alert: anomaly or bot risk signal detected';
+        $body = sprintf(
+            "Hello Admin,\n\n"
+            . "A user triggered a risk signal.\n\n"
+            . "User: %s\n"
+            . "Email: %s\n"
+            . "Detection: %s\n"
+            . "Signal score: %.2f/100\n"
+            . "Recommended action: %s\n\n"
+            . "Please review this user in the Risk Monitor and Activity Logs.\n\n"
+            . "Regards,\n%s",
+            $userName !== '' ? $userName : ($userEmail !== '' ? $userEmail : 'Unknown user'),
+            $userEmail !== '' ? $userEmail : 'Unknown email',
+            $signalLabel,
+            $signalScore,
+            str_replace('_', ' ', $recommendedAction),
+            $this->fromName,
+        );
+
+        return $this->sendMail($adminEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
+    public function sendRepeatedLoginFailureUserAlert(string $userEmail, string $userName, int $attemptCount, string $ipAddress): bool
+    {
+        $subject = 'Security alert: repeated failed sign-in attempts';
+        $body = sprintf(
+            "Hello %s,\n\n"
+            . "We detected %d failed password attempts on your Wanderlust account in a short period.\n"
+            . "Source IP: %s\n\n"
+            . "If this was not you, reset your password immediately and review your account security settings.\n\n"
+            . "Regards,\n%s",
+            $userName !== '' ? $userName : $userEmail,
+            $attemptCount,
+            $ipAddress,
+            $this->fromName,
+        );
+
+        return $this->sendMail($userEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
+    public function sendRepeatedLoginFailureAdminAlert(string $adminEmail, string $userName, string $userEmail, int $attemptCount, string $ipAddress): bool
+    {
+        $subject = 'Admin alert: repeated failed sign-in attempts detected';
+        $body = sprintf(
+            "Hello Admin,\n\n"
+            . "A user account has repeated failed password attempts.\n\n"
+            . "User: %s\n"
+            . "Email: %s\n"
+            . "Failed attempts (recent): %d\n"
+            . "Source IP: %s\n\n"
+            . "Please review auth activity and consider additional controls if needed.\n\n"
+            . "Regards,\n%s",
+            $userName !== '' ? $userName : ($userEmail !== '' ? $userEmail : 'Unknown user'),
+            $userEmail !== '' ? $userEmail : 'Unknown email',
+            $attemptCount,
+            $ipAddress,
+            $this->fromName,
+        );
+
+        return $this->sendMail($adminEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
+    public function sendCancellationPatternUserAlert(string $userEmail, string $userName, int $cancelCount, int $windowDays): bool
+    {
+        $subject = 'Security alert: repeated cancellations may be flagged as scam activity';
+        $body = sprintf(
+            "Hello %s,\n\n"
+            . "We detected repeated booking cancellations on your account.\n"
+            . "Cancelled bookings: %d in the last %d days.\n\n"
+            . "This pattern can be treated as suspicious or scam-like behavior by our safety controls.\n"
+            . "If this activity is expected, please avoid repeated booking/cancellation cycles.\n"
+            . "If this is unusual, please review your account activity and secure your account.\n\n"
+            . "Regards,\n%s",
+            $userName !== '' ? $userName : $userEmail,
+            $cancelCount,
+            $windowDays,
+            $this->fromName,
+        );
+
+        return $this->sendMail($userEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
+    public function sendMessageNotification(string $recipientEmail, string $senderName, string $conversationName, string $messagePreview): bool
+    {
+        $subject = sprintf('New message from %s in conversation "%s"', $senderName, $conversationName);
+        $body = sprintf(
+            "Hello,\n\n"
+            . "%s sent you a message in the conversation \"%s\":\n\n"
+            . "\"%s\"\n\n"
+            . "Visit the conversation to view the full message and reply.\n\n"
+            . "Regards,\n%s",
+            $senderName,
+            $conversationName,
+            mb_substr($messagePreview, 0, 200),
+            $this->fromName,
+        );
+
+        return $this->sendMail($recipientEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
+    public function sendToxicMessageSenderAlert(string $userEmail, string $userName, string $conversationName, string $messagePreview, float $toxicityScore): bool
+    {
+        $subject = 'Moderation warning: toxic message detected';
+        $body = sprintf(
+            "Hello %s,\n\n"
+            . "Your recent message in \"%s\" was flagged as toxic by our moderation AI.\n"
+            . "Toxicity score: %.2f/100\n\n"
+            . "Message excerpt:\n\"%s\"\n\n"
+            . "Please avoid abusive language. Repeated violations may lead to restrictions.\n\n"
+            . "Regards,\n%s",
+            $userName !== '' ? $userName : $userEmail,
+            $conversationName,
+            $toxicityScore,
+            mb_substr($messagePreview, 0, 200),
+            $this->fromName,
+        );
+
+        return $this->sendMail($userEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
+    public function sendToxicMessageGroupNotice(string $recipientEmail, string $senderName, string $conversationName): bool
+    {
+        $subject = 'Safety notice: toxic message detected in your group';
+        $body = sprintf(
+            "Hello,\n\n"
+            . "%s in group \"%s\" sent a toxic message.\n"
+            . "Please report if this is abusive to you.\n\n"
+            . "Regards,\n%s",
+            $senderName,
+            $conversationName,
+            $this->fromName,
+        );
+
+        return $this->sendMail($recipientEmail, $subject, nl2br(htmlspecialchars($body, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')));
+    }
+
     private function sendMail(string $to, string $subject, string $htmlBody): bool
     {
         $smtpResult = false;

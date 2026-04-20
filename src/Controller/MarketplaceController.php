@@ -7,6 +7,8 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use App\Entity\User;
+use App\Service\ActivityLogger;
+use App\Service\EmailService;
 use PDO;
 use Stripe\Stripe;
 use Stripe\Checkout\Session;
@@ -16,12 +18,15 @@ class MarketplaceController extends AbstractController
 {
     private PDO $pdo;
 
-    public function __construct()
+    public function __construct(
+        private readonly ActivityLogger $activityLogger,
+        private readonly EmailService $emailService,
+    )
     {
         $this->pdo = new PDO(
             'mysql:host=localhost;dbname=wonderlust_db;charset=utf8mb4',
             'root',
-            'saididhia',
+            '',
             [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
         );
     }
@@ -43,6 +48,122 @@ class MarketplaceController extends AbstractController
         }
         
         return $user->getId();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function detectFakeProductSignals(string $title, string $description): array
+    {
+        $signals = [];
+        $normalizedTitle = mb_strtolower(trim($title));
+        $normalizedDescription = mb_strtolower(trim($description));
+
+        if (mb_strlen(trim($title)) < 4) {
+            $signals[] = 'Title is too short';
+        }
+
+        if (mb_strlen(trim($description)) < 12) {
+            $signals[] = 'Description is too short';
+        }
+
+        if (preg_match('/(.)\\1{4,}/u', $normalizedTitle) === 1 || preg_match('/(.)\\1{4,}/u', $normalizedDescription) === 1) {
+            $signals[] = 'Repeated characters detected';
+        }
+
+        if (preg_match('/^(test|test123|asdf|qwerty|random|aaaa|zzzz|xxxxx)[a-z0-9 ]*$/u', $normalizedTitle) === 1) {
+            $signals[] = 'Placeholder/random title pattern detected';
+        }
+
+        if (preg_match('/(lorem ipsum|random text|fake product|dummy data|test product)/u', $normalizedDescription) === 1) {
+            $signals[] = 'Placeholder/random description pattern detected';
+        }
+
+        return array_values(array_unique($signals));
+    }
+
+    /**
+     * @param array<int, string> $signals
+     */
+    private function triggerFakeProductRiskAlerts(string $ownerUserId, string $productId, string $title, array $signals): void
+    {
+        if ($signals === []) {
+            return;
+        }
+
+        $owner = $this->pdo->prepare('SELECT id, full_name, email FROM users WHERE id = ? LIMIT 1');
+        $owner->execute([$ownerUserId]);
+        $ownerRow = $owner->fetch(PDO::FETCH_ASSOC);
+
+        $ownerEmail = is_array($ownerRow) ? trim((string) ($ownerRow['email'] ?? '')) : '';
+        $ownerName = is_array($ownerRow) ? trim((string) ($ownerRow['full_name'] ?? '')) : $ownerUserId;
+        if ($ownerName === '') {
+            $ownerName = $ownerUserId;
+        }
+
+        $label = 'Potential fake product or random marketplace data detected';
+        $score = 88.0;
+        $recommendedAction = 'manual_review_or_ban';
+
+        if ($ownerEmail !== '') {
+            try {
+                $this->emailService->sendRiskDetectionUserAlert(
+                    $ownerEmail,
+                    $ownerName,
+                    $label,
+                    $score,
+                    $recommendedAction
+                );
+            } catch (\Throwable) {
+                // Best-effort email only.
+            }
+        }
+
+        try {
+            $adminRows = $this->pdo->query(
+                "SELECT email FROM users WHERE role = 'ADMIN' AND is_active = 1 AND email IS NOT NULL AND TRIM(email) != ''"
+            )->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($adminRows as $adminRow) {
+                $adminEmail = trim((string) ($adminRow['email'] ?? ''));
+                if ($adminEmail === '') {
+                    continue;
+                }
+
+                $this->emailService->sendRiskDetectionAdminAlert(
+                    $adminEmail,
+                    $ownerName,
+                    $ownerEmail,
+                    $label,
+                    $score,
+                    $recommendedAction
+                );
+            }
+        } catch (\Throwable) {
+            // Best-effort admin notifications only.
+        }
+
+        try {
+            $actor = $this->getUser();
+            $actorUser = $actor instanceof User ? $actor : null;
+            $this->activityLogger->logAction($actorUser, 'moderation', 'marketplace_fake_product_detected', [
+                'targetType' => 'product',
+                'targetId' => $productId,
+                'targetName' => $title,
+                'content' => sprintf(
+                    'Potential fake/random product listing detected. Signals: %s',
+                    implode('; ', $signals)
+                ),
+                'destination' => '/admin/dashboard?section=risk',
+                'metadata' => [
+                    'product_id' => $productId,
+                    'owner_user_id' => $ownerUserId,
+                    'signals' => $signals,
+                ],
+            ]);
+        } catch (\Throwable) {
+            // Best-effort activity alert only.
+        }
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -153,6 +274,38 @@ class MarketplaceController extends AbstractController
                 $request->request->get('image', ''),
                 $targetUserId,
             ]);
+
+            $productId = (string) $this->pdo->lastInsertId();
+            $title = trim((string) $request->request->get('title', 'Untitled product'));
+            $description = trim((string) $request->request->get('description', ''));
+
+            try {
+                $actor = $this->getUser();
+                $actorUser = $actor instanceof User ? $actor : null;
+
+                $this->activityLogger->logAction($actorUser, 'marketplace', 'product_created', [
+                    'targetType' => 'product',
+                    'targetId' => $productId,
+                    'targetName' => $title,
+                    'content' => sprintf('Product "%s" created for seller %s.', $title, $targetUserId),
+                    'destination' => '/admin/dashboard?section=activity_feed',
+                    'metadata' => [
+                        'product_id' => $productId,
+                        'owner_user_id' => $targetUserId,
+                        'source' => 'admin_marketplace',
+                    ],
+                ]);
+            } catch (\Throwable) {
+                // Activity logging is best-effort.
+            }
+
+            try {
+                $signals = $this->detectFakeProductSignals($title, $description);
+                $this->triggerFakeProductRiskAlerts($targetUserId, $productId, $title, $signals);
+            } catch (\Throwable) {
+                // Risk alerting is best-effort.
+            }
+
             $this->addFlash('success', "✅ Product added for user: $targetUserId");
             return $this->redirectToRoute('app_marketplace_product_management');
         }
@@ -605,6 +758,7 @@ class MarketplaceController extends AbstractController
     public function addProduct(Request $request): Response
     {
         if ($request->isMethod('POST')) {
+            $currentUserId = $this->getCurrentUserId();
             $stmt = $this->pdo->prepare(
                 'INSERT INTO products (title, description, type, price, quantity, category, image, created_date, userId) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?)'
             );
@@ -616,8 +770,40 @@ class MarketplaceController extends AbstractController
                 $request->request->get('quantity'),
                 $request->request->get('category'),
                 $request->request->get('image', ''),
-                $this->getCurrentUserId(),
+                $currentUserId,
             ]);
+
+            $productId = (string) $this->pdo->lastInsertId();
+            $title = trim((string) $request->request->get('title', 'Untitled product'));
+            $description = trim((string) $request->request->get('description', ''));
+
+            try {
+                $actor = $this->getUser();
+                $actorUser = $actor instanceof User ? $actor : null;
+
+                $this->activityLogger->logAction($actorUser, 'marketplace', 'product_created', [
+                    'targetType' => 'product',
+                    'targetId' => $productId,
+                    'targetName' => $title,
+                    'content' => sprintf('Product "%s" created by seller %s.', $title, $currentUserId),
+                    'destination' => '/admin/dashboard?section=activity_feed',
+                    'metadata' => [
+                        'product_id' => $productId,
+                        'owner_user_id' => $currentUserId,
+                        'source' => 'seller_marketplace',
+                    ],
+                ]);
+            } catch (\Throwable) {
+                // Activity logging is best-effort.
+            }
+
+            try {
+                $signals = $this->detectFakeProductSignals($title, $description);
+                $this->triggerFakeProductRiskAlerts($currentUserId, $productId, $title, $signals);
+            } catch (\Throwable) {
+                // Risk alerting is best-effort.
+            }
+
             $this->addFlash('success', '✅ Product added successfully!');
             return $this->redirectToRoute('app_marketplace_seller');
         }
