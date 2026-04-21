@@ -226,7 +226,7 @@ La description doit:
 - Avoir entre 150 et 250 mots maximum
 - Être en français";
 
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$this->geminiApiKey}";
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$this->geminiApiKey}";
         
         $response = $this->httpClient->request('POST', $url, [
             'json' => [
@@ -272,7 +272,7 @@ La liste doit:
 - Être en français
 - Utiliser des émojis pour organiser les catégories";
 
-        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={$this->geminiApiKey}";
+        $url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={$this->geminiApiKey}";
         
         $response = $this->httpClient->request('POST', $url, [
             'json' => [

@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Reservations;
 use App\Entity\Events;
 use App\Entity\User;
+use App\Enum\StatusEventEnum;
 use App\Form\ReservationsType;
 use App\Repository\ReservationsRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -35,6 +36,30 @@ class ReservationsController extends AbstractController
         if ($ownerId === null || $ownerId !== $user->getId()) {
             throw $this->createAccessDeniedException('You can only access your own reservations.');
         }
+    }
+
+    private function getReservationBlockingReason(Events $event): ?string
+    {
+        $now = new \DateTimeImmutable();
+
+        if ($event->getStatus() !== StatusEventEnum::ACCEPTE) {
+            return 'Les réservations sont ouvertes uniquement pour les événements acceptés.';
+        }
+
+        if ($event->getStatus() === StatusEventEnum::TERMINE || $event->getDateFin() <= $now) {
+            return 'Cet événement est terminé.';
+        }
+
+        $deadline = $event->getDateLimiteInscription();
+        if ($deadline !== null && $deadline <= $now) {
+            return "La date limite d'inscription est dépassée.";
+        }
+
+        if ($event->getPlacesDisponibles() <= 0) {
+            return 'Cet événement est complet.';
+        }
+
+        return null;
     }
 
     // ─────────────────────────────────────────────────────────────────
@@ -68,8 +93,9 @@ class ReservationsController extends AbstractController
             return $this->redirectToRoute('app_events_index');
         }
 
-        if ($event->getPlacesDisponibles() <= 0) {
-            $this->addFlash('error', 'Cet événement est complet.');
+        $blockingReason = $this->getReservationBlockingReason($event);
+        if ($blockingReason !== null) {
+            $this->addFlash('error', $blockingReason);
             return $this->redirectToRoute('app_events_show', ['id' => $event->getId()]);
         }
 
@@ -83,6 +109,13 @@ class ReservationsController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            $em->refresh($event);
+
+            $blockingReason = $this->getReservationBlockingReason($event);
+            if ($blockingReason !== null) {
+                $this->addFlash('error', $blockingReason);
+                return $this->redirectToRoute('app_events_show', ['id' => $event->getId()]);
+            }
             
             $adultes = $reservation->getNombreAdultes();
             $enfants = $reservation->getNombreEnfants();

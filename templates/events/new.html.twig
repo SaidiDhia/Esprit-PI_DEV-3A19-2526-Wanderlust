@@ -917,7 +917,15 @@ function escapeHtml(text) {
 
         renderSelectedActivities();
 
-        initMap();
+        try {
+            if (typeof L !== 'undefined') {
+                initMap();
+            } else {
+                console.warn('Leaflet indisponible: la carte est désactivée, la sélection des activités reste disponible.');
+            }
+        } catch (error) {
+            console.error('Erreur lors de l\'initialisation de la carte:', error);
+        }
 
 
 

@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Events;
 use App\Entity\EventImages;
 use App\Entity\User;
+use App\Enum\StatusActiviteEnum;
 use App\Enum\StatusEventEnum;
 use App\Form\EventsType;
 use App\Repository\EventsRepository;
@@ -45,6 +46,49 @@ final class EventsController extends AbstractController
         }
     }
 
+    /**
+     * @return array<int, \App\Entity\Activities>
+     */
+    private function getAcceptedActivities(ActivitiesRepository $activitiesRepo): array
+    {
+        return $activitiesRepo->findBy([
+            'status' => StatusActiviteEnum::ACCEPTE,
+        ], [
+            'titre' => 'ASC',
+        ]);
+    }
+
+    /**
+     * @param array<int, int|string> $rawIds
+     * @return array{valid: array<int, \App\Entity\Activities>, invalid_ids: array<int, int>}
+     */
+    private function resolveAcceptedActivities(array $rawIds, ActivitiesRepository $activitiesRepo): array
+    {
+        $numericIds = array_values(array_unique(array_map(
+            static fn ($id): int => (int) $id,
+            array_filter($rawIds, static fn ($id): bool => is_numeric($id))
+        )));
+
+        if ($numericIds === []) {
+            return ['valid' => [], 'invalid_ids' => []];
+        }
+
+        $validActivities = [];
+        foreach ($activitiesRepo->findBy(['id' => $numericIds]) as $activity) {
+            if ($activity->getStatus() === StatusActiviteEnum::ACCEPTE) {
+                $validActivities[] = $activity;
+            }
+        }
+
+        $validIds = array_map(static fn ($activity): int => (int) $activity->getId(), $validActivities);
+        $invalidIds = array_values(array_diff($numericIds, $validIds));
+
+        return [
+            'valid' => $validActivities,
+            'invalid_ids' => $invalidIds,
+        ];
+    }
+
     // ─────────────────────────────────────────────────────────────────
     //  INDEX
     // ─────────────────────────────────────────────────────────────────
@@ -56,7 +100,8 @@ final class EventsController extends AbstractController
         
         $queryBuilder = $eventsRepository->createQueryBuilder('e')
             ->leftJoin('e.activities', 'a')
-            ->addSelect('a');
+            ->addSelect('a')
+            ->distinct();
 
         // Admin sees all events
         if ($canManage) {
@@ -67,11 +112,11 @@ final class EventsController extends AbstractController
             if ($user instanceof User) {
                 $queryBuilder
                     ->where('e.status = :acceptedStatus OR e.createdBy = :currentUser')
-                    ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE)
+                    ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE->value)
                     ->setParameter('currentUser', $user);
             } else {
                 $queryBuilder->where('e.status = :acceptedStatus')
-                    ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE);
+                    ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE->value);
             }
             $queryBuilder->orderBy('e.dateCreation', 'DESC');
         }
@@ -107,8 +152,14 @@ final class EventsController extends AbstractController
         $form = $this->createForm(EventsType::class, $event, ['is_admin' => $isAdmin]);
         $form->handleRequest($request);
 
+        $acceptedActivities = $this->getAcceptedActivities($activitiesRepo);
+        $requiredConditions = ['security', 'qualified', 'verification', 'risks'];
+
         // Récupérer les conditions acceptées
         $selectedConditions = $request->request->all('event_conditions', []);
+        if (!is_array($selectedConditions)) {
+            $selectedConditions = [];
+        }
     // 🔥 Récupérer les activités sélectionnées depuis le formulaire
     $eventActivities = $request->request->all('event_activities', []);
     if (!is_array($eventActivities)) {
@@ -122,15 +173,14 @@ final class EventsController extends AbstractController
 
     if ($form->isSubmitted() && $form->isValid()) {
         // ── Vérification des conditions ──────────────────────────────
-        $requiredConditions = ['security', 'qualified', 'verification', 'risks'];
         $missingConditions = array_diff($requiredConditions, $selectedConditions);
         
         if (!empty($missingConditions)) {
             $this->addFlash('error', 'Veuillez accepter toutes les conditions requises avant de créer l\'événement.');
             return $this->render('events/new.html.twig', [
                 'event' => $event,
-                'form' => $form,
-                'activities' => $activitiesRepo->findAll(),
+                'form' => $form->createView(),
+                'activities' => $acceptedActivities,
                 'selectedConditions' => $selectedConditions,
                 'selectedActivitiesIds' => $selectedActivitiesIds,
             ]);
@@ -141,19 +191,39 @@ final class EventsController extends AbstractController
             $this->addFlash('error', 'Sélectionnez au moins une activité avant de continuer.');
             return $this->render('events/new.html.twig', [
                 'event' => $event,
-                'form' => $form,
-                'activities' => $activitiesRepo->findAll(),
+                'form' => $form->createView(),
+                'activities' => $acceptedActivities,
                 'selectedConditions' => $selectedConditions,
                 'selectedActivitiesIds' => $selectedActivitiesIds,
             ]);
         }
 
         // ── Ajouter les activités à l'événement ──────────────────────
-        foreach ($selectedActivitiesIds as $activityId) {
-            $activity = $activitiesRepo->find((int)$activityId);
-            if ($activity) {
-                $event->addActivity($activity);
-            }
+        $resolvedActivities = $this->resolveAcceptedActivities($selectedActivitiesIds, $activitiesRepo);
+        if ($resolvedActivities['invalid_ids'] !== []) {
+            $this->addFlash('error', 'Certaines activités sélectionnées ne sont pas acceptées ou n\'existent plus.');
+            return $this->render('events/new.html.twig', [
+                'event' => $event,
+                'form' => $form->createView(),
+                'activities' => $acceptedActivities,
+                'selectedConditions' => $selectedConditions,
+                'selectedActivitiesIds' => $selectedActivitiesIds,
+            ]);
+        }
+
+        if ($resolvedActivities['valid'] === []) {
+            $this->addFlash('error', 'Sélectionnez au moins une activité acceptée avant de continuer.');
+            return $this->render('events/new.html.twig', [
+                'event' => $event,
+                'form' => $form->createView(),
+                'activities' => $acceptedActivities,
+                'selectedConditions' => $selectedConditions,
+                'selectedActivitiesIds' => $selectedActivitiesIds,
+            ]);
+        }
+
+        foreach ($resolvedActivities['valid'] as $activity) {
+            $event->addActivity($activity);
         }
 
         // ── Validation des dates ────────────────────────────────────
@@ -161,8 +231,8 @@ final class EventsController extends AbstractController
             $this->addFlash('error', 'La date de fin doit être postérieure à la date de début.');
             return $this->render('events/new.html.twig', [
                 'event' => $event,
-                'form' => $form,
-                'activities' => $activitiesRepo->findAll(),
+                'form' => $form->createView(),
+                'activities' => $acceptedActivities,
                 'selectedConditions' => $selectedConditions,
                 'selectedActivitiesIds' => $selectedActivitiesIds,
             ]);
@@ -172,8 +242,8 @@ final class EventsController extends AbstractController
             $this->addFlash('error', "La date limite d'inscription doit être avant la date de début.");
             return $this->render('events/new.html.twig', [
                 'event' => $event,
-                'form' => $form,
-                'activities' => $activitiesRepo->findAll(),
+                'form' => $form->createView(),
+                'activities' => $acceptedActivities,
                 'selectedConditions' => $selectedConditions,
                 'selectedActivitiesIds' => $selectedActivitiesIds,
             ]);
@@ -189,8 +259,8 @@ final class EventsController extends AbstractController
                     $this->addFlash('error', 'Erreur upload image. Formats : JPG, PNG, WEBP. Max 5 Mo.');
                     return $this->render('events/new.html.twig', [
                         'event' => $event,
-                        'form' => $form,
-                        'activities' => $activitiesRepo->findAll(),
+                        'form' => $form->createView(),
+                        'activities' => $acceptedActivities,
                         'selectedConditions' => $selectedConditions,
                         'selectedActivitiesIds' => $selectedActivitiesIds,
                     ]);
@@ -219,8 +289,8 @@ final class EventsController extends AbstractController
 
     return $this->render('events/new.html.twig', [
         'event' => $event,
-        'form' => $form,
-        'activities' => $activitiesRepo->findAll(),
+        'form' => $form->createView(),
+        'activities' => $acceptedActivities,
         'selectedConditions' => $selectedConditions,
         'selectedActivitiesIds' => $selectedActivitiesIds,
     ]);
@@ -301,12 +371,24 @@ final class EventsController extends AbstractController
         $this->denyAccessUnlessGranted('IS_AUTHENTICATED_FULLY');
         $this->denyUnlessEventOwner($event);
 
+        $previousCapacity = (int) $event->getCapaciteMax();
+        $previousAvailablePlaces = (int) $event->getPlacesDisponibles();
+
         $user = $this->getUser();
         $isAdmin = $user && in_array('ROLE_ADMIN', $user->getRoles());
         $form = $this->createForm(EventsType::class, $event, ['is_admin' => $isAdmin]);
         $form->handleRequest($request);
 
+        $acceptedActivities = $this->getAcceptedActivities($activitiesRepo);
+        $requiredConditions = ['security', 'qualified', 'verification', 'risks'];
+
         $selectedConditions = $request->request->all('event_conditions', []);
+        if (!is_array($selectedConditions)) {
+            $selectedConditions = [];
+        }
+        if (!$form->isSubmitted() && $selectedConditions === []) {
+            $selectedConditions = $requiredConditions;
+        }
 
         $eventActivities = $request->request->all('event_activities', []);
         if (!is_array($eventActivities)) {
@@ -325,13 +407,12 @@ final class EventsController extends AbstractController
         }
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $requiredConditions = ['security', 'qualified', 'verification', 'risks'];
             if (count(array_intersect($requiredConditions, $selectedConditions)) !== count($requiredConditions)) {
                 $this->addFlash('error', 'Veuillez accepter toutes les conditions requises avant de modifier l\'événement.');
                 return $this->render('events/edit.html.twig', [
                     'event' => $event,
-                    'form' => $form,
-                    'activities' => $activitiesRepo->findAll(),
+                    'form' => $form->createView(),
+                    'activities' => $acceptedActivities,
                     'selectedConditions' => $selectedConditions,
                     'selectedActivitiesIds' => $selectedActivitiesIds,
                 ]);
@@ -341,8 +422,20 @@ final class EventsController extends AbstractController
                 $this->addFlash('error', 'Sélectionnez au moins une activité avant de continuer.');
                 return $this->render('events/edit.html.twig', [
                     'event' => $event,
-                    'form' => $form,
-                    'activities' => $activitiesRepo->findAll(),
+                    'form' => $form->createView(),
+                    'activities' => $acceptedActivities,
+                    'selectedConditions' => $selectedConditions,
+                    'selectedActivitiesIds' => $selectedActivitiesIds,
+                ]);
+            }
+
+            $resolvedActivities = $this->resolveAcceptedActivities($selectedActivitiesIds, $activitiesRepo);
+            if ($resolvedActivities['invalid_ids'] !== []) {
+                $this->addFlash('error', 'Certaines activités sélectionnées ne sont pas acceptées ou n\'existent plus.');
+                return $this->render('events/edit.html.twig', [
+                    'event' => $event,
+                    'form' => $form->createView(),
+                    'activities' => $acceptedActivities,
                     'selectedConditions' => $selectedConditions,
                     'selectedActivitiesIds' => $selectedActivitiesIds,
                 ]);
@@ -352,8 +445,8 @@ final class EventsController extends AbstractController
                 $this->addFlash('error', 'La date de fin doit être postérieure à la date de début.');
                 return $this->render('events/edit.html.twig', [
                     'event' => $event,
-                    'form' => $form,
-                    'activities' => $activitiesRepo->findAll(),
+                    'form' => $form->createView(),
+                    'activities' => $acceptedActivities,
                     'selectedConditions' => $selectedConditions,
                     'selectedActivitiesIds' => $selectedActivitiesIds,
                 ]);
@@ -363,8 +456,8 @@ final class EventsController extends AbstractController
                 $this->addFlash('error', "La date limite d'inscription doit être avant la date de début.");
                 return $this->render('events/edit.html.twig', [
                     'event' => $event,
-                    'form' => $form,
-                    'activities' => $activitiesRepo->findAll(),
+                    'form' => $form->createView(),
+                    'activities' => $acceptedActivities,
                     'selectedConditions' => $selectedConditions,
                     'selectedActivitiesIds' => $selectedActivitiesIds,
                 ]);
@@ -373,35 +466,53 @@ final class EventsController extends AbstractController
             foreach ($event->getActivities()->toArray() as $existingActivity) {
                 $event->removeActivity($existingActivity);
             }
-            foreach ($selectedActivitiesIds as $activityId) {
-                $activity = $activitiesRepo->find((int) $activityId);
-                if ($activity) {
-                    $event->addActivity($activity);
-                }
+            foreach ($resolvedActivities['valid'] as $activity) {
+                $event->addActivity($activity);
             }
 
             $imageFiles = $form->get('imagesFiles')->getData();
             if (!empty($imageFiles)) {
                 $this->deleteImages($event->getImages());
-                $imagePaths = [];
+                foreach ($event->getImages()->toArray() as $existingImage) {
+                    $event->removeImage($existingImage);
+                    $entityManager->remove($existingImage);
+                }
+
                 foreach ($imageFiles as $imageFile) {
-                    $filename = $this->uploadImage($imageFile, $slugger);
-                    if ($filename === null) {
+                    $eventImage = $this->uploadImage($imageFile, $slugger);
+                    if ($eventImage === null) {
                         $this->addFlash('error', 'Erreur upload image.');
                         return $this->render('events/edit.html.twig', [
                             'event' => $event,
-                            'form' => $form,
-                            'activities' => $activitiesRepo->findAll(),
+                            'form' => $form->createView(),
+                            'activities' => $acceptedActivities,
                             'selectedConditions' => $selectedConditions,
                             'selectedActivitiesIds' => $selectedActivitiesIds,
                         ]);
                     }
-                    $imagePaths[] = $filename;
+                    $event->addImage($eventImage);
                 }
-                $event->setImages($imagePaths);
             }
 
-            $event->setPlacesDisponibles($event->getCapaciteMax());
+            $alreadyReservedPlaces = max(0, $previousCapacity - $previousAvailablePlaces);
+            $newCapacity = (int) $event->getCapaciteMax();
+
+            if ($newCapacity < $alreadyReservedPlaces) {
+                $this->addFlash('error', sprintf(
+                    'La capacité maximale ne peut pas être inférieure aux places déjà réservées (%d).',
+                    $alreadyReservedPlaces
+                ));
+
+                return $this->render('events/edit.html.twig', [
+                    'event' => $event,
+                    'form' => $form->createView(),
+                    'activities' => $acceptedActivities,
+                    'selectedConditions' => $selectedConditions,
+                    'selectedActivitiesIds' => $selectedActivitiesIds,
+                ]);
+            }
+
+            $event->setPlacesDisponibles($newCapacity - $alreadyReservedPlaces);
             $entityManager->flush();
 
             $this->addFlash('success', 'Événement modifié avec succès.');
@@ -410,8 +521,8 @@ final class EventsController extends AbstractController
 
         return $this->render('events/edit.html.twig', [
             'event' => $event,
-            'form' => $form,
-            'activities' => $activitiesRepo->findAll(),
+            'form' => $form->createView(),
+            'activities' => $acceptedActivities,
             'selectedConditions' => $selectedConditions,
             'selectedActivitiesIds' => $selectedActivitiesIds,
         ]);

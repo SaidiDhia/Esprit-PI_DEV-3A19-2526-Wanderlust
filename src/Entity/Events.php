@@ -60,7 +60,7 @@ class Events
     private ?string $video = null;
 
     #[ORM\Column(type: 'string', length: 50, enumType: StatusEventEnum::class, options: ['default' => 'en_attente'])]
-    private StatusEventEnum $status = StatusEventEnum::EN_ATTENTE;
+    private ?StatusEventEnum $status = StatusEventEnum::EN_ATTENTE;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $dateCreation = null;
@@ -267,12 +267,12 @@ class Events
 
     public function getStatus(): StatusEventEnum
     {
-        return $this->status;
+        return $this->status ?? StatusEventEnum::EN_ATTENTE;
     }
 
-    public function setStatus(StatusEventEnum $status): static
+    public function setStatus(?StatusEventEnum $status): static
     {
-        $this->status = $status;
+        $this->status = $status ?? StatusEventEnum::EN_ATTENTE;
         return $this;
     }
 

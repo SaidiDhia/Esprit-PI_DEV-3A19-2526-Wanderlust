@@ -234,10 +234,15 @@
                         <div class="promo-hint" id="show-promo-hint"></div>
                     </div>
 
-                    {% set eventDate = event.getDateDebut() %}
-                    {% set now = "now"|date("Y-m-d H:i:s") %}
-                    
-                    {% if event.placesDisponibles > 0 and eventDate > now %}
+                    {% set now = date() %}
+                    {% set isReservable =
+                        event.status.value == 'accepte'
+                        and event.placesDisponibles > 0
+                        and event.dateDebut > now
+                        and (event.dateLimiteInscription is null or event.dateLimiteInscription > now)
+                    %}
+
+                    {% if isReservable %}
                         {% if app.user %}
                             <a href="{{ path('app_reservations_new', {'event_id': event.id}) }}" class="btn-reserve mt-4">
                                 Réserver maintenant
@@ -249,7 +254,13 @@
                         {% endif %}
                     {% else %}
                         <div class="alert alert-warning mt-4 text-center mb-0">
-                            <strong><i class="fa fa-exclamation-circle"></i> Complet ou terminé</strong>
+                            {% if event.status.value != 'accepte' %}
+                                <strong><i class="fa fa-exclamation-circle"></i> Réservations indisponibles tant que l'événement n'est pas accepté</strong>
+                            {% elseif event.dateLimiteInscription and event.dateLimiteInscription <= now %}
+                                <strong><i class="fa fa-exclamation-circle"></i> Date limite d'inscription dépassée</strong>
+                            {% else %}
+                                <strong><i class="fa fa-exclamation-circle"></i> Complet ou terminé</strong>
+                            {% endif %}
                         </div>
                     {% endif %}
 

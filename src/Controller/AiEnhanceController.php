@@ -414,8 +414,8 @@ PROMPT;
 
         // ── 4. Appel LLM ───────────────────────────────────────────────
         try {
-            if (empty($this->groqApiKey) || $this->groqApiKey === 'your_key_here') {
-                throw new \RuntimeException('Clé API Groq non configurée (GEMINI_API_KEY dans .env.local).');
+            if ($this->groqApiKey === '') {
+                throw new \RuntimeException('Clé API Groq non configurée (GROQ_API_KEY dans .env.local).');
             }
 
             $response = $this->httpClient->request('POST', 'https://api.groq.com/openai/v1/chat/completions', [
