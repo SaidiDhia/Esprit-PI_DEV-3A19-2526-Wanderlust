@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Booking;
 use App\Entity\Activities;
 use App\Entity\Events;
+use App\Entity\Posts;
 use App\Entity\Place;
 use App\Entity\PlaceImage;
 use App\Entity\Reservations;
@@ -90,7 +91,7 @@ class AdminController extends AbstractController
             $section = $requestedSection;
         }
 
-        if (!in_array($section, ['users', 'messaging', 'booking', 'experiences', 'marketplace', 'risk', 'activity_logs', 'activity_feed'], true)) {
+        if (!in_array($section, ['users', 'messaging', 'booking', 'experiences', 'marketplace', 'blog', 'risk', 'activity_logs', 'activity_feed'], true)) {
             $section = 'users';
         }
 
@@ -628,6 +629,90 @@ class AdminController extends AbstractController
             // Users table might not exist or unreachable
         }
 
+        $blogStats = [
+            'totalPosts' => 0,
+            'publicPosts' => 0,
+            'privatePosts' => 0,
+            'hiddenPosts' => 0,
+            'scheduledPosts' => 0,
+            'publishedThisWeek' => 0,
+        ];
+        $blogRecentPosts = [];
+        $blogPostsTrendChart = [];
+        $blogStatusMixChartData = [];
+        $blogEngagementChartData = [
+            ['label' => 'Comments', 'count' => 0],
+            ['label' => 'Reactions', 'count' => 0],
+            ['label' => 'Saves', 'count' => 0],
+        ];
+
+        try {
+            $blogStats['totalPosts'] = (int) $conn->executeQuery('SELECT COUNT(*) FROM posts')->fetchOne();
+            $blogStats['publicPosts'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM posts WHERE statut = 'public'")->fetchOne();
+            $blogStats['privatePosts'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM posts WHERE statut = 'private'")->fetchOne();
+            $blogStats['hiddenPosts'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM posts WHERE statut = 'hidden'")->fetchOne();
+            $blogStats['scheduledPosts'] = (int) $conn->executeQuery("SELECT COUNT(*) FROM posts WHERE statut = 'scheduled'")->fetchOne();
+            $blogStats['publishedThisWeek'] = (int) $conn->executeQuery(
+                "SELECT COUNT(*) FROM posts WHERE statut = 'public' AND date_creation >= DATE_SUB(NOW(), INTERVAL 7 DAY)"
+            )->fetchOne();
+        } catch (\Throwable) {
+            // Blog tables may not be available in early rollout.
+        }
+
+        try {
+            $blogRecentPosts = $conn->executeQuery(
+                "SELECT p.id_post, p.contenu, p.media, p.statut, p.date_creation, p.scheduled_at,
+                        COALESCE(u.full_name, 'Unknown author') AS author_name,
+                        (SELECT COUNT(*) FROM commentaires c WHERE c.id_post = p.id_post) AS comment_count,
+                        (SELECT COUNT(*) FROM reactions r WHERE r.id_post = p.id_post) AS reaction_count,
+                        (SELECT COUNT(*) FROM posts_sauvegardes s WHERE s.id_post = p.id_post) AS save_count
+                 FROM posts p
+                 LEFT JOIN users u ON u.id = p.id_user
+                 ORDER BY p.date_creation DESC
+                 LIMIT 18"
+            )->fetchAllAssociative();
+        } catch (\Throwable) {
+            $blogRecentPosts = [];
+        }
+
+        try {
+            $blogTrendRows = $conn->executeQuery(
+                "SELECT DATE(date_creation) AS day_label, COUNT(*) AS total
+                 FROM posts
+                 WHERE date_creation >= DATE_SUB(NOW(), INTERVAL 14 DAY)
+                 GROUP BY DATE(date_creation)
+                 ORDER BY day_label ASC"
+            )->fetchAllAssociative();
+
+            $blogPostsTrendChart = array_map(static fn (array $row): array => [
+                'label' => (new \DateTimeImmutable((string) $row['day_label']))->format('M d'),
+                'count' => (int) ($row['total'] ?? 0),
+            ], $blogTrendRows);
+        } catch (\Throwable) {
+            $blogPostsTrendChart = [];
+        }
+
+        try {
+            $blogEngagementChartData = [
+                ['label' => 'Comments', 'count' => (int) $conn->executeQuery('SELECT COUNT(*) FROM commentaires')->fetchOne()],
+                ['label' => 'Reactions', 'count' => (int) $conn->executeQuery('SELECT COUNT(*) FROM reactions WHERE id_post IS NOT NULL')->fetchOne()],
+                ['label' => 'Saves', 'count' => (int) $conn->executeQuery('SELECT COUNT(*) FROM posts_sauvegardes')->fetchOne()],
+            ];
+        } catch (\Throwable) {
+            $blogEngagementChartData = [
+                ['label' => 'Comments', 'count' => 0],
+                ['label' => 'Reactions', 'count' => 0],
+                ['label' => 'Saves', 'count' => 0],
+            ];
+        }
+
+        $blogStatusMixChartData = [
+            ['label' => 'Public', 'count' => (int) ($blogStats['publicPosts'] ?? 0)],
+            ['label' => 'Private', 'count' => (int) ($blogStats['privatePosts'] ?? 0)],
+            ['label' => 'Hidden', 'count' => (int) ($blogStats['hiddenPosts'] ?? 0)],
+            ['label' => 'Scheduled', 'count' => (int) ($blogStats['scheduledPosts'] ?? 0)],
+        ];
+
         $riskBandChartData = [
             ['label' => 'Normal', 'count' => (int) ($riskSummary['normal'] ?? 0)],
             ['label' => 'Suspicious', 'count' => (int) ($riskSummary['suspicious'] ?? 0)],
@@ -772,6 +857,11 @@ class AdminController extends AbstractController
             'marketplaceOrdersPerDay' => $marketplaceOrdersPerDay,
             'marketplaceProducts' => $marketplaceProducts,
             'marketplaceSellerOptions' => $marketplaceSellerOptions,
+            'blogStats' => $blogStats,
+            'blogRecentPosts' => $blogRecentPosts,
+            'blogPostsTrendChart' => $blogPostsTrendChart,
+            'blogStatusMixChartData' => $blogStatusMixChartData,
+            'blogEngagementChartData' => $blogEngagementChartData,
             'riskTopUsers' => $riskTopUsers,
             'riskFlaggedUsers' => $riskFlaggedUsers,
             'marketplaceFraudRows' => $marketplaceFraudRows,
@@ -1015,6 +1105,70 @@ class AdminController extends AbstractController
 
         $this->addFlash('success', 'Reservation deleted from admin dashboard.');
         return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+    }
+
+    #[Route('/admin/dashboard/blog/{id}/status', name: 'app_admin_blog_status', methods: ['POST'])]
+    public function updateBlogStatus(Request $request, Posts $post, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_blog_status_' . $post->getIdPost(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid blog status token.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'blog']);
+        }
+
+        $status = mb_strtolower(trim((string) $request->request->get('status', '')));
+        if (!in_array($status, ['public', 'private', 'hidden', 'scheduled'], true)) {
+            $this->addFlash('error', 'Invalid blog status value.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'blog']);
+        }
+
+        if ($status === 'scheduled') {
+            $scheduledAtRaw = trim((string) $request->request->get('scheduled_at', ''));
+            if ($scheduledAtRaw === '') {
+                $this->addFlash('error', 'Scheduled posts require a future date and time.');
+                return $this->redirectToRoute('app_admin_dashboard', ['section' => 'blog']);
+            }
+
+            try {
+                $scheduledAt = new \DateTimeImmutable($scheduledAtRaw);
+            } catch (\Throwable) {
+                $this->addFlash('error', 'Invalid scheduled date format.');
+                return $this->redirectToRoute('app_admin_dashboard', ['section' => 'blog']);
+            }
+
+            if ($scheduledAt <= new \DateTimeImmutable()) {
+                $this->addFlash('error', 'Scheduled date must be in the future.');
+                return $this->redirectToRoute('app_admin_dashboard', ['section' => 'blog']);
+            }
+
+            $post->setScheduledAt(\DateTime::createFromImmutable($scheduledAt));
+        } else {
+            $post->setScheduledAt(null);
+        }
+
+        $post->setStatut($status);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Blog post status updated.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'blog']);
+    }
+
+    #[Route('/admin/dashboard/blog/{id}/delete', name: 'app_admin_blog_delete', methods: ['POST'])]
+    public function deleteBlogPostFromAdmin(Request $request, Posts $post, EntityManagerInterface $entityManager): Response
+    {
+        $this->denyAccessUnlessGranted('ROLE_ADMIN');
+
+        if (!$this->isCsrfTokenValid('admin_blog_delete_' . $post->getIdPost(), (string) $request->request->get('_token'))) {
+            $this->addFlash('error', 'Invalid blog delete token.');
+            return $this->redirectToRoute('app_admin_dashboard', ['section' => 'blog']);
+        }
+
+        $entityManager->remove($post);
+        $entityManager->flush();
+
+        $this->addFlash('success', 'Blog post deleted from admin dashboard.');
+        return $this->redirectToRoute('app_admin_dashboard', ['section' => 'blog']);
     }
 
     /**

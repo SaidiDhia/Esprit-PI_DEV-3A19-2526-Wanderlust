@@ -2,6 +2,8 @@
 
 namespace App\Service;
 
+use Symfony\Contracts\HttpClient\HttpClientInterface;
+
 class TranslationService
 {
     private const API_URL = 'https://api.mymemory.translated.net/get';
@@ -9,6 +11,10 @@ class TranslationService
         ['fr', 'en'],
         ['en', 'fr'],
     ];
+
+    public function __construct(private readonly HttpClientInterface $httpClient)
+    {
+    }
 
     public function translateAuto(string $text): array
     {
@@ -113,17 +119,22 @@ class TranslationService
     {
         $url = self::API_URL . '?q=' . urlencode($text) . '&langpair=' . urlencode("$source|$target");
 
-        $ch = curl_init($url);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 10,
-            CURLOPT_USERAGENT      => 'Mozilla/5.0 WanderlustApp/1.0',
-        ]);
-        $response   = curl_exec($ch);
-        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        try {
+            $httpResponse = $this->httpClient->request('GET', $url, [
+                'headers' => [
+                    'User-Agent' => 'Mozilla/5.0 WanderlustApp/1.0',
+                ],
+                'timeout' => 10,
+            ]);
+            $statusCode = $httpResponse->getStatusCode();
+            $response = $httpResponse->getContent(false);
+        } catch (\Throwable) {
+            return null;
+        }
 
-        if ($statusCode !== 200 || !$response) return null;
+        if ($statusCode !== 200 || !$response) {
+            return null;
+        }
 
         $data       = json_decode($response, true);
         $translated = $data['responseData']['translatedText'] ?? null;

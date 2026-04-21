@@ -593,20 +593,44 @@ public function index(Request $request, EntityManagerInterface $em): Response
             return $this->json(['error' => 'Country name is required.'], 400);
         }
 
-        $url = 'https://restcountries.com/v3.1/name/' . urlencode($countryName);
+        $urls = [
+            'https://restcountries.com/v3.1/name/' . urlencode($countryName),
+            'https://restcountries.com/v3.1/translation/' . urlencode($countryName),
+        ];
 
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 8);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 12);
+        $response = null;
+        $httpCode = 0;
 
-        $response = curl_exec($ch);
-        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        foreach ($urls as $url) {
+            $context = stream_context_create([
+                'http' => [
+                    'method' => 'GET',
+                    'timeout' => 12,
+                    'ignore_errors' => true,
+                    'header' => "Accept: application/json\r\nUser-Agent: Wanderlust/1.0\r\n",
+                ],
+            ]);
 
-        if (!is_string($response) || $response === '' || $httpCode >= 400) {
-            return $this->json(['error' => 'Country not found'], 404);
+            $raw = @file_get_contents($url, false, $context);
+
+            $headers = $http_response_header ?? [];
+            $statusLine = is_array($headers) && isset($headers[0]) ? (string) $headers[0] : '';
+            if (preg_match('/\s(\d{3})\s/', $statusLine, $matches) === 1) {
+                $httpCode = (int) $matches[1];
+            }
+
+            if (is_string($raw) && $raw !== '' && $httpCode >= 200 && $httpCode < 300) {
+                $response = $raw;
+                break;
+            }
+        }
+
+        if (!is_string($response) || $response === '') {
+            if ($httpCode === 404) {
+                return $this->json(['error' => 'Country not found'], 404);
+            }
+
+            return $this->json(['error' => 'Country service is unavailable right now.'], 503);
         }
 
         $data = json_decode($response, true);

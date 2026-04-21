@@ -167,7 +167,12 @@
                             <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
                         {% endif %}
                     </a>
-                    <a href="{{ path('app_blog') }}" class="block rounded-xl border border-border px-4 py-3 text-sm font-semibold text-foreground transition-colors hover:bg-secondary/40">Blog</a>
+                    <a href="{{ path('app_admin_dashboard', { section: 'blog' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'blog' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
+                        <span>Blog</span>
+                        {% if activeSection == 'blog' %}
+                            <span class="rounded-md bg-primary/20 px-2 py-0.5 text-[10px] uppercase tracking-wider text-primary">Current</span>
+                        {% endif %}
+                    </a>
                     <a href="{{ path('app_admin_dashboard', { section: 'messaging' }) }}" class="flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold transition-colors {{ activeSection == 'messaging' ? 'border-primary/30 bg-primary/15 font-bold text-primary shadow-sm' : 'border-border text-foreground hover:bg-secondary/40' }}">
                         <span>Messaging</span>
                         {% if activeSection == 'messaging' %}
@@ -427,6 +432,137 @@
                             {% endfor %}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+
+                <div id="blog-analytics" class="{{ activeSection == 'blog' ? '' : 'hidden' }} rounded-[2rem] border border-border bg-card p-6 space-y-6">
+                    <div class="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+                        <div>
+                            <h2 class="text-xl font-heading font-bold text-foreground">Blog Management</h2>
+                            <p class="text-sm text-muted-foreground">Admin CRUD and analytics for posts, stories, and engagement metrics.</p>
+                        </div>
+                        <a href="{{ path('blog_post_new') }}" class="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-primary/90">+ Create Post</a>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Total Posts</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-foreground">{{ blogStats.totalPosts|default(0) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Public Posts</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-primary">{{ blogStats.publicPosts|default(0) }}</p>
+                            <p class="mt-1 text-xs text-muted-foreground">This week: {{ blogStats.publishedThisWeek|default(0) }}</p>
+                        </div>
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-5">
+                            <p class="text-xs font-bold uppercase tracking-widest text-muted-foreground">Scheduled Posts</p>
+                            <p class="mt-2 text-3xl font-heading font-bold text-accent">{{ blogStats.scheduledPosts|default(0) }}</p>
+                            <p class="mt-1 text-xs text-muted-foreground">Hidden: {{ blogStats.hiddenPosts|default(0) }} · Private: {{ blogStats.privatePosts|default(0) }}</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6 xl:grid-cols-3">
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4 xl:col-span-2">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Posts Curve (14 Days)</h3>
+                                <span class="text-xs text-muted-foreground">Line chart</span>
+                            </div>
+                            <div class="h-[260px] w-full">
+                                <canvas id="blogPostsTrendChart" class="h-full w-full"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                            <div class="mb-3 flex items-center justify-between">
+                                <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Status Mix</h3>
+                                <span class="text-xs text-muted-foreground">Doughnut chart</span>
+                            </div>
+                            <div class="h-[260px] w-full">
+                                <canvas id="blogStatusMixChart" class="h-full w-full"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <div class="mb-3 flex items-center justify-between">
+                            <h3 class="text-sm font-bold uppercase tracking-wider text-foreground">Engagement Totals</h3>
+                            <span class="text-xs text-muted-foreground">Bar chart</span>
+                        </div>
+                        <div class="h-[230px] w-full">
+                            <canvas id="blogEngagementChart" class="h-full w-full"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border bg-secondary/10 p-4">
+                        <h3 class="mb-3 text-sm font-bold uppercase tracking-wider text-foreground">Blog Posts CRUD</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full min-w-[1260px] border-collapse">
+                                <thead>
+                                <tr class="border-b border-border text-left">
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Post</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Author</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Status</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Comments</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Reactions</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Saves</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Created</th>
+                                    <th class="py-3 pr-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Scheduled At</th>
+                                    <th class="py-3 text-xs font-bold uppercase tracking-wider text-muted-foreground">Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for post in blogRecentPosts|default([]) %}
+                                    <tr class="border-b border-border/70 align-top hover:bg-secondary/20">
+                                        <td class="py-3 pr-3">
+                                            <div class="max-w-[340px]">
+                                                <p class="text-xs text-muted-foreground">#{{ post.id_post }}</p>
+                                                <p class="truncate text-sm font-semibold text-foreground">{{ post.contenu|default('')|slice(0, 90) }}</p>
+                                                {% if post.media %}
+                                                    <p class="mt-1 text-[11px] text-muted-foreground">Media: {{ post.media }}</p>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                        <td class="py-3 pr-3 text-sm text-foreground">{{ post.author_name ?: 'Unknown' }}</td>
+                                        <td class="py-3 pr-3">
+                                            <span class="inline-flex rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider {{ post.statut == 'public' ? 'bg-primary/10 text-primary' : (post.statut == 'hidden' ? 'bg-destructive/10 text-destructive' : (post.statut == 'scheduled' ? 'bg-accent/20 text-accent' : 'bg-secondary/40 text-foreground')) }}">{{ post.statut ?: 'n/a' }}</span>
+                                        </td>
+                                        <td class="py-3 pr-3 text-sm text-muted-foreground">{{ post.comment_count|default(0) }}</td>
+                                        <td class="py-3 pr-3 text-sm text-muted-foreground">{{ post.reaction_count|default(0) }}</td>
+                                        <td class="py-3 pr-3 text-sm text-muted-foreground">{{ post.save_count|default(0) }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ post.date_creation ? post.date_creation|date('Y-m-d H:i') : 'N/A' }}</td>
+                                        <td class="py-3 pr-3 text-xs text-muted-foreground">{{ post.scheduled_at ? post.scheduled_at|date('Y-m-d H:i') : 'N/A' }}</td>
+                                        <td class="py-3 text-sm">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <a href="{{ path('blog_post_show', { id: post.id_post }) }}" class="rounded-lg border border-border px-3 py-1.5 text-xs font-bold text-foreground transition-colors hover:bg-secondary/50">View</a>
+                                                <a href="{{ path('blog_post_edit', { id: post.id_post }) }}" class="rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary transition-colors hover:bg-primary/20">Edit</a>
+
+                                                <form method="post" action="{{ path('app_admin_blog_status', { id: post.id_post }) }}" class="flex flex-wrap items-center gap-2">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('admin_blog_status_' ~ post.id_post) }}">
+                                                    <select name="status" class="rounded-lg border border-border bg-background px-2 py-1.5 text-xs">
+                                                        <option value="public" {% if post.statut == 'public' %}selected{% endif %}>Public</option>
+                                                        <option value="private" {% if post.statut == 'private' %}selected{% endif %}>Private</option>
+                                                        <option value="hidden" {% if post.statut == 'hidden' %}selected{% endif %}>Hidden</option>
+                                                        <option value="scheduled" {% if post.statut == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                                                    </select>
+                                                    <input type="datetime-local" name="scheduled_at" value="{{ post.scheduled_at ? post.scheduled_at|date('Y-m-d\\TH:i') : '' }}" class="rounded-lg border border-border bg-background px-2 py-1.5 text-xs">
+                                                    <button type="submit" class="rounded-lg bg-foreground px-3 py-1.5 text-xs font-bold text-background">Update</button>
+                                                </form>
+
+                                                <form method="post" action="{{ path('app_admin_blog_delete', { id: post.id_post }) }}" onsubmit="return confirm('Delete this post? This action cannot be undone.');">
+                                                    <input type="hidden" name="_token" value="{{ csrf_token('admin_blog_delete_' ~ post.id_post) }}">
+                                                    <button type="submit" class="rounded-lg bg-destructive px-3 py-1.5 text-xs font-bold text-white hover:bg-destructive/90">Delete</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% else %}
+                                    <tr>
+                                        <td colspan="9" class="py-8 text-center text-sm text-muted-foreground">No blog posts available yet.</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -2258,6 +2394,84 @@
         }
     }
 
+    function initBlogCharts() {
+        if (typeof Chart === 'undefined') {
+            return;
+        }
+
+        const blogTrendElement = document.getElementById('blogPostsTrendChart');
+        if (blogTrendElement) {
+            const trendData = {{ blogPostsTrendChart|json_encode|raw }};
+            new Chart(blogTrendElement, {
+                type: 'line',
+                data: {
+                    labels: trendData.map((item) => item.label),
+                    datasets: [{
+                        label: 'Posts',
+                        data: trendData.map((item) => item.count),
+                        borderColor: '#0ea5e9',
+                        backgroundColor: 'rgba(14, 165, 233, 0.14)',
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
+
+        const blogStatusElement = document.getElementById('blogStatusMixChart');
+        if (blogStatusElement) {
+            const statusData = {{ blogStatusMixChartData|json_encode|raw }};
+            new Chart(blogStatusElement, {
+                type: 'doughnut',
+                data: {
+                    labels: statusData.map((item) => item.label),
+                    datasets: [{
+                        data: statusData.map((item) => item.count),
+                        backgroundColor: ['#22c55e', '#64748b', '#ef4444', '#f59e0b'],
+                        borderColor: ['#22c55e', '#64748b', '#ef4444', '#f59e0b'],
+                        borderWidth: 1,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } } },
+                },
+            });
+        }
+
+        const blogEngagementElement = document.getElementById('blogEngagementChart');
+        if (blogEngagementElement) {
+            const engagementData = {{ blogEngagementChartData|json_encode|raw }};
+            new Chart(blogEngagementElement, {
+                type: 'bar',
+                data: {
+                    labels: engagementData.map((item) => item.label),
+                    datasets: [{
+                        label: 'Count',
+                        data: engagementData.map((item) => item.count),
+                        backgroundColor: ['#3b82f6', '#10b981', '#a855f7'],
+                        borderRadius: 8,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                },
+            });
+        }
+    }
+
     function initMarketplaceCharts() {
         if (typeof Chart === 'undefined') {
             return;
@@ -3118,6 +3332,9 @@
     {% endif %}
     {% if activeSection == 'messaging' %}
     initMessagingCharts();
+    {% endif %}
+    {% if activeSection == 'blog' %}
+    initBlogCharts();
     {% endif %}
     {% if activeSection == 'marketplace' %}
     initMarketplaceCharts();

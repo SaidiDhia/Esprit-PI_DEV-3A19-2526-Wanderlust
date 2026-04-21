@@ -98,16 +98,22 @@
 
             <div class="mp-form-group">
                 <label class="mp-form-label">Product Title *</label>
-                <input type="text" name="title" required class="mp-form-input"
+                <input type="text" id="product_title" name="title" required class="mp-form-input"
                        placeholder="e.g. Sahara Backpack 60L"
                        value="{{ product ? product.title : '' }}">
             </div>
 
+            
             <div class="mp-form-group">
-                <label class="mp-form-label">Description *</label>
-                <textarea name="description" required class="mp-form-input" rows="4"
-                          placeholder="Describe your product...">{{ product ? product.description : '' }}</textarea>
-            </div>
+    <label class="mp-form-label">Description *</label>
+    
+    <textarea id="product_description" name="description" required class="mp-form-input" rows="4"
+              placeholder="Describe your product...">{{ product ? product.description : '' }}</textarea>
+
+    <button type="button" onclick="askAI(event)" class="mp-btn-outline">
+    ✨ Generate Description with AI
+</button>
+</div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                 <div class="mp-form-group">
@@ -169,17 +175,16 @@
 {% endblock %}
 
 {% block javascripts %}
+{{ parent() }}
 <script>
 const CLOUD_NAME = 'dvxulayhm';
 const UPLOAD_PRESET = 'cloudinarypreset1';
 
-// Store original values on page load
 const originalValues = {};
 document.querySelectorAll('input[name], select[name], textarea[name]').forEach(el => {
     originalValues[el.name] = el.value;
 });
 
-// Block submit if nothing changed (only in Edit mode)
 const isEdit = '{{ action }}' === 'Edit';
 document.querySelector('form').addEventListener('submit', function(e) {
     if (!isEdit) return;
@@ -189,31 +194,76 @@ document.querySelector('form').addEventListener('submit', function(e) {
     });
     if (!changed) {
         e.preventDefault();
-        alert('⚠️ You have not changed anything. Please modify at least one field before saving.');
+        alert('You have not changed anything. Please modify at least one field before saving.');
     }
 });
 
-// Cloudinary upload
 document.getElementById('imageFileInput').addEventListener('change', async function() {
     const file = this.files[0];
     if (!file) return;
     const status = document.getElementById('uploadStatus');
-    status.textContent = '⏳ Uploading...';
+    status.textContent = 'Uploading...';
     const formData = new FormData();
     formData.append('file', file);
     formData.append('upload_preset', UPLOAD_PRESET);
     try {
-        const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
+        const res = await fetch('https://api.cloudinary.com/v1_1/' + CLOUD_NAME + '/image/upload', {
+            method: 'POST',
+            body: formData
+        });
         const data = await res.json();
         document.getElementById('imageUrlInput').value = data.secure_url;
         document.getElementById('previewImg').src = data.secure_url;
         document.getElementById('imgPreview').style.display = 'block';
-        status.textContent = '✅ Image uploaded!';
+        status.textContent = 'Image uploaded!';
         status.style.color = '#059669';
     } catch(e) {
-        status.textContent = '❌ Upload failed. Try again.';
+        status.textContent = 'Upload failed. Try again.';
         status.style.color = '#EF4444';
     }
 });
+
+function askAI(event) {
+    const btn = event.target;
+    const title = document.getElementById('product_title').value;
+
+    if (!title) {
+        alert('Please enter product title first');
+        return;
+    }
+
+    btn.innerText = 'Generating...';
+    btn.disabled = true;
+
+    fetch('/marketplace/product/ai-description', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: new URLSearchParams({ title: title })
+    })
+    .then(async function(res) {
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.message || data.error || 'Server error');
+        }
+        return data;
+    })
+    .then(function(data) {
+        if (data.description) {
+            document.getElementById('product_description').value = data.description;
+        } else {
+            alert('No description returned');
+        }
+    })
+    .catch(function(err) {
+        alert('Error: ' + err.message);
+    })
+    .finally(function() {
+        btn.innerText = 'Generate Description with AI';
+        btn.disabled = false;
+    });
+}
 </script>
 {% endblock %}

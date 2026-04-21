@@ -845,19 +845,7 @@ class MarketplaceController extends AbstractController
         return $this->redirectToRoute('app_marketplace_seller');
     }
 
-    #[Route('/product/{id}', name: '_product_details')]
-    public function productDetails(int $id): Response
-    {
-        $stmt = $this->pdo->prepare('SELECT * FROM products WHERE id = ?');
-        $stmt->execute([$id]);
-        $product = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$product) throw $this->createNotFoundException('Product not found.');
-        $product['available_quantity'] = max(0, $product['quantity'] - ($product['reserved_quantity'] ?? 0));
-        return $this->render('marketplace/product_details.html.twig', [
-            'product'   => $product,
-            'cartCount' => $this->getCartItemCount($this->getCurrentUserId()),
-        ]);
-    }
+
 
     #[Route('/cart', name: '_cart')]
     public function cart(): Response
@@ -1369,6 +1357,64 @@ return $this->redirectToRoute('app_marketplace_orders');
     return $this->redirectToRoute('app_marketplace_cart');
 }
 
+#[Route('/product/ai-description', name: '_ai_description', methods: ['POST'])]
+public function aiDescription(Request $request): JsonResponse
+{
+    try {
+        $title = $request->request->get('title');
+        if (!$title) {
+            return new JsonResponse(['error' => 'Missing title'], 400);
+        }
+
+        $apiKey = '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';
+        $client = HttpClient::create();
+
+        $response = $client->request('POST',
+            'https://router.huggingface.co/novita/v3/openai/chat/completions',
+            [
+                'headers' => [
+                    'Authorization' => 'Bearer ' . $apiKey,
+                    'Content-Type'  => 'application/json',
+                ],
+                'json' => [
+                    'model' => 'meta-llama/llama-3.1-8b-instruct',
+                    'messages' => [
+                        [
+                            'role'    => 'user',
+                            'content' => 'Write a short 2-3 sentence product description for: ' . $title . '. Focus on features and benefits. No bullet points.'
+                        ]
+                    ],
+                    'max_tokens' => 150
+                ]
+            ]
+        );
+
+        $data = $response->toArray();
+        $description = trim($data['choices'][0]['message']['content'] ?? '');
+
+        return new JsonResponse(['description' => $description]);
+
+    } catch (\Throwable $e) {
+        return new JsonResponse([
+            'error'   => 'AI failed',
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
+
+#[Route('/product/{id}', name: '_product_details')]
+    public function productDetails(int $id): Response
+    {
+        $stmt = $this->pdo->prepare('SELECT * FROM products WHERE id = ?');
+        $stmt->execute([$id]);
+        $product = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$product) throw $this->createNotFoundException('Product not found.');
+        $product['available_quantity'] = max(0, $product['quantity'] - ($product['reserved_quantity'] ?? 0));
+        return $this->render('marketplace/product_details.html.twig', [
+            'product'   => $product,
+            'cartCount' => $this->getCartItemCount($this->CURRENT_USER_ID),
+        ]);
+    }
 
 }
 

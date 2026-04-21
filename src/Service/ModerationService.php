@@ -3,6 +3,7 @@
 namespace App\Service;
 
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class ModerationService
 {
@@ -146,7 +147,11 @@ class ModerationService
 
     private LoggerInterface $logger;
 
-    public function __construct(private readonly string $openrouterApiKey, ?LoggerInterface $logger = null)
+    public function __construct(
+        private readonly string $openrouterApiKey,
+        private readonly HttpClientInterface $httpClient,
+        ?LoggerInterface $logger = null
+    )
     {
         $this->logger = $logger ?? new \Psr\Log\NullLogger();
     }
@@ -190,44 +195,44 @@ class ModerationService
             'Example safe: {"score":0.03,"reason":"Normal travel greeting."} ' .
             'Example unsafe: {"score":0.95,"reason":"Direct death threat."}';
 
-        $body = json_encode([
-            'model'       => $model,
-            'max_tokens'  => 100,
-            'temperature' => 0.1,
-            'messages'    => [
-                ['role' => 'system', 'content' => $systemPrompt],
-                ['role' => 'user',   'content' => $content],
-            ],
-        ]);
+        $response = null;
+        $statusCode = 0;
+        $requestError = null;
 
-        $ch = curl_init(self::API_URL);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $body,
-            CURLOPT_TIMEOUT        => 25,
-            CURLOPT_CONNECTTIMEOUT => 8,
-            CURLOPT_HTTPHEADER     => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $this->openrouterApiKey,
-                'HTTP-Referer: http://localhost',
-                'X-Title: Wanderlust Blog Moderation',
-            ],
-        ]);
+        try {
+            $httpResponse = $this->httpClient->request('POST', self::API_URL, [
+                'headers' => [
+                    'Content-Type' => 'application/json',
+                    'Authorization' => 'Bearer ' . $this->openrouterApiKey,
+                    'HTTP-Referer' => 'http://localhost',
+                    'X-Title' => 'Wanderlust Blog Moderation',
+                ],
+                'json' => [
+                    'model' => $model,
+                    'max_tokens' => 100,
+                    'temperature' => 0.1,
+                    'messages' => [
+                        ['role' => 'system', 'content' => $systemPrompt],
+                        ['role' => 'user', 'content' => $content],
+                    ],
+                ],
+                'timeout' => 25,
+            ]);
 
-        $response   = curl_exec($ch);
-        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $curlError  = curl_error($ch);
-        curl_close($ch);
+            $statusCode = $httpResponse->getStatusCode();
+            $response = $httpResponse->getContent(false);
+        } catch (\Throwable $e) {
+            $requestError = $e->getMessage();
+        }
 
         $this->logger->debug('OpenRouter API call', [
             'model'            => $model,
             'status'           => $statusCode,
-            'error'            => $curlError,
+            'error'            => $requestError,
             'response_preview' => substr($response, 0, 200),
         ]);
 
-        if ($curlError || $statusCode !== 200) {
+        if ($requestError || $statusCode !== 200 || !$response) {
             return null;
         }
 
