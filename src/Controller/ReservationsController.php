@@ -129,16 +129,6 @@ class ReservationsController extends AbstractController
                 ]);
             }
 
-            // Validation : assez de places
-            if ($total > $event->getPlacesDisponibles()) {
-                $this->addFlash('error', sprintf(
-                    'Seulement %d place(s) disponible(s).', $event->getPlacesDisponibles()
-                ));
-                return $this->render('reservations/new.html.twig', [
-                    'form' => $form, 'event' => $event,
-                ]);
-            }
-
             // ── Calculs automatiques selon la structure de table ───────────────────────────────
             $reservation->setNombrePersonnes($total); // nombre_personnes = nombre_adultes + nombre_enfants
             $reservation->setPrixTotal(
@@ -147,15 +137,11 @@ class ReservationsController extends AbstractController
             $reservation->setStatut('en_attente'); // statut par défaut
             // date_creation est déjà défini dans le constructeur de l'entité
 
-            // Décrémenter les places dans l'événement
-            $event->setPlacesDisponibles($event->getPlacesDisponibles() - $total);
-
             $em->persist($reservation);
-            $em->persist($event);
             $em->flush();
 
             $this->addFlash('success', sprintf(
-                'Réservation confirmée ! %d personne(s) — %s TND.',
+                'Réservation créée en attente ! %d personne(s) — %s TND.',
                 $total, $reservation->getPrixTotal()
             ));
 
@@ -208,10 +194,14 @@ class ReservationsController extends AbstractController
         $this->denyUnlessReservationOwner($reservation);
 
         $event = $reservation->getEvent();
+        $originalTotal = $reservation->getNombrePersonnes();
+        $originalStatus = $reservation->getStatut();
+
+        $isConfirmedStatus = in_array($reservation->getStatut(), ['confirmee', 'accepte'], true);
 
         $form = $this->createForm(ReservationsType::class, $reservation, [
             'max_places' => $event
-                ? $event->getPlacesDisponibles() + $reservation->getNombrePersonnes()
+                ? $event->getPlacesDisponibles() + ($isConfirmedStatus ? $reservation->getNombrePersonnes() : 0)
                 : 100,
         ]);
         $form->handleRequest($request);
@@ -226,6 +216,28 @@ class ReservationsController extends AbstractController
             if ($event) {
                 $prixTotal = number_format((float) $event->getPrix() * $total, 2, '.', '');
                 $reservation->setPrixTotal($prixTotal);
+
+                if (in_array($originalStatus, ['confirmee', 'accepte'], true)) {
+                    $delta = $total - $originalTotal;
+
+                    if ($delta > 0 && $delta > $event->getPlacesDisponibles()) {
+                        $this->addFlash('error', sprintf(
+                            'Seulement %d place(s) disponible(s).',
+                            $event->getPlacesDisponibles()
+                        ));
+
+                        return $this->render('reservations/edit.html.twig', [
+                            'form'        => $form->createView(),
+                            'reservation' => $reservation,
+                            'event'       => $event,
+                        ]);
+                    }
+
+                    if ($delta !== 0) {
+                        $event->setPlacesDisponibles($event->getPlacesDisponibles() - $delta);
+                        $em->persist($event);
+                    }
+                }
             }
 
             // S'assurer que l'entité est bien suivie par Doctrine
@@ -261,7 +273,7 @@ class ReservationsController extends AbstractController
 
         if ($this->isCsrfTokenValid('delete'.$reservation->getId(), $request->request->get('_token'))) {
             $event = $reservation->getEvent();
-            if ($event) {
+            if ($event && in_array($reservation->getStatut(), ['confirmee', 'accepte'], true)) {
                 $event->setPlacesDisponibles(
                     $event->getPlacesDisponibles() + $reservation->getNombrePersonnes()
                 );
@@ -291,7 +303,29 @@ class ReservationsController extends AbstractController
         $this->denyUnlessReservationOwner($reservation);
 
         if ($this->isCsrfTokenValid('confirm'.$reservation->getId(), $request->request->get('_token'))) {
+            $event = $reservation->getEvent();
+
+            if (in_array($reservation->getStatut(), ['confirmee', 'accepte'], true)) {
+                $this->addFlash('info', 'Cette réservation est déjà confirmée.');
+                return $this->redirectToRoute('app_reservations_index');
+            }
+
+            if (!$event) {
+                $this->addFlash('error', 'Événement introuvable pour cette réservation.');
+                return $this->redirectToRoute('app_reservations_index');
+            }
+
+            if ($reservation->getNombrePersonnes() > $event->getPlacesDisponibles()) {
+                $this->addFlash('error', sprintf(
+                    'Impossible de confirmer: seulement %d place(s) disponible(s).',
+                    $event->getPlacesDisponibles()
+                ));
+                return $this->redirectToRoute('app_reservations_index');
+            }
+
+            $event->setPlacesDisponibles($event->getPlacesDisponibles() - $reservation->getNombrePersonnes());
             $reservation->setStatut('confirmee');
+            $em->persist($event);
             $em->flush(); // Va déclencher le ReservationStatusListener (Envoi email !)
             $this->addFlash('success', 'Réservation confirmée. Le ticket virtuel part par email !');
         }
@@ -311,6 +345,13 @@ class ReservationsController extends AbstractController
         $this->denyUnlessReservationOwner($reservation);
 
         if ($this->isCsrfTokenValid('cancel'.$reservation->getId(), $request->request->get('_token'))) {
+            $event = $reservation->getEvent();
+
+            if (in_array($reservation->getStatut(), ['confirmee', 'accepte'], true) && $event) {
+                $event->setPlacesDisponibles($event->getPlacesDisponibles() + $reservation->getNombrePersonnes());
+                $em->persist($event);
+            }
+
             $reservation->setStatut('annulee');
             $em->flush(); // Va déclencher le ReservationStatusListener (Envoi email !)
             $this->addFlash('success', 'Réservation annulée.');

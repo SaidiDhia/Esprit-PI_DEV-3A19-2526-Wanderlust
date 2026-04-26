@@ -10,8 +10,10 @@ use App\Entity\User;
 use App\Service\ActivityLogger;
 use App\Service\EmailService;
 use PDO;
-use Stripe\Stripe;
 use Stripe\Checkout\Session;
+use Stripe\Stripe;
+use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Component\HttpFoundation\JsonResponse;
 
 #[Route('/marketplace', name: 'app_marketplace')]
 class MarketplaceController extends AbstractController
@@ -1234,16 +1236,34 @@ public function stripeCheckout(Request $request): Response
         return $this->redirectToRoute('app_marketplace_cart');
     }
 
-    Stripe::setApiKey($_ENV['STRIPE_SECRET_KEY']);
-    // 🔥 get rates
-    $ratesJson = file_get_contents("https://open.er-api.com/v6/latest/TND");
-    $ratesData = json_decode($ratesJson, true);
-    $usdRate = $ratesData['rates']['USD'] ?? 0.32;
+    $stripeSecret = $_ENV['STRIPE_SECRET_KEY'] ?? '';
+    if ($stripeSecret === '') {
+        $this->addFlash('error', 'Stripe is not configured (missing STRIPE_SECRET_KEY).');
+        return $this->redirectToRoute('app_marketplace_checkout');
+    }
+
+    Stripe::setApiKey($stripeSecret);
+
+    // Convert TND to USD; fallback to a safe default when rate API is unavailable.
+    $usdRate = 0.32;
+    try {
+        $ratesJson = @file_get_contents('https://open.er-api.com/v6/latest/TND');
+        if ($ratesJson !== false) {
+            $ratesData = json_decode($ratesJson, true);
+            $apiRate = (float) ($ratesData['rates']['USD'] ?? 0);
+            if ($apiRate > 0) {
+                $usdRate = $apiRate;
+            }
+        }
+    } catch (\Throwable) {
+        // Keep fallback rate.
+    }
+
     $lineItems = [];
 
    foreach ($cartItems as $item) {
     $priceUSD = $item['price'] * $usdRate;
-    $unitAmount = (int) round($priceUSD * 100);
+    $unitAmount = max(1, (int) round($priceUSD * 100));
 
     $lineItems[] = [
         'price_data' => [
@@ -1264,19 +1284,24 @@ public function stripeCheckout(Request $request): Response
     $cancelUrl = $request->getSchemeAndHttpHost()
         . $this->generateUrl('app_marketplace_cart');
 
-    $session = Session::create([
-        'payment_method_types' => ['card'],
-        'line_items' => $lineItems,
-        'mode' => 'payment',
-        'success_url' => $successUrl,
-        'cancel_url' => $cancelUrl,
-        'metadata' => [
-        'customer_name'  => $request->request->get('name'),
-        'customer_email' => $request->request->get('email'),
-                 ]
-    ]);
+    try {
+        $session = Session::create([
+            'payment_method_types' => ['card'],
+            'line_items' => $lineItems,
+            'mode' => 'payment',
+            'success_url' => $successUrl,
+            'cancel_url' => $cancelUrl,
+            'metadata' => [
+                'customer_name' => (string) $request->request->get('name', ''),
+                'customer_email' => (string) $request->request->get('email', ''),
+            ],
+        ]);
+    } catch (\Throwable $e) {
+        $this->addFlash('error', 'Unable to create Stripe checkout session: '.$e->getMessage());
+        return $this->redirectToRoute('app_marketplace_checkout');
+    }
 
-    return $this->redirect($session->url);
+    return $this->redirect((string) ($session->url ?? $cancelUrl));
 }
 
 #[Route('/stripe/success', name: '_stripe_success')]
@@ -1284,13 +1309,47 @@ public function stripeSuccess(Request $request): Response
 {
     $sessionId = $request->query->get('session_id');
 
-    Stripe::setApiKey($_ENV['STRIPE_SECRET_KEY']);
-    $session = Session::retrieve($sessionId);
+    if (!$sessionId) {
+        $this->addFlash('error', 'Missing Stripe session id.');
+        return $this->redirectToRoute('app_marketplace_cart');
+    }
 
-    if ($session && $session->payment_status === 'paid') {
+    $stripeSecret = $_ENV['STRIPE_SECRET_KEY'] ?? '';
+    if ($stripeSecret === '') {
+        $this->addFlash('error', 'Stripe is not configured (missing STRIPE_SECRET_KEY).');
+        return $this->redirectToRoute('app_marketplace_cart');
+    }
+
+    Stripe::setApiKey($stripeSecret);
+
+    try {
+        $session = Session::retrieve((string) $sessionId);
+    } catch (\Throwable $e) {
+        $this->addFlash('error', 'Unable to verify Stripe payment: '.$e->getMessage());
+        return $this->redirectToRoute('app_marketplace_cart');
+    }
+
+    if ($session && ($session->payment_status ?? null) === 'paid') {
 
         $cartId = $this->getOrCreateCart($this->getCurrentUserId());
         $cartItems = $this->getCartItemsDetailed($cartId);
+
+        if (empty($cartItems)) {
+            $this->addFlash('success', 'Payment already processed.');
+            return $this->redirectToRoute('app_marketplace_orders');
+        }
+
+        foreach ($cartItems as $item) {
+            $stockStmt = $this->pdo->prepare('SELECT quantity FROM products WHERE id = ?');
+            $stockStmt->execute([$item['product_id']]);
+            $fresh = $stockStmt->fetch(PDO::FETCH_ASSOC);
+            $available = (int) ($fresh['quantity'] ?? 0);
+
+            if ($available < (int) $item['cart_qty']) {
+                $this->addFlash('error', "Not enough stock: {$item['product_title']}");
+                return $this->redirectToRoute('app_marketplace_cart');
+            }
+        }
 
         $total = array_reduce($cartItems, fn($s, $i) => $s + ($i['price'] * $i['cart_qty']), 0);
 
@@ -1361,38 +1420,103 @@ return $this->redirectToRoute('app_marketplace_orders');
 public function aiDescription(Request $request): JsonResponse
 {
     try {
-        $title = $request->request->get('title');
-        if (!$title) {
+        $title = trim((string) $request->request->get('title', ''));
+        if ($title === '') {
             return new JsonResponse(['error' => 'Missing title'], 400);
         }
 
-        $apiKey = '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';
-        $client = HttpClient::create();
+        $openRouterApiKey = trim((string) ($_ENV['OPENROUTER_API_KEY'] ?? ''));
+        $huggingFaceApiKey = trim((string) ($_ENV['HUGGINGFACE_API_KEY'] ?? ''));
 
-        $response = $client->request('POST',
-            'https://router.huggingface.co/novita/v3/openai/chat/completions',
-            [
-                'headers' => [
-                    'Authorization' => 'Bearer ' . $apiKey,
-                    'Content-Type'  => 'application/json',
+        if ($openRouterApiKey === '' && $huggingFaceApiKey === '') {
+            return new JsonResponse([
+                'error' => 'AI API key is not configured. Set OPENROUTER_API_KEY or HUGGINGFACE_API_KEY in .env.'
+            ], 500);
+        }
+
+        $providers = [];
+        if ($openRouterApiKey !== '') {
+            $providers[] = [
+                'name' => 'openrouter',
+                'url' => 'https://openrouter.ai/api/v1/chat/completions',
+                'key' => $openRouterApiKey,
+                'model' => 'openrouter/auto',
+                'extra_headers' => [
+                    'HTTP-Referer' => 'http://127.0.0.1:8000',
+                    'X-Title' => 'Wanderlust Marketplace',
                 ],
+            ];
+        }
+
+        if ($huggingFaceApiKey !== '') {
+            $providers[] = [
+                'name' => 'huggingface',
+                'url' => 'https://router.huggingface.co/novita/v3/openai/chat/completions',
+                'key' => $huggingFaceApiKey,
+                'model' => 'meta-llama/llama-3.1-8b-instruct',
+                'extra_headers' => [],
+            ];
+        }
+
+        $client = HttpClient::create();
+        $lastError = 'Unauthorized AI request. Verify your API key in .env.';
+
+        foreach ($providers as $provider) {
+            $headers = [
+                'Authorization' => 'Bearer ' . $provider['key'],
+                'Content-Type' => 'application/json',
+            ];
+
+            foreach ($provider['extra_headers'] as $headerName => $headerValue) {
+                $headers[$headerName] = $headerValue;
+            }
+
+            $response = $client->request('POST', $provider['url'], [
+                'headers' => $headers,
                 'json' => [
-                    'model' => 'meta-llama/llama-3.1-8b-instruct',
+                    'model' => $provider['model'],
                     'messages' => [
                         [
-                            'role'    => 'user',
+                            'role' => 'user',
                             'content' => 'Write a short 2-3 sentence product description for: ' . $title . '. Focus on features and benefits. No bullet points.'
                         ]
                     ],
-                    'max_tokens' => 150
-                ]
-            ]
-        );
+                    'max_tokens' => 150,
+                ],
+            ]);
 
-        $data = $response->toArray();
-        $description = trim($data['choices'][0]['message']['content'] ?? '');
+            $statusCode = $response->getStatusCode();
+            $data = $response->toArray(false);
 
-        return new JsonResponse(['description' => $description]);
+            if ($statusCode >= 200 && $statusCode < 300) {
+                $description = trim($data['choices'][0]['message']['content'] ?? '');
+
+                if ($description !== '') {
+                    return new JsonResponse(['description' => $description]);
+                }
+
+                $lastError = 'AI returned an empty description.';
+                continue;
+            }
+
+            $providerMessage = (string) ($data['error']['message'] ?? 'Unknown AI provider error');
+            $lastError = sprintf('%s error: %s', strtoupper((string) $provider['name']), $providerMessage);
+
+            // On 401, try the next provider if available.
+            if ($statusCode === 401) {
+                continue;
+            }
+
+            return new JsonResponse([
+                'error' => 'AI provider request failed',
+                'message' => $lastError,
+            ], 502);
+        }
+
+        return new JsonResponse([
+            'error' => 'Unauthorized AI request. Verify your API key in .env.',
+            'message' => $lastError,
+        ], 401);
 
     } catch (\Throwable $e) {
         return new JsonResponse([
@@ -1412,7 +1536,7 @@ public function aiDescription(Request $request): JsonResponse
         $product['available_quantity'] = max(0, $product['quantity'] - ($product['reserved_quantity'] ?? 0));
         return $this->render('marketplace/product_details.html.twig', [
             'product'   => $product,
-            'cartCount' => $this->getCartItemCount($this->CURRENT_USER_ID),
+            'cartCount' => $this->getCartItemCount($this->getCurrentUserId()),
         ]);
     }
 

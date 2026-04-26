@@ -1072,9 +1072,41 @@ class AdminController extends AbstractController
         }
 
         $status = mb_strtolower(trim((string) $request->request->get('status', '')));
+        if ($status === 'accepte') {
+            $status = 'confirmee';
+        }
+
         if (!in_array($status, ['en_attente', 'confirmee', 'annulee'], true)) {
             $this->addFlash('error', 'Invalid reservation status value.');
             return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+        }
+
+        $oldStatus = $reservation->getStatut();
+        $wasConfirmed = in_array($oldStatus, ['confirmee', 'accepte'], true);
+        $isConfirmed = ($status === 'confirmee');
+        $event = $reservation->getEvent();
+        $peopleCount = max(0, $reservation->getNombrePersonnes());
+
+        if ($event instanceof Events) {
+            // Consume places only when reservation becomes confirmed.
+            if (!$wasConfirmed && $isConfirmed) {
+                if ($peopleCount > $event->getPlacesDisponibles()) {
+                    $this->addFlash('error', sprintf(
+                        'Impossible de confirmer: seulement %d place(s) disponible(s).',
+                        $event->getPlacesDisponibles()
+                    ));
+                    return $this->redirectToRoute('app_admin_dashboard', ['section' => 'experiences']);
+                }
+
+                $event->setPlacesDisponibles($event->getPlacesDisponibles() - $peopleCount);
+                $entityManager->persist($event);
+            }
+
+            // Release places when reservation leaves confirmed status.
+            if ($wasConfirmed && !$isConfirmed) {
+                $event->setPlacesDisponibles($event->getPlacesDisponibles() + $peopleCount);
+                $entityManager->persist($event);
+            }
         }
 
         $reservation->setStatut($status);
@@ -1095,7 +1127,7 @@ class AdminController extends AbstractController
         }
 
         $event = $reservation->getEvent();
-        if ($event instanceof Events) {
+        if ($event instanceof Events && in_array($reservation->getStatut(), ['confirmee', 'accepte'], true)) {
             $event->setPlacesDisponibles($event->getPlacesDisponibles() + max(0, $reservation->getNombrePersonnes()));
             $entityManager->persist($event);
         }
