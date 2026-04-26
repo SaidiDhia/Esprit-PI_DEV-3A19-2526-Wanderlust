@@ -5,24 +5,22 @@ namespace App\Form;
 
 use App\Entity\Activities;
 use App\Entity\Events;
-use App\Enum\StatusActiviteEnum;
 use App\Enum\StatusEventEnum;
 use Doctrine\ORM\EntityRepository;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\Extension\Core\Type\DateTimeType;
 use Symfony\Component\Form\Extension\Core\Type\EmailType;
-use Symfony\Component\Form\Extension\Core\Type\EnumType;
 use Symfony\Component\Form\Extension\Core\Type\FileType;
+use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\MoneyType;
 use Symfony\Component\Form\Extension\Core\Type\NumberType;
 use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\Extension\Core\Type\UrlType;
 use Symfony\Component\Form\FormBuilderInterface;
-use Symfony\Component\Form\FormEvent;
-use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\All;
 use Symfony\Component\Validator\Constraints\Email;
@@ -54,8 +52,6 @@ class EventsType extends AbstractType
                 ],
                 'query_builder' => function (EntityRepository $er) {
                     return $er->createQueryBuilder('a')
-                        ->where('a.status = :acceptedStatus')
-                        ->setParameter('acceptedStatus', StatusActiviteEnum::ACCEPTE)
                         ->orderBy('a.titre', 'ASC');
                 },
                 'required'     => false,
@@ -141,8 +137,9 @@ class EventsType extends AbstractType
                 'constraints' => [
                     new NotBlank(['message' => 'Le téléphone est obligatoire.']),
                     new Regex([
-                        'pattern' => '/^\+216\s?\d{2}\s?\d{3}\s?\d{3}$/',
-                        'message' => 'Le numéro de téléphone doit être au format +216 XX XXX XXX.',
+                        // Accepte les formats les plus courants (+216 XX XXX XXX, +216XXXXXXXX, XXXXXXXX)
+                        'pattern' => '/^(?:\+216[\s.-]?)?(?:\d{2}[\s.-]?\d{3}[\s.-]?\d{3}|\d{8})$/',
+                        'message' => 'Le numéro de téléphone doit être un numéro tunisien valide (ex: +216 XX XXX XXX).',
                     ]),
                 ],
             ])
@@ -191,19 +188,23 @@ class EventsType extends AbstractType
                     new Length(['max' => 5000, 'maxMessage' => 'La description des matériels ne peut pas dépasser 5000 caractères.']),
                 ],
             ])
-        ;
-
-        if ($isAdmin) {
-            $builder->add('status', EnumType::class, [
+            // Statut (admin uniquement)
+            ->add('status', ChoiceType::class, [
                 'label' => 'Statut',
-                'class' => StatusEventEnum::class,
-                'placeholder' => false,
+                'choices' => [
+                    'En attente' => StatusEventEnum::EN_ATTENTE,
+                    'Accepté' => StatusEventEnum::ACCEPTE,
+                    'Refusé' => StatusEventEnum::REFUSE,
+                    'Annulé' => StatusEventEnum::ANNULE,
+                    'Terminé' => StatusEventEnum::TERMINE,
+                ],
                 'attr' => [
                     'class' => 'form-select-modern',
                 ],
-                'required' => true,
-            ]);
-        }
+                'required' => false,
+                'disabled' => !$isAdmin, // Activé uniquement pour les admins
+            ])
+        ;
     }
 
     public function configureOptions(OptionsResolver $resolver): void

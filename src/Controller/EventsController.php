@@ -39,6 +39,12 @@ final class EventsController extends AbstractController
     private function denyUnlessEventOwner(Events $event): void
     {
         $user = $this->getAuthenticatedUser();
+
+        // Admins can manage all events from moderation/admin views.
+        if (in_array('ROLE_ADMIN', $user->getRoles(), true)) {
+            return;
+        }
+
         $ownerId = $event->getCreatedBy()?->getId();
 
         if ($ownerId === null || $ownerId !== $user->getId()) {
@@ -63,16 +69,27 @@ final class EventsController extends AbstractController
         if ($canManage) {
             $queryBuilder->orderBy('e.dateCreation', 'DESC');
         } else {
-            // Authenticated users see: accepted events + their own events (any status)
-            // Anonymous users see: only accepted events
+            // Authenticated users see: available public events + their own events (any status)
+            // Anonymous users see: only available accepted events
             if ($user instanceof User) {
+                $visibleStatuses = [
+                    StatusEventEnum::ACCEPTE,
+                    StatusEventEnum::EN_ATTENTE,
+                ];
+
                 $queryBuilder
-                    ->where('e.status = :acceptedStatus OR e.createdBy = :currentUser')
-                    ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE)
-                    ->setParameter('currentUser', $user);
+                    ->where('e.createdBy = :currentUser')
+                    ->orWhere('(e.status IN (:visibleStatuses) AND e.placesDisponibles > 0 AND e.dateFin > :now)')
+                    ->setParameter('currentUser', $user)
+                    ->setParameter('visibleStatuses', $visibleStatuses)
+                    ->setParameter('now', new \DateTimeImmutable());
             } else {
-                $queryBuilder->where('e.status = :acceptedStatus')
-                    ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE);
+                $queryBuilder
+                    ->where('e.status = :acceptedStatus')
+                    ->andWhere('e.placesDisponibles > 0')
+                    ->andWhere('e.dateFin > :now')
+                    ->setParameter('acceptedStatus', StatusEventEnum::ACCEPTE)
+                    ->setParameter('now', new \DateTimeImmutable());
             }
             $queryBuilder->orderBy('e.dateCreation', 'DESC');
         }
@@ -321,6 +338,7 @@ final class EventsController extends AbstractController
         });
 
         if (!$form->isSubmitted()) {
+            $selectedConditions = ['security', 'qualified', 'verification', 'risks'];
             $selectedActivitiesIds = array_map(function ($activity) {
                 return $activity->getId();
             }, $event->getActivities()->toArray());
@@ -419,6 +437,22 @@ final class EventsController extends AbstractController
 
             $this->addFlash('success', 'Événement modifié avec succès.');
             return $this->redirectToRoute('app_events_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        if ($form->isSubmitted() && !$form->isValid()) {
+            $this->addFlash('error', 'Le formulaire contient des erreurs.');
+
+            $reported = 0;
+            foreach ($form->getErrors(true, true) as $error) {
+                $origin = $error->getOrigin();
+                $fieldName = $origin ? $origin->getName() : 'formulaire';
+                $this->addFlash('error', sprintf('%s: %s', $fieldName, $error->getMessage()));
+                $reported++;
+
+                if ($reported >= 5) {
+                    break;
+                }
+            }
         }
 
         return $this->render('events/edit.html.twig', [
