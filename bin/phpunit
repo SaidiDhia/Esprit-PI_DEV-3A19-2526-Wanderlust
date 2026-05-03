@@ -1,0 +1,8 @@
+#!/usr/bin/env php
+<?php
+
+if (!is_file(dirname(__DIR__).'/vendor/bin/simple-phpunit')) {
+    throw new LogicException('Dependencies are missing. Try running "composer install" or installing symfony/phpunit-bridge.');
+}
+
+require dirname(__DIR__).'/vendor/bin/simple-phpunit';
