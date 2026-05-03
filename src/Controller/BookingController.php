@@ -84,14 +84,15 @@ class BookingController extends AbstractController
                 ->setParameter('category', '%' . mb_strtolower($category) . '%');
         }
 
+        /** @var list<Place> $places */
         $places = $qb->getQuery()->getResult();
         $distanceByPlaceIdMeters = [];
         if ($distanceKm !== null && $hasUserCoordinates && $userLatitude !== null && $userLongitude !== null) {
             $distanceByPlaceIdMeters = $this->fetchOsrmDistancesFromOrigin($userLatitude, $userLongitude, $places);
             $maxDistanceMeters = $distanceKm * 1000;
 
-            $places = array_values(array_filter($places, function ($place) use ($distanceByPlaceIdMeters, $maxDistanceMeters): bool {
-                if (!$place instanceof Place || $place->getId() === null) {
+            $places = array_values(array_filter($places, function (Place $place) use ($distanceByPlaceIdMeters, $maxDistanceMeters): bool {
+                if ($place->getId() === null) {
                     return false;
                 }
 
@@ -101,7 +102,7 @@ class BookingController extends AbstractController
 
             $visiblePlaceIds = [];
             foreach ($places as $place) {
-                if ($place instanceof Place && $place->getId() !== null) {
+                if ($place->getId() !== null) {
                     $visiblePlaceIds[(int) $place->getId()] = true;
                 }
             }
@@ -118,9 +119,6 @@ class BookingController extends AbstractController
         $mapPlaces = [];
         $distanceByPlaceIdKm = [];
         foreach ($places as $place) {
-            if (!$place instanceof Place) {
-                continue;
-            }
 
             $latitude = $place->getLatitude();
             $longitude = $place->getLongitude();
@@ -285,6 +283,10 @@ class BookingController extends AbstractController
             ], new Response('', Response::HTTP_UNPROCESSABLE_ENTITY));
         }
 
+        if (!$start instanceof \DateTimeImmutable || !$end instanceof \DateTimeImmutable) {
+            throw new \RuntimeException('Booking dates are invalid.');
+        }
+
         $nights = (int) $start->diff($end)->days;
         $booking = new Booking();
         $booking->setPlace($place);
@@ -305,8 +307,8 @@ class BookingController extends AbstractController
             'targetImage' => $place->getImageUrl(),
             'destination' => sprintf('Place #%d', (int) $place->getId()),
             'metadata' => [
-                'start_date' => $start?->format('Y-m-d'),
-                'end_date' => $end?->format('Y-m-d'),
+                'start_date' => $start->format('Y-m-d'),
+                'end_date' => $end->format('Y-m-d'),
                 'guests' => $guests,
                 'total_price' => $booking->getTotalPrice(),
             ],
@@ -356,6 +358,7 @@ class BookingController extends AbstractController
             ], new Response('', Response::HTTP_UNPROCESSABLE_ENTITY));
         }
 
+        /** @var list<Review> $existingReviews */
         $existingReviews = $em->createQueryBuilder()
             ->select('r')
             ->from(Review::class, 'r')
@@ -368,20 +371,15 @@ class BookingController extends AbstractController
             ->getResult();
 
         $existingReview = $existingReviews[0] ?? null;
-        if (!$existingReview instanceof Review) {
-            $existingReview = null;
-        }
 
         if (count($existingReviews) > 1) {
             foreach (array_slice($existingReviews, 1) as $duplicateReview) {
-                if ($duplicateReview instanceof Review) {
-                    $em->remove($duplicateReview);
-                }
+                $em->remove($duplicateReview);
             }
         }
 
-        $review = $existingReview instanceof Review ? $existingReview : new Review();
-        if (!$existingReview instanceof Review) {
+        $review = $existingReview ?? new Review();
+        if ($existingReview === null) {
             $review->setPlace($place);
             $review->setUser($user);
             $em->persist($review);
@@ -399,6 +397,8 @@ class BookingController extends AbstractController
         if (($review->getComment() ?? '') !== '') {
             $moderation = $this->contentModerationService->moderateForDisplay((string) $review->getComment());
         }
+        /** @var array{severity: string, reason: string, should_hide: bool, display_text: string, score?: float} $moderation */
+        $moderation = $moderation;
 
         $aiResult = $aiReviewService->analyzeReview($review->getComment(), $rating);
         if ($aiResult->getSummary() !== '') {
@@ -410,7 +410,7 @@ class BookingController extends AbstractController
         $this->recalculatePlaceRatingStats($em, $place);
         $em->flush();
 
-        $activityLogger->logAction($user, 'booking', $existingReview instanceof Review ? 'review_updated' : 'review_created', [
+        $activityLogger->logAction($user, 'booking', $existingReview !== null ? 'review_updated' : 'review_created', [
             'targetType' => 'place_review',
             'targetId' => $review->getId(),
             'targetName' => $place->getTitle(),
@@ -419,11 +419,11 @@ class BookingController extends AbstractController
             'metadata' => [
                 'rating' => $rating,
                 'sentiment' => $review->getSentiment(),
-                'moderation_severity' => (string) ($moderation['severity'] ?? 'none'),
+                'moderation_severity' => $moderation['severity'],
             ],
         ]);
 
-        if (($moderation['severity'] ?? 'none') === 'severe' && ($review->getComment() ?? '') !== '') {
+        if ($moderation['severity'] === 'severe' && ($review->getComment() ?? '') !== '') {
             $activityLogger->logAction($user, 'moderation', 'high_risk_content_hidden', [
                 'targetType' => 'place_review',
                 'targetId' => $review->getId(),
@@ -434,7 +434,7 @@ class BookingController extends AbstractController
                 'metadata' => [
                     'source' => 'booking_review',
                     'moderation_severity' => 'severe',
-                    'moderation_reason' => (string) ($moderation['reason'] ?? 'High-risk content'),
+                    'moderation_reason' => $moderation['reason'],
                 ],
             ]);
 
@@ -443,7 +443,7 @@ class BookingController extends AbstractController
             return $this->redirectToRoute('app_booking_place', ['id' => $place->getId()]);
         }
 
-        $this->addFlash('success', $existingReview instanceof Review ? 'Review updated successfully.' : 'Review submitted successfully.');
+        $this->addFlash('success', $existingReview !== null ? 'Review updated successfully.' : 'Review submitted successfully.');
         return $this->redirectToRoute('app_booking_place', ['id' => $place->getId()]);
     }
 
@@ -452,6 +452,7 @@ class BookingController extends AbstractController
     {
         $user = $this->requireUser();
 
+        /** @var list<Booking> $bookings */
         $bookings = $em->createQueryBuilder()
             ->select('b', 'p', 'pi')
             ->from(Booking::class, 'b')
@@ -465,11 +466,10 @@ class BookingController extends AbstractController
 
         $visitedPlaces = [];
         foreach ($bookings as $booking) {
-            if (!$booking instanceof Booking || !$booking->getPlace() instanceof Place) {
+            $place = $booking->getPlace();
+            if (!$place instanceof Place) {
                 continue;
             }
-
-            $place = $booking->getPlace();
             $placeId = $place->getId();
             if ($placeId === null || isset($visitedPlaces[$placeId])) {
                 continue;
@@ -558,16 +558,21 @@ class BookingController extends AbstractController
         }
 
         $decoded = json_decode($response, true);
-        if (!is_array($decoded) || ($decoded['code'] ?? '') !== 'Ok' || !isset($decoded['routes'][0])) {
+        if (!is_array($decoded) || ($decoded['code'] ?? '') !== 'Ok') {
             return new JsonResponse(['error' => 'No route found.'], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        $route = $decoded['routes'][0];
+        $routes = $decoded['routes'] ?? null;
+        if (!is_array($routes) || !isset($routes[0]) || !is_array($routes[0])) {
+            return new JsonResponse(['error' => 'No route found.'], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        $route = $routes[0];
 
         return new JsonResponse([
             'route' => [
-                'distance' => (float) ($route['distance'] ?? 0),
-                'duration' => (float) ($route['duration'] ?? 0),
+                'distance' => $this->toFloat($route['distance'] ?? 0),
+                'duration' => $this->toFloat($route['duration'] ?? 0),
                 'geometry' => $route['geometry'] ?? null,
             ],
             'place' => [
@@ -607,6 +612,7 @@ class BookingController extends AbstractController
         $nights = max(1, (int) $booking->getStartDate()->diff($booking->getEndDate())->days);
         $invoiceNumber = sprintf('RES-%s-%04d', $issuedAt->format('Ymd'), (int) $booking->getId());
 
+        /** @var Response $response */
         $response = $this->withSuppressedIconvNotice(function () use ($booking, $issuedAt, $invoiceNumber, $nights): Response {
             $html = $this->renderView('booking/invoice_pdf.html.twig', [
                 'booking' => $booking,
@@ -692,6 +698,11 @@ class BookingController extends AbstractController
             return $this->redirectToRoute('app_booking_my_bookings');
         }
 
+        $place = $booking->getPlace();
+        if (!$place instanceof Place) {
+            throw $this->createNotFoundException('Place not found.');
+        }
+
         if (!$this->isCsrfTokenValid('booking_edit_' . $booking->getId(), (string) $request->request->get('_token'))) {
             $this->addFlash('error', 'Invalid booking token. Please try again.');
             return $this->redirectToRoute('app_booking_my_bookings');
@@ -730,7 +741,6 @@ class BookingController extends AbstractController
             $bookingFormErrors['end_date'] = 'End date must be after start date.';
         }
 
-        $place = $booking->getPlace();
         if ($start instanceof \DateTimeImmutable && $end instanceof \DateTimeImmutable && !$this->isPlaceAvailable($em, $place, $start, $end, $booking->getId())) {
             $bookingFormErrors['_global'] = 'Those dates are already reserved.';
         }
@@ -738,6 +748,10 @@ class BookingController extends AbstractController
         if (!empty($bookingFormErrors)) {
             $this->addFlash('error', implode(' ', $bookingFormErrors));
             return $this->redirectToRoute('app_booking_my_bookings');
+        }
+
+        if (!$start instanceof \DateTimeImmutable || !$end instanceof \DateTimeImmutable) {
+            throw new \RuntimeException('Booking dates are invalid.');
         }
 
         $booking->setStartDate($start);
@@ -799,7 +813,7 @@ class BookingController extends AbstractController
         $booking->setCancelledAt(new \DateTimeImmutable());
         $booking->setCancelledBy('GUEST');
         $booking->setCancelReason('Cancelled by guest');
-        $booking->setRefundAmount((string) $refundPolicy['amount']);
+        $booking->setRefundAmount($refundPolicy['amount']);
         $em->flush();
 
         $activityLogger->logAction($user, 'booking', 'booking_cancelled_by_guest', [
@@ -828,8 +842,8 @@ class BookingController extends AbstractController
         if ($currentStatus === Booking::STATUS_CONFIRMED) {
             $this->addFlash('success', sprintf(
                 'Booking cancelled. Refund: %.2f%% (%.2f).',
-                (float) $refundPolicy['percent'],
-                (float) $refundPolicy['amount']
+                $this->toFloat($refundPolicy['percent']),
+                $this->toFloat($refundPolicy['amount'])
             ));
         } else {
             $this->addFlash('success', 'Booking cancelled. No refund is applied to non-confirmed bookings.');
@@ -864,8 +878,8 @@ class BookingController extends AbstractController
             $lng = $coordinates['lng'];
             if ($this->isCoordinateInTunisia($lat, $lng)) {
                 $snapped = $this->snapCoordinateToOsrmRoad($lat, $lng);
-                $resultLat = $snapped['lat'] ?? $lat;
-                $resultLng = $snapped['lng'] ?? $lng;
+                $resultLat = $snapped['lat'];
+                $resultLng = $snapped['lng'];
                 $key = number_format($resultLat, 6, '.', '') . ':' . number_format($resultLng, 6, '.', '');
                 $dedupe[$key] = true;
 
@@ -879,7 +893,7 @@ class BookingController extends AbstractController
 
         $localSuggestions = $this->fetchTunisiaLocationSuggestionsFromApi($query);
         foreach ($localSuggestions as $item) {
-            $key = number_format((float) $item['latitude'], 6, '.', '') . ':' . number_format((float) $item['longitude'], 6, '.', '');
+            $key = number_format($this->toFloat($item['latitude']), 6, '.', '') . ':' . number_format($this->toFloat($item['longitude']), 6, '.', '');
             if (isset($dedupe[$key])) {
                 continue;
             }
@@ -895,6 +909,9 @@ class BookingController extends AbstractController
         return new JsonResponse(['items' => array_slice($items, 0, 8)]);
     }
 
+    /**
+     * @return array{lat: float, lng: float}|null
+     */
     private function extractCoordinatesFromQuery(string $query): ?array
     {
         if (preg_match('/^\s*(-?\d+(?:\.\d+)?)\s*[,;\s]\s*(-?\d+(?:\.\d+)?)\s*$/u', $query, $matches) !== 1) {
@@ -911,6 +928,9 @@ class BookingController extends AbstractController
         return ['lat' => $latitude, 'lng' => $longitude];
     }
 
+    /**
+     * @return list<array{name: string, latitude: string, longitude: string}>
+     */
     private function fetchTunisiaLocationSuggestionsFromApi(string $query): array
     {
         $term = trim($query);
@@ -948,19 +968,21 @@ class BookingController extends AbstractController
             break;
         }
 
-        if (!is_array($decoded) || !isset($decoded['items']) || !is_array($decoded['items'])) {
+        if (!is_array($decoded)) {
             return [];
         }
 
+        $itemsData = $decoded['items'];
+
         $items = [];
-        foreach ($decoded['items'] as $item) {
+        foreach ($itemsData as $item) {
             if (!is_array($item)) {
                 continue;
             }
 
-            $name = trim((string) ($item['name'] ?? ''));
-            $latitude = (string) ($item['latitude'] ?? '');
-            $longitude = (string) ($item['longitude'] ?? '');
+            $name = trim($this->toString($item['name'] ?? ''));
+            $latitude = $this->toString($item['latitude'] ?? '');
+            $longitude = $this->toString($item['longitude'] ?? '');
             if ($name === '' || !is_numeric($latitude) || !is_numeric($longitude)) {
                 continue;
             }
@@ -985,19 +1007,22 @@ class BookingController extends AbstractController
         return $items;
     }
 
+    /**
+     * @return list<string>
+     */
     private function getLocationApiBaseUrls(): array
     {
         $candidates = [
             $this->locationApiUrl,
-            (string) ($_ENV['LOCATION_API_URL'] ?? ''),
-            (string) getenv('LOCATION_API_URL'),
+            $this->toString($_ENV['LOCATION_API_URL'] ?? ''),
+            $this->toString(getenv('LOCATION_API_URL')),
             'http://127.0.0.1:8104',
             'http://location_api:8000',
         ];
 
         $urls = [];
         foreach ($candidates as $candidate) {
-            $candidate = trim((string) $candidate);
+            $candidate = trim($this->toString($candidate));
             if ($candidate === '') {
                 continue;
             }
@@ -1128,6 +1153,13 @@ class BookingController extends AbstractController
         $place->setLatitude((string) $latitude);
         $place->setLongitude((string) $longitude);
 
+        $uploadedImages = array_values(array_filter(
+            $uploadedImages,
+            static fn ($uploadedImage): bool => $uploadedImage instanceof UploadedFile
+        ));
+        /** @var list<UploadedFile> $uploadedImages */
+        $uploadedImages = $uploadedImages;
+
         $em->persist($place);
         $em->flush();
 
@@ -1210,6 +1242,8 @@ class BookingController extends AbstractController
         }
 
         $uploadedImages = array_values(array_filter($uploadedImages, static fn ($uploadedImage): bool => $uploadedImage instanceof UploadedFile));
+        /** @var list<UploadedFile> $uploadedImages */
+        $uploadedImages = $uploadedImages;
         foreach ($uploadedImages as $uploadedImage) {
             if (!$this->isImageUpload($uploadedImage)) {
                 $errors[] = 'Only image files are allowed.';
@@ -1296,9 +1330,13 @@ class BookingController extends AbstractController
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_host_view' : 'app_booking_host', ['id' => $host->getId()]);
     }
 
+    /**
+     * @return list<Place>
+     */
     private function fetchHostPlaces(EntityManagerInterface $em, User $user): array
     {
-        return $em->createQueryBuilder()
+        /** @var list<Place> $results */
+        $results = $em->createQueryBuilder()
             ->select('p')
             ->from(Place::class, 'p')
             ->where('p.host = :user')
@@ -1306,11 +1344,17 @@ class BookingController extends AbstractController
             ->orderBy('p.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
+
+        return $results;
     }
 
+    /**
+     * @return list<Booking>
+     */
     private function fetchHostBookings(EntityManagerInterface $em, User $user): array
     {
-        return $em->createQueryBuilder()
+        /** @var list<Booking> $results */
+        $results = $em->createQueryBuilder()
             ->select('b', 'p', 'g')
             ->from(Booking::class, 'b')
             ->join('b.place', 'p')
@@ -1320,8 +1364,13 @@ class BookingController extends AbstractController
             ->orderBy('b.createdAt', 'DESC')
             ->getQuery()
             ->getResult();
+
+        return $results;
     }
 
+    /**
+     * @param array<string, mixed> $additionalContext
+     */
     private function renderHostDashboard(EntityManagerInterface $em, User $hostUser, ?User $viewer = null, array $additionalContext = [], int $statusCode = Response::HTTP_OK): Response
     {
         $places = $this->fetchHostPlaces($em, $hostUser);
@@ -1348,10 +1397,6 @@ class BookingController extends AbstractController
         }
 
         foreach ($bookings as $booking) {
-            if (!$booking instanceof Booking) {
-                continue;
-            }
-
             $status = $booking->getStatus();
             if (isset($bookingStatusCounts[$status])) {
                 ++$bookingStatusCounts[$status];
@@ -1424,21 +1469,24 @@ class BookingController extends AbstractController
         $booking->setStatus(Booking::STATUS_CONFIRMED);
         $em->flush();
 
+        $place = $booking->getPlace();
+        $guest = $booking->getGuest();
+
         $activityLogger->logAction($viewer, 'booking', 'booking_confirmed_by_host', [
             'targetType' => 'booking',
             'targetId' => $booking->getId(),
-            'targetName' => $booking->getPlace()?->getTitle(),
-            'targetImage' => $booking->getPlace()?->getImageUrl(),
-            'destination' => $booking->getGuest()?->getFullName(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'destination' => $guest?->getFullName(),
             'content' => sprintf(
                 'Approved booking request for %s from %s to %s.',
-                $booking->getPlace()?->getTitle() ?? 'booking',
-                $booking->getStartDate()?->format('Y-m-d') ?? 'unknown date',
-                $booking->getEndDate()?->format('Y-m-d') ?? 'unknown date'
+                $place->getTitle(),
+                $booking->getStartDate()->format('Y-m-d'),
+                $booking->getEndDate()->format('Y-m-d')
             ),
             'metadata' => [
                 'status' => Booking::STATUS_CONFIRMED,
-                'guest' => $booking->getGuest()?->getFullName(),
+                'guest' => $guest?->getFullName(),
                 'reason' => null,
             ],
         ]);
@@ -1471,18 +1519,21 @@ class BookingController extends AbstractController
         $booking->setStatus(Booking::STATUS_REJECTED);
         $em->flush();
 
+        $place = $booking->getPlace();
+        $guest = $booking->getGuest();
+
         $activityLogger->logAction($viewer, 'booking', 'booking_rejected_by_host', [
             'targetType' => 'booking',
             'targetId' => $booking->getId(),
-            'targetName' => $booking->getPlace()?->getTitle(),
-            'targetImage' => $booking->getPlace()?->getImageUrl(),
-            'destination' => $booking->getGuest()?->getFullName(),
+            'targetName' => $place->getTitle(),
+            'targetImage' => $place->getImageUrl(),
+            'destination' => $guest?->getFullName(),
             'content' => $reason !== ''
                 ? $reason
-                : sprintf('Rejected booking request for %s.', $booking->getPlace()?->getTitle() ?? 'booking'),
+                : sprintf('Rejected booking request for %s.', $place->getTitle()),
             'metadata' => [
                 'status' => Booking::STATUS_REJECTED,
-                'guest' => $booking->getGuest()?->getFullName(),
+                'guest' => $guest?->getFullName(),
                 'reason' => $reason !== '' ? $reason : null,
             ],
         ]);
@@ -1491,6 +1542,7 @@ class BookingController extends AbstractController
         return $this->redirectToRoute($viewer->isAdmin() ? 'app_booking_admin' : 'app_booking_host', ['id' => $hostUser->getId()]);
     }
 
+    /** @phpstan-ignore-next-line */
     private function countHostPendingRequests(EntityManagerInterface $em, User $user): int
     {
         return (int) $em->createQueryBuilder()
@@ -1529,6 +1581,11 @@ class BookingController extends AbstractController
         return $clean;
     }
 
+    /**
+     * @template T
+     * @param callable(): T $callback
+     * @return T
+     */
     private function withSuppressedIconvNotice(callable $callback): mixed
     {
         set_error_handler(static function (int $severity, string $message): bool {
@@ -1552,7 +1609,7 @@ class BookingController extends AbstractController
         $title = sprintf('Wanderlust Stay - %s', $place instanceof Place ? $place->getTitle() : 'Reservation');
         $location = '';
         if ($place instanceof Place) {
-            $location = trim(($place->getAddress() ?? '') . ' ' . ($place->getCity() ?? ''));
+            $location = trim($place->getAddress() . ' ' . $place->getCity());
         }
 
         $details = sprintf(
@@ -1579,6 +1636,9 @@ class BookingController extends AbstractController
         return 'https://calendar.google.com/calendar/render?' . $query;
     }
 
+    /**
+     * @return array<string, string>
+     */
     private function defaultHostFormData(): array
     {
         return [
@@ -1595,13 +1655,16 @@ class BookingController extends AbstractController
         ];
     }
 
+    /**
+     * @param array<int, UploadedFile> $uploadedImages
+     */
     private function persistHostPlaceImages(EntityManagerInterface $em, Place $place, array $uploadedImages): void
     {
         if ($uploadedImages === []) {
             return;
         }
 
-        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/places';
+        $uploadDir = $this->toString($this->getParameter('kernel.project_dir')) . '/public/uploads/places';
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0775, true);
         }
@@ -1616,10 +1679,6 @@ class BookingController extends AbstractController
 
         $sortOrder = $existingCount;
         foreach ($uploadedImages as $uploadedImage) {
-            if (!$uploadedImage instanceof UploadedFile) {
-                continue;
-            }
-
             $extension = $this->guessUploadedImageExtension($uploadedImage);
             $fileName = sprintf('%s_%s.%s', $place->getId(), bin2hex(random_bytes(8)), $extension);
             $uploadedImage->move($uploadDir, $fileName);
@@ -1676,8 +1735,12 @@ class BookingController extends AbstractController
         return 'jpg';
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     private function buildPlacePageData(EntityManagerInterface $em, Place $place): array
     {
+        /** @var list<PlaceImage> $images */
         $images = $em->createQueryBuilder()
             ->select('i')
             ->from(PlaceImage::class, 'i')
@@ -1688,6 +1751,7 @@ class BookingController extends AbstractController
             ->getQuery()
             ->getResult();
 
+        /** @var list<Review> $reviews */
         $reviews = $em->createQueryBuilder()
             ->select('r', 'u')
             ->from(Review::class, 'r')
@@ -1700,10 +1764,6 @@ class BookingController extends AbstractController
 
         $reviewCards = [];
         foreach ($reviews as $review) {
-            if (!$review instanceof Review) {
-                continue;
-            }
-
             $comment = $review->getComment() ?? '';
             $moderation = $comment !== ''
                 ? $this->contentModerationService->moderateForDisplay($comment)
@@ -1713,15 +1773,18 @@ class BookingController extends AbstractController
                     'display_text' => '',
                     'reason' => 'Empty text',
                 ];
+            /** @var array{severity: string, reason: string, should_hide: bool, display_text: string, score?: float} $moderation */
+            $moderation = $moderation;
 
             $reviewCards[] = [
                 'review' => $review,
-                'displayComment' => (string) ($moderation['display_text'] ?? ''),
-                'hiddenByModeration' => (bool) ($moderation['should_hide'] ?? false),
-                'moderationSeverity' => (string) ($moderation['severity'] ?? 'none'),
+                'displayComment' => $moderation['display_text'],
+                'hiddenByModeration' => $moderation['should_hide'],
+                'moderationSeverity' => $moderation['severity'],
             ];
         }
 
+        /** @var list<Booking> $bookings */
         $bookings = $em->createQueryBuilder()
             ->select('b')
             ->from(Booking::class, 'b')
@@ -1759,18 +1822,28 @@ class BookingController extends AbstractController
             }
         }
 
-        return [
-            'place' => $place,
-            'images' => $images,
-            'mainImageUrl' => $images !== [] ? $images[0]->getUrl() : $place->getImageUrl(),
-            'reviews' => $reviews,
-            'reviewCards' => $reviewCards,
-            'bookings' => $bookings,
-            'bookedRanges' => array_map(static fn (Booking $booking): array => [
+        $mainImageUrl = $place->getImageUrl();
+        if ($images !== []) {
+            $mainImageUrl = $images[0]->getUrl();
+        }
+
+        $bookedRanges = [];
+        foreach ($bookings as $booking) {
+            $bookedRanges[] = [
                 'start' => $booking->getStartDate()->format('Y-m-d'),
                 'end' => $booking->getEndDate()->format('Y-m-d'),
                 'status' => $booking->getStatus(),
-            ], $bookings),
+            ];
+        }
+
+        return [
+            'place' => $place,
+            'images' => $images,
+            'mainImageUrl' => $mainImageUrl,
+            'reviews' => $reviews,
+            'reviewCards' => $reviewCards,
+            'bookings' => $bookings,
+            'bookedRanges' => $bookedRanges,
             'todayDate' => (new \DateTimeImmutable('today'))->format('Y-m-d'),
             'bookingFormErrors' => [],
             'bookingFormData' => [
@@ -1793,8 +1866,13 @@ class BookingController extends AbstractController
             ->getQuery()
             ->getSingleResult();
 
-        $reviewsCount = (int) ($stats['reviewsCount'] ?? 0);
-        $avgRating = $stats['avgRating'] !== null ? number_format((float) $stats['avgRating'], 2, '.', '') : null;
+        if (!is_array($stats)) {
+            return;
+        }
+
+        $reviewsCount = $this->toInt($stats['reviewsCount'] ?? 0);
+        $avgRatingValue = $stats['avgRating'] ?? null;
+        $avgRating = is_numeric($avgRatingValue) ? number_format((float) $avgRatingValue, 2, '.', '') : null;
 
         $place->setReviewsCount($reviewsCount);
         $place->setAvgRating($avgRating);
@@ -1813,6 +1891,7 @@ class BookingController extends AbstractController
             'pendingBookings' => (int) $em->createQueryBuilder()->select('COUNT(b.id)')->from(Booking::class, 'b')->where('b.status = :status')->setParameter('status', Booking::STATUS_PENDING)->getQuery()->getSingleScalarResult(),
         ];
 
+        /** @var list<Place> $pendingPlaces */
         $pendingPlaces = $em->createQueryBuilder()
             ->select('p', 'h')
             ->from(Place::class, 'p')
@@ -1823,6 +1902,7 @@ class BookingController extends AbstractController
             ->getQuery()
             ->getResult();
 
+        /** @var list<Booking> $recentBookings */
         $recentBookings = $em->createQueryBuilder()
             ->select('b', 'p', 'g')
             ->from(Booking::class, 'b')
@@ -1835,13 +1915,12 @@ class BookingController extends AbstractController
 
         $previewPlaces = [];
         foreach ($pendingPlaces as $pendingPlace) {
-            if ($pendingPlace instanceof Place) {
-                $previewPlaces[] = $pendingPlace;
-            }
+            $previewPlaces[] = $pendingPlace;
         }
         foreach ($recentBookings as $recentBooking) {
-            if ($recentBooking instanceof Booking && $recentBooking->getPlace() instanceof Place) {
-                $previewPlaces[] = $recentBooking->getPlace();
+            $place = $recentBooking->getPlace();
+            if ($place instanceof Place) {
+                $previewPlaces[] = $place;
             }
         }
 
@@ -1855,11 +1934,15 @@ class BookingController extends AbstractController
         ]);
     }
 
+    /**
+     * @param array<int, Place> $places
+     * @return array<int, string>
+     */
     private function buildPlacePreviewImagesMap(EntityManagerInterface $em, array $places): array
     {
         $placeIds = [];
         foreach ($places as $place) {
-            if ($place instanceof Place && $place->getId() !== null) {
+            if ($place->getId() !== null) {
                 $placeIds[] = $place->getId();
             }
         }
@@ -1869,6 +1952,7 @@ class BookingController extends AbstractController
             return [];
         }
 
+        /** @var list<PlaceImage> $images */
         $images = $em->createQueryBuilder()
             ->select('i', 'p')
             ->from(PlaceImage::class, 'i')
@@ -1883,26 +1967,31 @@ class BookingController extends AbstractController
 
         $previewMap = [];
         foreach ($images as $image) {
-            if (!$image instanceof PlaceImage || !$image->getPlace() instanceof Place) {
+            $place = $image->getPlace();
+            if (!$place instanceof Place) {
                 continue;
             }
 
-            $placeId = $image->getPlace()->getId();
+            $placeId = $place->getId();
             if ($placeId === null || isset($previewMap[$placeId])) {
                 continue;
             }
 
-            $previewMap[$placeId] = $image->getUrl();
+            $previewMap[$placeId] = $this->toString($image->getUrl());
         }
 
         return $previewMap;
     }
 
+    /**
+     * @param array<int, Place> $places
+     * @return array<int, float>
+     */
     private function fetchOsrmDistancesFromOrigin(float $originLat, float $originLng, array $places): array
     {
         $destinations = [];
         foreach ($places as $place) {
-            if (!$place instanceof Place || $place->getId() === null) {
+            if ($place->getId() === null) {
                 continue;
             }
 
@@ -1978,13 +2067,15 @@ class BookingController extends AbstractController
                 continue;
             }
 
-            $distances = $decoded['distances'][0] ?? null;
-            if (!is_array($distances)) {
+            $distancesMatrix = $decoded['distances'] ?? null;
+            if (!is_array($distancesMatrix) || !isset($distancesMatrix[0]) || !is_array($distancesMatrix[0])) {
                 foreach ($fallbackDistances as $destinationId => $fallbackDistance) {
                     $distanceByPlaceId[$destinationId] = $fallbackDistance;
                 }
                 continue;
             }
+
+            $distances = $distancesMatrix[0];
 
             foreach ($chunk as $index => $destination) {
                 $distanceValue = $distances[$index] ?? null;
@@ -2024,11 +2115,15 @@ class BookingController extends AbstractController
             && $longitude <= self::TUNISIA_EAST;
     }
 
+    /**
+     * @param array<int, Place> $places
+     * @return array<int, list<string>>
+     */
     private function buildPlaceGalleryImagesMap(EntityManagerInterface $em, array $places): array
     {
         $placeIds = [];
         foreach ($places as $place) {
-            if ($place instanceof Place && $place->getId() !== null) {
+            if ($place->getId() !== null) {
                 $placeIds[] = $place->getId();
             }
         }
@@ -2038,6 +2133,7 @@ class BookingController extends AbstractController
             return [];
         }
 
+        /** @var list<PlaceImage> $images */
         $images = $em->createQueryBuilder()
             ->select('i', 'p')
             ->from(PlaceImage::class, 'i')
@@ -2052,11 +2148,12 @@ class BookingController extends AbstractController
 
         $galleryMap = [];
         foreach ($images as $image) {
-            if (!$image instanceof PlaceImage || !$image->getPlace() instanceof Place) {
+            $place = $image->getPlace();
+            if (!$place instanceof Place) {
                 continue;
             }
 
-            $placeId = $image->getPlace()->getId();
+            $placeId = $place->getId();
             if ($placeId === null) {
                 continue;
             }
@@ -2065,7 +2162,7 @@ class BookingController extends AbstractController
                 $galleryMap[$placeId] = [];
             }
 
-            $galleryMap[$placeId][] = $image->getUrl();
+            $galleryMap[$placeId][] = $this->toString($image->getUrl());
         }
 
         return $galleryMap;
@@ -2140,6 +2237,9 @@ class BookingController extends AbstractController
         return rtrim(rtrim(number_format((float) $value, 8, '.', ''), '0'), '.') ?: '0';
     }
 
+    /**
+     * @return array{percent: float, amount: string}
+     */
     private function calculateCancellationRefundPolicy(Booking $booking, \DateTimeImmutable $cancelledAt): array
     {
         if ($booking->getStatus() !== Booking::STATUS_CONFIRMED) {
@@ -2185,5 +2285,96 @@ class BookingController extends AbstractController
         $count = (int) $qb->getQuery()->getSingleScalarResult();
 
         return $count === 0;
+    }
+
+    /**
+     * @return array{lat: float, lng: float}
+     */
+    private function snapCoordinateToOsrmRoad(float $latitude, float $longitude): array
+    {
+        $url = sprintf(
+            'http://127.0.0.1:5001/nearest/v1/driving/%s,%s?number=1',
+            rawurlencode((string) $longitude),
+            rawurlencode((string) $latitude)
+        );
+
+        $context = stream_context_create([
+            'http' => [
+                'method' => 'GET',
+                'timeout' => 6,
+                'header' => "Accept: application/json\r\n",
+            ],
+        ]);
+
+        $response = @file_get_contents($url, false, $context);
+        if (!is_string($response) || $response === '') {
+            return ['lat' => $latitude, 'lng' => $longitude];
+        }
+
+        $decoded = json_decode($response, true);
+        if (!is_array($decoded) || ($decoded['code'] ?? '') !== 'Ok') {
+            return ['lat' => $latitude, 'lng' => $longitude];
+        }
+
+        $waypoints = $decoded['waypoints'] ?? null;
+        if (!is_array($waypoints) || !isset($waypoints[0]) || !is_array($waypoints[0])) {
+            return ['lat' => $latitude, 'lng' => $longitude];
+        }
+
+        $location = $waypoints[0]['location'] ?? null;
+        if (!is_array($location) || !isset($location[0], $location[1])) {
+            return ['lat' => $latitude, 'lng' => $longitude];
+        }
+
+        $lng = $location[0];
+        $lat = $location[1];
+        if (!is_numeric($lat) || !is_numeric($lng)) {
+            return ['lat' => $latitude, 'lng' => $longitude];
+        }
+
+        return ['lat' => (float) $lat, 'lng' => (float) $lng];
+    }
+
+    private function toString(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        return '';
+    }
+
+    private function toInt(mixed $value): int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+
+        return 0;
+    }
+
+    private function toFloat(mixed $value): float
+    {
+        if (is_float($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return 0.0;
     }
 }

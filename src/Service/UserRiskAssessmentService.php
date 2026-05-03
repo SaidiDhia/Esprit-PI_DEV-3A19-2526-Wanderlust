@@ -115,7 +115,7 @@ class UserRiskAssessmentService
                 $userId,
                 $signals,
                 $previousSignalScores,
-                (string) ($classification['recommended_action'] ?? 'manual_review_or_ban')
+                $this->toString($classification['recommended_action'] ?? 'manual_review_or_ban')
             );
 
             $this->notifyCancellationPatternIfNeeded($userId);
@@ -143,9 +143,9 @@ class UserRiskAssessmentService
             }
 
             return [
-                'anomaly_score' => (float) ($row['anomaly_score'] ?? 0.0),
-                'bot_behavior_score' => (float) ($row['bot_behavior_score'] ?? 0.0),
-                'marketplace_fraud_score' => (float) ($row['marketplace_fraud_score'] ?? 0.0),
+                'anomaly_score' => $this->toFloat($row['anomaly_score'] ?? 0.0),
+                'bot_behavior_score' => $this->toFloat($row['bot_behavior_score'] ?? 0.0),
+                'marketplace_fraud_score' => $this->toFloat($row['marketplace_fraud_score'] ?? 0.0),
             ];
         } catch (\Throwable) {
             return [];
@@ -178,13 +178,13 @@ class UserRiskAssessmentService
 
         $triggered = [];
         foreach ($thresholds as $signalKey => $threshold) {
-            $current = (float) ($signals[$signalKey] ?? 0.0);
-            $previous = (float) ($previousSignalScores[$signalKey] ?? 0.0);
+            $current = $this->toFloat($signals[$signalKey] ?? 0.0);
+            $previous = $this->toFloat($previousSignalScores[$signalKey] ?? 0.0);
 
             if ($current >= $threshold && $previous < $threshold) {
                 $triggered[] = [
                     'key' => $signalKey,
-                    'label' => (string) ($labels[$signalKey] ?? $signalKey),
+                    'label' => $labels[$signalKey],
                     'score' => $current,
                 ];
             }
@@ -199,8 +199,8 @@ class UserRiskAssessmentService
             return;
         }
 
-        $userEmail = trim((string) ($userRow['email'] ?? ''));
-        $userName = trim((string) ($userRow['full_name'] ?? ''));
+        $userEmail = trim($this->toString($userRow['email'] ?? ''));
+        $userName = trim($this->toString($userRow['full_name'] ?? ''));
         if ($userName === '') {
             $userName = $userEmail !== '' ? $userEmail : $userId;
         }
@@ -213,8 +213,8 @@ class UserRiskAssessmentService
                     $this->emailService->sendRiskDetectionUserAlert(
                         $userEmail,
                         $userName,
-                        (string) $event['label'],
-                        (float) $event['score'],
+                        $this->toString($event['label']),
+                        $this->toFloat($event['score']),
                         $recommendedAction
                     );
                 }
@@ -224,8 +224,8 @@ class UserRiskAssessmentService
                         $adminEmail,
                         $userName,
                         $userEmail,
-                        (string) $event['label'],
-                        (float) $event['score'],
+                        $this->toString($event['label']),
+                        $this->toFloat($event['score']),
                         $recommendedAction
                     );
                 }
@@ -275,7 +275,7 @@ class UserRiskAssessmentService
 
         $emails = [];
         foreach ($rows as $row) {
-            $email = trim((string) ($row['email'] ?? ''));
+            $email = trim($this->toString($row['email'] ?? ''));
             if ($email !== '') {
                 $emails[] = $email;
             }
@@ -291,7 +291,7 @@ class UserRiskAssessmentService
         $cooldownHours = 24;
 
         try {
-            $cancelCount = (int) $this->connection->executeQuery(
+            $cancelCount = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM booking
                  WHERE user_id = :user_id
@@ -303,7 +303,7 @@ class UserRiskAssessmentService
                     'user_id' => $userId,
                     'window_days' => $windowDays,
                 ]
-            )->fetchOne();
+            )->fetchOne());
         } catch (\Throwable) {
             return;
         }
@@ -313,7 +313,7 @@ class UserRiskAssessmentService
         }
 
         try {
-            $recentAlertCount = (int) $this->connection->executeQuery(
+            $recentAlertCount = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM activity_log
                  WHERE module = 'risk'
@@ -324,7 +324,7 @@ class UserRiskAssessmentService
                     'user_id' => $userId,
                     'cooldown_hours' => $cooldownHours,
                 ]
-            )->fetchOne();
+            )->fetchOne());
         } catch (\Throwable) {
             $recentAlertCount = 1;
         }
@@ -338,12 +338,12 @@ class UserRiskAssessmentService
             return;
         }
 
-        $userEmail = trim((string) ($identity['email'] ?? ''));
+        $userEmail = trim($this->toString($identity['email'] ?? ''));
         if ($userEmail === '') {
             return;
         }
 
-        $userName = trim((string) ($identity['full_name'] ?? ''));
+        $userName = trim($this->toString($identity['full_name'] ?? ''));
         if ($userName === '') {
             $userName = $userEmail;
         }
@@ -384,40 +384,40 @@ class UserRiskAssessmentService
     private function collectMetrics(string $userId): array
     {
         try {
-            $actionsPerMinute = (int) $this->connection->executeQuery(
+            $actionsPerMinute = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*) FROM activity_log WHERE user_id = :user_id AND created_at >= DATE_SUB(NOW(), INTERVAL 1 MINUTE)",
                 ['user_id' => $userId]
-            )->fetchOne();
+            )->fetchOne());
 
-            $actionsFiveMinutes = (int) $this->connection->executeQuery(
+            $actionsFiveMinutes = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*) FROM activity_log WHERE user_id = :user_id AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)",
                 ['user_id' => $userId]
-            )->fetchOne();
+            )->fetchOne());
 
-            $bookingsPerDay = (int) $this->connection->executeQuery(
+            $bookingsPerDay = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*) FROM booking WHERE user_id = :user_id AND created_at >= DATE_SUB(NOW(), INTERVAL 1 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+            )->fetchOne());
 
-            $sessionDurationMinutes = (int) $this->connection->executeQuery(
+            $sessionDurationMinutes = $this->toInt($this->connection->executeQuery(
                 "SELECT COALESCE(TIMESTAMPDIFF(MINUTE, MIN(created_at), MAX(created_at)), 0)
                  FROM activity_log
                  WHERE user_id = :user_id
                    AND created_at >= DATE_SUB(NOW(), INTERVAL 1 HOUR)",
                 ['user_id' => $userId]
-            )->fetchOne();
+            )->fetchOne());
 
-            $cancelledBookings = (int) $this->connection->executeQuery(
+            $cancelledBookings = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*) FROM booking WHERE user_id = :user_id AND status = 'CANCELLED' AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+            )->fetchOne());
 
-            $totalBookings = (int) $this->connection->executeQuery(
+            $totalBookings = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*) FROM booking WHERE user_id = :user_id AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+            )->fetchOne());
 
-            $failedLogins2m = (int) $this->connection->executeQuery(
+            $failedLogins2m = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM activity_log
                  WHERE user_id = :user_id
@@ -425,31 +425,31 @@ class UserRiskAssessmentService
                    AND action IN ('login_failed', 'face_id_login_failed')
                    AND created_at >= DATE_SUB(NOW(), INTERVAL 2 MINUTE)",
                 ['user_id' => $userId]
-            )->fetchOne();
+            )->fetchOne());
 
             $marketplaceOrders24h = 0;
             $marketplaceProducts24h = 0;
             $marketplaceOrderCancelRatio30d = 0.0;
             try {
-                $marketplaceOrders24h = (int) $this->connection->executeQuery(
+                $marketplaceOrders24h = $this->toInt($this->connection->executeQuery(
                     "SELECT COUNT(*) FROM facture WHERE user_id = :user_id AND date_facture >= DATE_SUB(NOW(), INTERVAL 1 DAY)",
                     ['user_id' => $userId]
-                )->fetchOne();
+                )->fetchOne());
 
-                $marketplaceProducts24h = (int) $this->connection->executeQuery(
+                $marketplaceProducts24h = $this->toInt($this->connection->executeQuery(
                     "SELECT COUNT(*) FROM products WHERE userId = :user_id AND created_date >= DATE_SUB(NOW(), INTERVAL 1 DAY)",
                     ['user_id' => $userId]
-                )->fetchOne();
+                )->fetchOne());
 
-                $marketplaceOrders30d = (int) $this->connection->executeQuery(
+                $marketplaceOrders30d = $this->toInt($this->connection->executeQuery(
                     "SELECT COUNT(*) FROM facture WHERE user_id = :user_id AND date_facture >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                     ['user_id' => $userId]
-                )->fetchOne();
+                )->fetchOne());
 
-                $marketplaceCancelled30d = (int) $this->connection->executeQuery(
+                $marketplaceCancelled30d = $this->toInt($this->connection->executeQuery(
                     "SELECT COUNT(*) FROM facture WHERE user_id = :user_id AND delivery_status = 'cancelled' AND date_facture >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                     ['user_id' => $userId]
-                )->fetchOne();
+                )->fetchOne());
 
                 $marketplaceOrderCancelRatio30d = $marketplaceOrders30d > 0 ? round($marketplaceCancelled30d / $marketplaceOrders30d, 4) : 0.0;
             } catch (\Throwable) {
@@ -472,18 +472,18 @@ class UserRiskAssessmentService
             )->fetchAllAssociative();
 
             if (count($recentLogins) >= 2) {
-                $latest = is_array($recentLogins[0]) ? $recentLogins[0] : [];
-                $previous = is_array($recentLogins[1]) ? $recentLogins[1] : [];
+                $latest = $recentLogins[0];
+                $previous = $recentLogins[1];
 
                 $latestMetadata = $this->decodeMetadata($latest['metadata_json'] ?? null);
                 $previousMetadata = $this->decodeMetadata($previous['metadata_json'] ?? null);
 
-                $latestFingerprint = (string) ($latestMetadata['device_fingerprint'] ?? '');
-                $previousFingerprint = (string) ($previousMetadata['device_fingerprint'] ?? '');
+                $latestFingerprint = $this->toString($latestMetadata['device_fingerprint'] ?? '');
+                $previousFingerprint = $this->toString($previousMetadata['device_fingerprint'] ?? '');
                 $newDeviceFlag = $latestFingerprint !== '' && $previousFingerprint !== '' && $latestFingerprint !== $previousFingerprint;
 
-                $latestCountry = strtolower((string) ($latestMetadata['country'] ?? ''));
-                $previousCountry = strtolower((string) ($previousMetadata['country'] ?? ''));
+                $latestCountry = strtolower($this->toString($latestMetadata['country'] ?? ''));
+                $previousCountry = strtolower($this->toString($previousMetadata['country'] ?? ''));
                 $geoJumpFlag = $latestCountry !== '' && $previousCountry !== '' && $latestCountry !== $previousCountry;
             }
 
@@ -557,11 +557,11 @@ class UserRiskAssessmentService
     private function computeAnomalyScore(string $userId, array $metrics): float
     {
         $apiScore = $this->anomalyDetectionService->score([
-            'clicks_per_minute' => (float) ($metrics['clicks_per_minute'] ?? 0.0),
-            'time_between_actions_seconds' => (float) ($metrics['time_between_actions_seconds'] ?? 300.0),
-            'booking_frequency' => (float) ($metrics['booking_frequency'] ?? 0.0),
-            'cancel_booking_ratio' => (float) ($metrics['cancel_booking_ratio'] ?? 0.0),
-            'session_duration_minutes' => (float) ($metrics['session_duration_minutes'] ?? 0.0),
+            'clicks_per_minute' => $this->toFloat($metrics['clicks_per_minute'] ?? 0.0),
+            'time_between_actions_seconds' => $this->toFloat($metrics['time_between_actions_seconds'] ?? 300.0),
+            'booking_frequency' => $this->toFloat($metrics['booking_frequency'] ?? 0.0),
+            'cancel_booking_ratio' => $this->toFloat($metrics['cancel_booking_ratio'] ?? 0.0),
+            'session_duration_minutes' => $this->toFloat($metrics['session_duration_minutes'] ?? 0.0),
         ]);
 
         if ($apiScore !== null) {
@@ -569,20 +569,20 @@ class UserRiskAssessmentService
         }
 
         try {
-            $actions30m = (int) $this->connection->executeQuery(
+            $actions30m = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*) FROM activity_log WHERE user_id = :user_id AND created_at >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)",
                 ['user_id' => $userId]
-            )->fetchOne();
+            )->fetchOne());
 
-            $actions5m = (int) $this->connection->executeQuery(
+            $actions5m = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*) FROM activity_log WHERE user_id = :user_id AND created_at >= DATE_SUB(NOW(), INTERVAL 5 MINUTE)",
                 ['user_id' => $userId]
-            )->fetchOne();
+            )->fetchOne());
 
-            $distinctActions = (int) $this->connection->executeQuery(
+            $distinctActions = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(DISTINCT action) FROM activity_log WHERE user_id = :user_id AND created_at >= DATE_SUB(NOW(), INTERVAL 30 MINUTE)",
                 ['user_id' => $userId]
-            )->fetchOne();
+            )->fetchOne());
 
             $score = min(100.0, ($actions30m * 1.2) + max(0, $actions5m - 25) * 2.5);
             if ($actions30m > 40 && $distinctActions <= 2) {
@@ -598,7 +598,7 @@ class UserRiskAssessmentService
     private function computeClickSpeedScore(string $userId): float
     {
         try {
-            $bucketPeak = (int) $this->connection->executeQuery(
+                        $bucketPeak = $this->toInt($this->connection->executeQuery(
                 "SELECT COALESCE(MAX(bucket_count), 0) FROM (
                     SELECT COUNT(*) AS bucket_count
                     FROM activity_log
@@ -607,7 +607,7 @@ class UserRiskAssessmentService
                     GROUP BY FLOOR(UNIX_TIMESTAMP(created_at) / 10)
                 ) t",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
             if ($bucketPeak <= 8) {
                 return 0.0;
@@ -622,7 +622,7 @@ class UserRiskAssessmentService
     private function computeLoginFailureScore(string $userId): float
     {
         try {
-            $failures = (int) $this->connection->executeQuery(
+                        $failures = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM activity_log
                  WHERE user_id = :user_id
@@ -630,7 +630,7 @@ class UserRiskAssessmentService
                    AND action IN ('login_failed', 'face_id_login_failed')
                    AND created_at >= DATE_SUB(NOW(), INTERVAL 10 MINUTE)",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
             return min(100.0, $failures * 20.0);
         } catch (\Throwable) {
@@ -684,7 +684,7 @@ class UserRiskAssessmentService
         $peak = 0.0;
 
         foreach ($rows as $row) {
-            $text = trim((string) ($row['content'] ?? ''));
+            $text = trim($this->toString($row['content'] ?? ''));
             if ($text === '') {
                 continue;
             }
@@ -712,6 +712,9 @@ class UserRiskAssessmentService
         return min(100.0, round($finalScore, 2));
     }
 
+    /**
+     * @param array<string, float|int|bool|string|null> $metrics
+     */
     private function computeBotBehaviorScore(string $userId, array $metrics): float
     {
         try {
@@ -735,12 +738,12 @@ class UserRiskAssessmentService
         $parts = [];
         foreach ($activityRows as $row) {
             $fragment = trim(implode(' ', array_filter([
-                (string) ($row['module'] ?? ''),
-                (string) ($row['action'] ?? ''),
-                (string) ($row['content'] ?? ''),
-                (string) ($row['destination'] ?? ''),
-                (string) ($row['target_type'] ?? ''),
-                (string) ($row['target_name'] ?? ''),
+                $this->toString($row['module'] ?? ''),
+                $this->toString($row['action'] ?? ''),
+                $this->toString($row['content'] ?? ''),
+                $this->toString($row['destination'] ?? ''),
+                $this->toString($row['target_type'] ?? ''),
+                $this->toString($row['target_name'] ?? ''),
             ], static fn (string $value): bool => trim($value) !== '')));
 
             if ($fragment !== '') {
@@ -755,13 +758,13 @@ class UserRiskAssessmentService
         $summary = implode("\n", $parts);
         $score = $this->botBehaviorService->score($summary);
 
-        $clickSpeed = (float) ($metrics['clicks_per_minute'] ?? 0.0);
+        $clickSpeed = $this->toFloat($metrics['clicks_per_minute'] ?? 0.0);
         if ($clickSpeed > 0.0) {
             $score = max($score, min(100.0, $clickSpeed * 2.5));
         }
 
         $distinctActions = count(array_unique(array_map(
-            static fn (array $row): string => strtolower(trim((string) ($row['module'] ?? '')) . ':' . trim((string) ($row['action'] ?? ''))),
+            fn (array $row): string => strtolower(trim($this->toString($row['module'] ?? '')) . ':' . trim($this->toString($row['action'] ?? ''))),
             $activityRows
         )));
 
@@ -775,28 +778,28 @@ class UserRiskAssessmentService
     private function computeCancellationAbuseScore(string $userId): float
     {
         try {
-            $totalBookings = (int) $this->connection->executeQuery(
+                        $totalBookings = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM booking
                  WHERE user_id = :user_id
                    AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
             if ($totalBookings === 0) {
                 return 0.0;
             }
 
-            $cancelledBookings = (int) $this->connection->executeQuery(
+                        $cancelledBookings = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM booking
                  WHERE user_id = :user_id
                    AND status = 'CANCELLED'
                    AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
-            $quickCancels = (int) $this->connection->executeQuery(
+                        $quickCancels = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM booking
                  WHERE user_id = :user_id
@@ -805,7 +808,7 @@ class UserRiskAssessmentService
                    AND TIMESTAMPDIFF(MINUTE, created_at, cancelled_at) <= 30
                    AND created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
             $ratio = $cancelledBookings / max(1, $totalBookings);
             $score = $ratio * 100.0;
@@ -845,24 +848,24 @@ class UserRiskAssessmentService
     private function computeMarketplaceFraudScore(string $userId): float
     {
         try {
-            $buyerOrders30d = (int) $this->connection->executeQuery(
+                        $buyerOrders30d = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM facture
                  WHERE user_id = :user_id
                    AND date_facture >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
-            $buyerCancelled30d = (int) $this->connection->executeQuery(
+                        $buyerCancelled30d = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM facture
                  WHERE user_id = :user_id
                    AND delivery_status = 'cancelled'
                    AND date_facture >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
-            $buyerRapidBurst10m = (int) $this->connection->executeQuery(
+                        $buyerRapidBurst10m = $this->toInt($this->connection->executeQuery(
                 "SELECT COALESCE(MAX(bucket_count), 0) FROM (
                     SELECT COUNT(*) AS bucket_count
                     FROM facture
@@ -871,25 +874,25 @@ class UserRiskAssessmentService
                     GROUP BY FLOOR(UNIX_TIMESTAMP(date_facture) / 600)
                 ) t",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
-            $sellerProducts30d = (int) $this->connection->executeQuery(
+                        $sellerProducts30d = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM products
                  WHERE userId = :user_id
                    AND created_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
-            $sellerProducts24h = (int) $this->connection->executeQuery(
+                        $sellerProducts24h = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM products
                  WHERE userId = :user_id
                    AND created_date >= DATE_SUB(NOW(), INTERVAL 1 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
-            $sellerCancelledOrders30d = (int) $this->connection->executeQuery(
+                        $sellerCancelledOrders30d = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(DISTINCT f.id_facture)
                  FROM facture f
                  JOIN facture_product fp ON fp.facture_id = f.id_facture
@@ -898,9 +901,9 @@ class UserRiskAssessmentService
                    AND f.delivery_status = 'cancelled'
                    AND f.date_facture >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
-            $sellerOrders30d = (int) $this->connection->executeQuery(
+                        $sellerOrders30d = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(DISTINCT f.id_facture)
                  FROM facture f
                  JOIN facture_product fp ON fp.facture_id = f.id_facture
@@ -908,16 +911,16 @@ class UserRiskAssessmentService
                  WHERE p.userId = :user_id
                    AND f.date_facture >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
 
-            $suspiciousPriceProducts = (int) $this->connection->executeQuery(
+                        $suspiciousPriceProducts = $this->toInt($this->connection->executeQuery(
                 "SELECT COUNT(*)
                  FROM products
                  WHERE userId = :user_id
                    AND (price <= 0.50 OR price >= 10000)
                    AND created_date >= DATE_SUB(NOW(), INTERVAL 30 DAY)",
                 ['user_id' => $userId]
-            )->fetchOne();
+                        )->fetchOne());
         } catch (\Throwable) {
             return 0.0;
         }
@@ -981,7 +984,7 @@ class UserRiskAssessmentService
 
         $times = [];
         foreach ($rows as $row) {
-            $raw = (string) ($row['cancelled_at'] ?? '');
+            $raw = $this->toString($row['cancelled_at'] ?? '');
             if ($raw === '') {
                 continue;
             }
@@ -1047,7 +1050,7 @@ class UserRiskAssessmentService
     private function resolveRuleOrFallback(string $key, ?array $ruleResponse, callable $fallback): float
     {
         if (is_array($ruleResponse) && isset($ruleResponse[$key]) && is_numeric($ruleResponse[$key])) {
-            $value = (float) $ruleResponse[$key];
+            $value = $this->toFloat($ruleResponse[$key]);
 
             if ($value < 0.0) {
                 return 0.0;
@@ -1060,7 +1063,7 @@ class UserRiskAssessmentService
             return round($value, 2);
         }
 
-        $fallbackValue = (float) $fallback();
+        $fallbackValue = $this->toFloat($fallback());
         if ($fallbackValue < 0.0) {
             return 0.0;
         }
@@ -1081,6 +1084,60 @@ class UserRiskAssessmentService
         }
 
         $decoded = json_decode($raw, true);
-        return is_array($decoded) ? $decoded : [];
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($decoded as $key => $value) {
+            if (is_string($key)) {
+                $normalized[$key] = $value;
+            }
+        }
+
+        return $normalized;
+    }
+
+    private function toString(mixed $value): string
+    {
+        if (is_string($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (string) $value;
+        }
+
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+
+        return '';
+    }
+
+    private function toInt(mixed $value): int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+
+        return 0;
+    }
+
+    private function toFloat(mixed $value): float
+    {
+        if (is_float($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_numeric($value)) {
+            return (float) $value;
+        }
+
+        return 0.0;
     }
 }
